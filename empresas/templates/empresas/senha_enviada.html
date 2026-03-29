@@ -1,0 +1,7 @@
+{% extends "empresas/base.html" %}
+{% block title %}E-mail Enviado{% endblock %}
+{% block content %}
+<h2>Verifique seu e-mail</h2>
+<p style="margin:1rem 0;color:#555;">Se o e-mail existir no sistema, você receberá as instruções em breve.</p>
+<div class="link"><a href="{% url 'login' %}">Voltar ao login</a></div>
+{% endblock %}

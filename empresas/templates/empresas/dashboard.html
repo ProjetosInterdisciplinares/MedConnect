@@ -1,0 +1,9 @@
+{% extends "empresas/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h2>Bem-vindo, {{ request.user.razao_social }}!</h2>
+<p style="margin:1rem 0;color:#555;">CNPJ: {{ request.user.cnpj }}</p>
+<a href="{% url 'logout' %}">
+  <button type="button">Sair</button>
+</a>
+{% endblock %}

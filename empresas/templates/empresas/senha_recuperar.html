@@ -1,0 +1,11 @@
+{% extends "empresas/base.html" %}
+{% block title %}Recuperar Senha{% endblock %}
+{% block content %}
+<h2>Recuperar Senha</h2>
+<form method="post">
+  {% csrf_token %}
+  <label>E-mail cadastrado</label>
+  {{ form.email }}
+  <button type="submit">Enviar link</button>
+</form>
+{% endblock %}
