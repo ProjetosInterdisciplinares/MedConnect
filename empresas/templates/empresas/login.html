@@ -1,0 +1,21 @@
+{% extends "empresas/base.html" %}
+{% block title %}Login{% endblock %}
+{% block content %}
+<h2>Entrar</h2>
+{% if form.non_field_errors %}
+  <div class="errors">{{ form.non_field_errors }}</div>
+{% endif %}
+<form method="post">
+  {% csrf_token %}
+  {% for field in form %}
+    <label>{{ field.label }}</label>
+    {{ field }}
+    {% if field.errors %}<div class="errors">{{ field.errors }}</div>{% endif %}
+  {% endfor %}
+  <button type="submit">Entrar</button>
+</form>
+<div class="link">
+  <a href="{% url 'cadastro' %}">Criar conta</a> ·
+  <a href="{% url 'password_reset' %}">Esqueci a senha</a>
+</div>
+{% endblock %}

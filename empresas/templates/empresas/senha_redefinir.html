@@ -1,0 +1,26 @@
+{% extends "empresas/base.html" %}
+{% block title %}Nova Senha{% endblock %}
+{% block content %}
+<h2>Definir Nova Senha</h2>
+<form method="post">
+  {% csrf_token %}
+  {% for field in form %}
+    <label>{{ field.label }}</label>
+    {{ field }}
+    {% if field.errors %}<div class="errors">{{ field.errors }}</div>{% endif %}
+  {% endfor %}
+  <button type="submit">Salvar senha</button>
+</form>
+{% endblock %}
+```
+
+**`email_recuperar.html`** (corpo do e-mail):
+```
+Olá,
+
+Recebemos uma solicitação para redefinir a senha da sua conta.
+
+Clique no link abaixo para criar uma nova senha:
+{{ protocol }}://{{ domain }}{% url 'password_reset_confirm' uidb64=uid token=token %}
+
+Se você não solicitou isso, ignore este e-mail.
