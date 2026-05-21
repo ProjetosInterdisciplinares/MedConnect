@@ -10,65 +10,48 @@ O **MedConnect** é uma plataforma digital desenvolvida para conectar empresas d
 
 A plataforma atua como um marketplace B2B, permitindo que empresas compradoras e vendedoras:
 
-* Cadastrem produtos;
-* Pesquisem materiais disponíveis;
+* Cadastrem ou busquem por materiais, medicamentos e produtos;
 * Iniciem negociações;
-* Troquem mensagens;
 * Gerenciem anúncios e interações comerciais.
 
 O principal objetivo do projeto é reduzir desperdícios de insumos hospitalares, otimizar negociações e promover práticas sustentáveis no setor da saúde.
 
 ---
-# 👥 Perfis de Usuário
+## 👥 Perfis de Usuário
 
-## Administrador
+**Administrador:** Responsável pelo gerenciamento geral da plataforma, incluindo controle de usuários e operações do sistema.
 
-Responsável pelo gerenciamento geral da plataforma.
+**Empresa Vendedora:** Empresa responsável pelo cadastro de insumos e publicação de anúncios para negociação na plataforma.
 
-## Empresa Vendedora
-
-Empresa com CNPJ autorizada a cadastrar produtos.
-
-## Empresa Compradora
-
-Empresa responsável por buscar produtos e iniciar negociações.
+**Empresa Compradora:** Empresa que busca produtos disponíveis no marketplace, podendo demonstrar interesse e iniciar negociações com as empresas vendedoras.
 
 ---
 ## 🛡️ Regras de Negócio e Segurança
-* Apenas empresas cadastradas com CNPJ podem cadastrar produtos no sistema.
-* Usuários pessoa física (CPF) não têm permissão para cadastrar produtos.
-* É obrigatório informar o lote e a data de validade para todos os produtos cadastrados.
-* Negociações ocorrem de forma restrita entre usuários logados na plataforma.
-* O acesso integral após 30 dias de teste depende de uma assinatura ativa.
+* Apenas empresas cadastradas com CNPJ podem utilizar o sistema.
 * O sistema é acessível via web, utiliza criptografia HTTPS para dados sensíveis e registra logs de acesso.
 
 ## 🔄 Fluxo Básico de Uso
-1. O usuário realiza o cadastro na plataforma.
-2. O usuário acessa o sistema através de login.
-3. A empresa com CNPJ cadastra ou importa produtos.
-4. Outras empresas pesquisam produtos no marketplace.
-5. As empresas iniciam a negociação e trocam mensagens.
-6. A negociação é concluída fora da plataforma, com a emissão de nota fiscal.
+1. A empresa realiza seu cadastro na plataforma;
+2. Empresas vendedoras anunciam os insumos disponíveis para negociação;
+3. Empresas compradoras pesquisam os produtos disponíveis no marketplace e podem demonstrar interesse no produto nas condições anunciadas ou enviar uma proposta personalizada;
+4. A empresa vendedora pode aceitar ou recusar a proposta recebida, podendo justificar o motivo da recusa;
+5. Após o aceite, as empresas iniciam a negociação diretamente pela plataforma;
+6. Após o acordo entre as partes, a negociação é concluída externamente.
 
+## 🛠️ Tecnologias Utilizadas
 
-
-
-
-# 🛠️ Tecnologias Utilizadas
-
-## Backend
-
+### Backend
 * Python
 * Django
 * PostgreSQL
 
-## Frontend
+### Frontend
 
 * Next.js
 * React
 * TypeScript
 
-## Outras Tecnologias
+### Outras Tecnologias
 
 * JWT Authentication
 * Google Gemini API
@@ -76,7 +59,7 @@ Empresa responsável por buscar produtos e iniciar negociações.
 
 ---
 
-# ⚙️ Pré-requisitos
+## ⚙️ Pré-requisitos
 
 Antes de iniciar o projeto, instale:
 
@@ -86,9 +69,9 @@ Antes de iniciar o projeto, instale:
 
 ---
 
-# Como Executar o Projeto
+## 🚀 Como Executar o Projeto
 
-## 1. Clonar o Repositório
+### 1. Clonar o Repositório
 
 ```bash
 git clone URL_DO_REPOSITORIO
@@ -102,11 +85,11 @@ cd MedConnect
 
 ---
 
-# Configuração do Ambiente Virtual
+## 🐍 Configuração do Ambiente Virtual
 
-## 2. Criar Ambiente Virtual
+### 2. Criar Ambiente Virtual
 
-### Windows
+#### Windows
 
 ```bash
 python -m venv venv
@@ -114,9 +97,9 @@ python -m venv venv
 
 ---
 
-## 3. Ativar Ambiente Virtual
+### 3. Ativar Ambiente Virtual
 
-### Windows
+#### Windows
 
 ```bash
 venv\Scripts\activate
@@ -124,9 +107,9 @@ venv\Scripts\activate
 
 ---
 
-# Instalar Dependências
+## 📦 Instalar Dependências
 
-## 4. Instalar Dependências do Projeto
+### 4. Instalar Dependências do Projeto
 
 ```bash
 pip install -r requirements.txt
@@ -134,13 +117,13 @@ pip install -r requirements.txt
 
 ---
 
-# Configuração do Ambiente
+## 🔐 Configuração do Ambiente
 
-## 5. Criar Arquivo `.env`
+### 5. Criar Arquivo `.env`
 
 Crie um arquivo chamado `.env` na raiz do projeto.
 
-Exemplo:
+É onde ficará sua chave API:
 
 ```env
 GEMINI_API_KEY=sua_chave_api
@@ -148,9 +131,9 @@ GEMINI_API_KEY=sua_chave_api
 
 ---
 
-# Configuração do Banco de Dados
+## 🗄️ Configuração do Banco de Dados
 
-## 6. Criar Banco PostgreSQL
+### 6. Criar Banco PostgreSQL
 
 Exemplo:
 
@@ -160,9 +143,9 @@ CREATE DATABASE medconnect;
 
 ---
 
-# Executar as Migrations
+## 🔄 Executar as Migrations
 
-## 7. Rodar Migrations
+### 7. Rodar Migrations
 
 ```bash
 python manage.py migrate
@@ -170,9 +153,9 @@ python manage.py migrate
 
 ---
 
-# Criar Superusuário
+## 👤 Criar Superusuário
 
-## 8. Criar Administrador
+### 8. Criar Administrador
 
 ```bash
 python manage.py createsuperuser
@@ -180,9 +163,9 @@ python manage.py createsuperuser
 
 ---
 
-# Executar o Projeto
+## ▶️ Executar o Projeto
 
-## 9. Iniciar Servidor Django
+### 9. Iniciar Servidor Django
 
 ```bash
 python manage.py runserver
@@ -196,47 +179,6 @@ http://127.0.0.1:8000/
 
 ---
 
-# Segurança
-
-* Criptografia HTTPS
-* Controle de autenticação
-* Logs de acesso
-* Proteção de rotas autenticadas
-
----
-
-# 🚧 Possíveis Problemas
-
-## Erro: `No module named ...`
-
-Execute:
-
-```bash
-pip install -r requirements.txt
-```
-
----
-
-## Erro relacionado ao PostgreSQL
-
-Verifique:
-
-* Se o PostgreSQL está instalado;
-* Se o banco foi criado;
-* Se as credenciais do `.env` estão corretas.
-
----
-
-## Ambiente virtual não ativado
-
-Ative novamente:
-
-```bash
-venv\Scripts\activate
-```
-
----
-
-# 📄 Licença
+## 📄 Licença
 
 Este projeto é destinado a fins acadêmicos e de desenvolvimento interno.
