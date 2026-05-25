@@ -50,6 +50,7 @@ O principal objetivo do projeto é reduzir desperdícios de insumos hospitalares
 * Next.js
 * React
 * TypeScript
+* Tailwind
 
 ### Outras Tecnologias
 
