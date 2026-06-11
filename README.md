@@ -288,7 +288,7 @@ http://127.0.0.1:8000/
 
 ---
 
-# 💻 Configuração do Frontend
+## 💻 Configuração do Frontend
 
 Acesse a pasta do frontend:
 
@@ -298,7 +298,7 @@ cd frontend
 
 ---
 
-## 1. Instalar Dependências
+### 1. Instalar Dependências
 
 ```bash
 npm install
@@ -306,7 +306,7 @@ npm install
 
 ---
 
-## 2. Criar Arquivo .env.local
+### 2. Criar Arquivo .env.local
 
 Crie o arquivo:
 
@@ -322,7 +322,7 @@ NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
 
 ---
 
-## 3. Executar Frontend
+### 3. Executar Frontend
 
 ```bash
 npm run dev
@@ -351,9 +351,29 @@ NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
 ```
 ---
 
+## 📸 Telas do Sistema
+
+### Landing Page
+![Landing Page da plataforma](docs/images/landing_page_1.png)
+![Landing Page da plataforma](docs/images/landing_page_2.png)
+![Landing Page da plataforma](docs/images/landing_page_3.png)
+
+### Login / Solicitação de Credenciamento
+
+![Tela de Login](docs/images/login.png)
+
+### Catálogo / Vitrine de produtos disponiveis
+
+![Marketplace](docs/images/Catalogo.png)
+
+### Publicar Anúncio
+
+![Cadastro de Anúncios](docs/images/publicarAnuncio.png)
+
+
 ## 📌 Status do Projeto
 
-🚧 Projeto em desenvolvimento para fins acadêmicos e demonstração de conceito.
+Projeto em desenvolvimento para fins acadêmicos e demonstração de conceito.
 
 ---
 
