@@ -1,0 +1,122 @@
+﻿[
+{
+  "model": "anuncio.anuncio",
+  "pk": 1,
+  "fields": {
+    "nr_lote": null,
+    "cd_mat": 1,
+    "qtd_mat": 1,
+    "val_unitario": "15.00",
+    "cd_pessoa_anunciante": 1,
+    "ds_obs": "",
+    "data_anuncio": "2026-05-19",
+    "ie_status": "A"
+  }
+},
+{
+  "model": "fabricante.fabricante",
+  "pk": 1,
+  "fields": {
+    "ds_fabricante": "Eurofarma",
+    "cnpj_fabri": "12.345.678/0001-01"
+  }
+},
+{
+  "model": "fabricante.fabricante",
+  "pk": 2,
+  "fields": {
+    "ds_fabricante": "Medline",
+    "cnpj_fabri": "98.765.432/0001-10"
+  }
+},
+{
+  "model": "fabricante.fabricante",
+  "pk": 3,
+  "fields": {
+    "ds_fabricante": "Johnson & Johnson",
+    "cnpj_fabri": "45.678.901/0001-55"
+  }
+},
+{
+  "model": "lote.lote",
+  "pk": 1,
+  "fields": {
+    "dt_fabricacao": "2026-05-04T06:00:00Z",
+    "dt_validade": "2028-02-02",
+    "qtd_lote": 10,
+    "unidade_med": "UN",
+    "fabricante": 1,
+    "cd_material": 1,
+    "cd_pessoaj": 1
+  }
+},
+{
+  "model": "marcas.marcas",
+  "pk": 1,
+  "fields": {
+    "ds_marca": "Descarpack"
+  }
+},
+{
+  "model": "marcas.marcas",
+  "pk": 2,
+  "fields": {
+    "ds_marca": "RIOHEX"
+  }
+},
+{
+  "model": "marcas.marcas",
+  "pk": 3,
+  "fields": {
+    "ds_marca": "3M"
+  }
+},
+{
+  "model": "marcas.marcas",
+  "pk": 4,
+  "fields": {
+    "ds_marca": "CREMER"
+  }
+},
+{
+  "model": "mat_med.matmed",
+  "pk": 1,
+  "fields": {
+    "ds_mat": "RIOHEX 0,5% Solução Aquosa 100ml",
+    "ds_marca": 2,
+    "ds_tipo": "MT01",
+    "ds_pessoaj": 1
+  }
+},
+{
+  "model": "mat_med.matmed",
+  "pk": 2,
+  "fields": {
+    "ds_mat": "Descarpack Seringa Descartável 3 Ml Luer Lock Sem Agulha - Caixa Com 100 Unidades",
+    "ds_marca": 1,
+    "ds_tipo": "MT01",
+    "ds_pessoaj": 2
+  }
+},
+{
+  "model": "tipo_matmed.tipomatmed",
+  "pk": "MD01",
+  "fields": {
+    "ds_tipo": "MEDICAMENTO"
+  }
+},
+{
+  "model": "tipo_matmed.tipomatmed",
+  "pk": "MT01",
+  "fields": {
+    "ds_tipo": "MATERIAL"
+  }
+},
+{
+  "model": "tipo_matmed.tipomatmed",
+  "pk": "PD01",
+  "fields": {
+    "ds_tipo": "PRODUTO"
+  }
+}
+]
