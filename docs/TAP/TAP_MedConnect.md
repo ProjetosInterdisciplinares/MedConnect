@@ -1,7 +1,7 @@
 
 
 | Controle de Versões |  |  |  |
-| :---: | :---: | ----- | ----- |
+| :---- | :---- | :---- | :---- |
 | **Versão** | **Data** | **Autor** | **Notas da Revisão** |
 | 1.0 | 18/08 | Ana Carolina dos Santos Simões Andressa Fernanda Fernandes Beatriz Barros Rodrigues Pereira Felipe Leme do Prado Laynne Maria da Silva Maria Gabriela Bonatto | Versão inicial do TAP, elaborada a partir do levantamento de requisitos (entrevistas com o cliente).  |
 |  |  |  |  |
@@ -128,7 +128,7 @@ RN06 – A comparação entre o valor anunciado pelo fornecedor e os valores de 
 # **Partes interessadas do Projeto**
 
 | Empresa | Participante (RA/Nome) | Função |
-| ----- | ----- | ----- |
+| :---- | :---- | :---- |
 | FHO  | RA: 117199/ Ana Carolina dos Santos Simões | (PO) E BUSINESS ANALYST |
 | FHO | RA: 116479/ Andressa Fernanda Fernandes | ARQUITETO DE SOFTWARE & DBA |
 | FHO | RA: 116418/ Felipe Leme do Prado | ENGENHEIRO DE IA E DADOS |
@@ -157,12 +157,70 @@ gratuitos/contratados durante todo o projeto;
 (4)Exposição de dados sensíveis em caso de falha na criptografia (RNF02) ou no controle de autenticação (RNF03);   
 (5)Atraso no cronograma acadêmico devido à complexidade do módulo de negociação e controle de status.
 
-# **Orçamento do Projeto**
+# **Orçamento do Projeto** 
 
-Como é um projeto acadêmico, não há orçamento financeiro dedicado à aquisição de licenças ou infraestrutura paga. Os principais custos previstos são indiretos como: a hospedagem/infraestrutura em camada gratuita ou de baixo custo (ex.: serviços cloud com free tier); o eventual custo de uso da API do Gemini acima da cota gratuita; o tempo dedicado pela equipe de desenvolvimento (recurso não financeiro, mas a ser controlado no cronograma). Caso o projeto avance para um cenário comercial, iremos detalhar um orçamento formal contemplando desenvolvimento, hospedagem, licenciamento de API e manutenção.
+Com base na última avaliação e nos conceitos apresentados na aula de Engenharia de Software, chegamos à seguinte relação de valores. Esses custos poderão sofrer ajustes conforme novas implementações forem realizadas. 
+
+**Pontos de Função**
+
+**Arquivos Lógicos Internos (ALI)**
+
+| ALI | Descrição | PF Médio |
+| :---- | :---- | :---- |
+| Empresas | Cadastro das empresas | 10 |
+| Produtos | Materiais e medicamentos | 10 |
+| Lotes | Controle de lotes | 10 |
+| Negociações | Histórico e status | 10 |
+| Propostas | Propostas Enviadas | 10 |
+| Anúncios | Marketplace | 10 |
+
+## **Arquivos de Interface Externa (AIE)**
+
+| AIE | Descrição | PF Médio |
+| :---- | :---- | :---- |
+| Validação de CNPJ | Serviço externo | 7 |
+| TISS/TUSS/Simpro/Brasíndice  | Bases externas  | 7 |
+
+## **Entradas Externas (EE)**
+
+| EE | PF Médio |
+| :---- | :---- |
+| Cadastro de empresa | 4 |
+| Login | 4 |
+| Cadastro de produto | 4 |
+| Editar produto | 4 |
+| Cadastro de lote | 4 |
+| Publicar anúncio | 4 |
+| Abrir negociação | 4 |
+| Enviar proposta | 4 |
+| Aceitar proposta | 4 |
+| Recusar proposta | 4 |
+| Encerrar negociação | 4 |
+| Gerenciar empresas | 4 |
+
+**Consultas Externas (CE)Saídas Externas (SE)**
+
+| CE | PF Médio |
+| :---- | :---- |
+| Buscar produtos | 4 |
+| Visualizar detalhes do produto | 4 |
+| Listar negociações | 4 |
+| Filtrar negociações | 4 |
+| Consultar status de negociação | 4 |
+| Listar empresas cadastradas | 4 |
+
+| AIE | PF Médio |
+| :---- | :---- |
+| Atualização automática de estoque | 5 |
+| Relatórios administrativos | 5 |
+| Controle de validade de lotes | 5 |
+| Histórico de negociações | 5 |
+
+* **Custo do Custo do Software:**  
+- Custo \= 166 x 32 \= R$5.312,00 
 
 | Aprovações |  |  |
-| ----- | ----- | ----- |
+| :---- | :---- | :---- |
 | **Participante** | **Assinatura** | **Data** |
 | Patrocinador do Projeto |  |  |
 | Gerente do Projeto |  |  |
