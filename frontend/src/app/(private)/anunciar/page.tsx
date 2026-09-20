@@ -1,7 +1,17 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import { Megaphone, Package, Layers, Hash, DollarSign, FileText, Sparkles } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Megaphone, Package, Layers, Hash, DollarSign, FileText, Sparkles, CheckCircle, ImagePlus, X, Crop, ZoomIn } from "lucide-react"
+import Cropper, { Area } from "react-easy-crop"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
 import {
   Select,
   SelectContent,
@@ -15,6 +25,7 @@ import servicesGetMatMed from "@/server/(GET)-mat-med"
 import servicesGetLotes from "@/server/(GET)-lotes"
 import servicesCreateAnuncio from "@/server/(POST)-anuncio"
 import { CreateAnuncioForm, MatMed } from "@/types"
+import AnimatedBackground from "@/components/ui/animated-background"
 
 
 // CORREÇÃO 1: Adicionado ds_lote na interface
@@ -60,7 +71,37 @@ const InputField = ({
     </div>
   )
   
+async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<string> {
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = (error) => reject(error)
+    img.src = imageSrc
+  })
+  const canvas = document.createElement("canvas")
+  const ctx = canvas.getContext("2d")
+  if (!ctx) return ""
+
+  canvas.width = pixelCrop.width
+  canvas.height = pixelCrop.height
+
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height
+  )
+
+  return canvas.toDataURL("image/jpeg", 0.9)
+}
+
 export default function PublicarAnuncioPage() {
+  const router = useRouter()
   const [materiais, setMateriais] = useState<MatMed[]>([])
   const [lotes, setLotes] = useState<Lote[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
@@ -73,7 +114,18 @@ export default function PublicarAnuncioPage() {
     val_base: "",
     ds_obs: "",
     cd_pessoa_anunciante: 0,
+    imagem_anuncio: "",
   })
+
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false)
+  const [lastSaved, setLastSaved] = useState<CreateAnuncioForm | null>(null)
+
+  // Estados do Cropper
+  const [cropModalOpen, setCropModalOpen] = useState(false)
+  const [imageToCrop, setImageToCrop] = useState<string>("")
+  const [crop, setCrop] = useState({ x: 0, y: 0 })
+  const [zoom, setZoom] = useState(1)
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
 
   useEffect(() => {
     const userId = Number(localStorage.getItem("userId") || 0)
@@ -161,6 +213,42 @@ export default function PublicarAnuncioPage() {
     }
   }
 
+  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Limita tamanho para 5MB aproximadamente (5 * 1024 * 1024)
+    if (file.size > 5242880) {
+      alert("A imagem selecionada é muito grande. O limite máximo é de 5MB.")
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const base64String = event.target?.result as string
+      setImageToCrop(base64String)
+      setCropModalOpen(true)
+    }
+    reader.onerror = () => {
+      alert("Não foi possível ler o arquivo de imagem.")
+    }
+    reader.readAsDataURL(file)
+  }
+
+  async function handleSaveCrop() {
+    if (imageToCrop && croppedAreaPixels) {
+      try {
+        const croppedImage = await getCroppedImg(imageToCrop, croppedAreaPixels)
+        setAnuncioForm((prev) => ({ ...prev, imagem_anuncio: croppedImage }))
+        setCropModalOpen(false)
+        setImageToCrop("")
+      } catch (e) {
+        console.error(e)
+        alert("Erro ao cortar a imagem")
+      }
+    }
+  }
+
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -176,6 +264,7 @@ export default function PublicarAnuncioPage() {
       qtd_mat: anuncioForm.qtd_mat,
       val_base: valorTratadoString || "0.00",
       ds_obs: anuncioForm.ds_obs,
+      imagem_anuncio: anuncioForm.imagem_anuncio || undefined,
       cd_pessoa_anunciante: anuncioForm.cd_pessoa_anunciante,
     }
 
@@ -187,17 +276,13 @@ export default function PublicarAnuncioPage() {
       return
     }
 
-    alert("Anúncio publicado com sucesso!")
+    setLastSaved(dataToSend)
+    setIsSuccessOpen(true)
+  }
 
-    setAnuncioForm((prev) => ({
-      ...prev,
-      cd_mat: 0,
-      nr_lote: 0,
-      qtd_mat: 0,
-      val_base: "",
-      ds_obs: "",
-    }))
-    setLotes([])
+  function handleCloseSuccess() {
+    setIsSuccessOpen(false)
+    router.push("/catalogo")
   }
 
   const lotesFiltrados = lotes.filter(
@@ -206,9 +291,11 @@ export default function PublicarAnuncioPage() {
   )
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-sky-800  flex items-center gap-2">
+    <div className="relative min-h-screen w-full antialiased selection:bg-teal-500/20">
+      <AnimatedBackground />
+      <div className="max-w-4xl mx-auto py-8 px-4 relative z-10">
+        <div className="mb-8">
+        <h1 className="text-2xl font-bold text-teal-800 flex items-center gap-2">
          Publicar Anúncio
         </h1>
         <p className="text-zinc-500 text-sm mt-1">
@@ -233,7 +320,11 @@ export default function PublicarAnuncioPage() {
                 <SelectTrigger className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm h-10">
                   <div className="flex items-center gap-2 text-zinc-500">
                     <Package size={16} />
-                    <SelectValue placeholder="Selecione o insumo cadastrado" />
+                    <SelectValue placeholder="Selecione o insumo cadastrado">
+                      {anuncioForm.cd_mat
+                        ? materiais.find(m => String(m.cd_mat) === String(anuncioForm.cd_mat))?.ds_mat
+                        : undefined}
+                    </SelectValue>
                   </div>
                 </SelectTrigger>
                 <SelectContent>
@@ -259,7 +350,16 @@ export default function PublicarAnuncioPage() {
                 <SelectTrigger className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm h-10">
                   <div className="flex items-center gap-2 text-zinc-500">
                     <Layers size={16} />
-                    <SelectValue placeholder={anuncioForm.cd_mat ? "Selecione um lote" : "Selecione um insumo primeiro"} />
+                    <SelectValue placeholder={anuncioForm.cd_mat ? "Selecione um lote" : "Selecione um insumo primeiro"}>
+                      {anuncioForm.nr_lote
+                        ? anuncioForm.nr_lote === 0 
+                          ? "Nenhum lote específico" 
+                          : (() => {
+                              const found = lotesFiltrados.find(l => String(l.nr_lote) === String(anuncioForm.nr_lote))
+                              return found ? `${found.ds_lote} — vence ${new Date(found.dt_validade).toLocaleDateString("pt-BR")}` : undefined
+                            })()
+                        : undefined}
+                    </SelectValue>
                   </div>
                 </SelectTrigger>
                 <SelectContent>
@@ -315,7 +415,8 @@ export default function PublicarAnuncioPage() {
                   type="button"
                   onClick={handleGenerateAIDescription}
                   disabled={isGenerating}
-                  className="text-xs flex items-center gap-1.5 bg-sky-700 text-zinc-50 font-bold px-3 py-1.5 rounded-lg shadow-sm transition-all duration-200 disabled:opacity-60 cursor-pointer"
+                  className="text-xs flex items-center gap-1.5 text-zinc-50 font-bold px-3 py-1.5 rounded-lg shadow-sm transition-all duration-200 disabled:opacity-60 cursor-pointer"
+                  style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)" }}
                 >
                   {isGenerating ? (
                     <>
@@ -333,14 +434,163 @@ export default function PublicarAnuncioPage() {
             />
           </div>
 
+          {/* BLOCO 4: IMAGEM DO ANÚNCIO */}
+          <div className="w-full flex flex-col gap-1.5">
+            <label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+              Foto do Lote/Produto (Opcional)
+            </label>
+            
+            {!anuncioForm.imagem_anuncio ? (
+              <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-zinc-300 rounded-xl bg-zinc-50 hover:bg-zinc-100 transition-colors cursor-pointer group">
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  <div className="w-10 h-10 mb-3 text-zinc-400 bg-white shadow-sm rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <ImagePlus size={20} className="text-teal-600" />
+                  </div>
+                  <p className="mb-1 text-sm text-zinc-600 font-semibold">
+                    Clique para fazer upload
+                  </p>
+                  <p className="text-xs text-zinc-500">
+                    PNG, JPG ou WEBP (Max. 5MB)
+                  </p>
+                </div>
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="image/png, image/jpeg, image/webp"
+                  onChange={handleImageUpload}
+                />
+              </label>
+            ) : (
+              <div className="relative w-full h-48 rounded-xl overflow-hidden border border-zinc-200 shadow-sm bg-zinc-900 flex items-center justify-center">
+                <img 
+                  src={anuncioForm.imagem_anuncio} 
+                  alt="Preview" 
+                  className="w-full h-full object-cover opacity-90"
+                />
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                  <button
+                    type="button"
+                    onClick={() => setAnuncioForm(prev => ({ ...prev, imagem_anuncio: "" }))}
+                    className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-red-700 transition-colors"
+                  >
+                    <X size={16} /> Remover Imagem
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <button
             type="submit"
-            className="w-full bg-sky-950 hover:bg-sky-900 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors cursor-pointer mt-4"
+            className="w-full text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-lg mt-4 cursor-pointer"
+            style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)" }}
           >
             Publicar no Marketplace
           </button>
         </form>
       </div>
+
+      <Dialog open={isSuccessOpen} onOpenChange={(open) => {
+        if (!open) handleCloseSuccess()
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-teal-700 text-xl">
+              <CheckCircle className="w-6 h-6" />
+              Anúncio Publicado!
+            </DialogTitle>
+            <DialogDescription>
+              Seu insumo agora está visível no catálogo para potenciais compradores.
+            </DialogDescription>
+          </DialogHeader>
+          {lastSaved && (
+            <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 space-y-2 mt-2 text-sm">
+              <p><span className="font-semibold text-slate-600">Insumo:</span> {materiais.find(m => String(m.cd_mat) === String(lastSaved.cd_mat))?.ds_mat}</p>
+              <p><span className="font-semibold text-slate-600">Quantidade:</span> {lastSaved.qtd_mat} unidades</p>
+              <p><span className="font-semibold text-slate-600">Valor Base:</span> R$ {lastSaved.val_base}</p>
+              {lastSaved.ds_lote && <p><span className="font-semibold text-slate-600">Lote Vinculado:</span> {lastSaved.ds_lote}</p>}
+            </div>
+          )}
+          <DialogFooter className="mt-4">
+            <button
+              type="button"
+              onClick={handleCloseSuccess}
+              className="px-4 py-2 bg-teal-600 text-white rounded-lg font-bold hover:bg-teal-700 transition-colors w-full sm:w-auto cursor-pointer"
+            >
+              Ir para o Catálogo
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL DE CORTE DE IMAGEM */}
+      <Dialog open={cropModalOpen} onOpenChange={(open) => {
+        if (!open) {
+          setCropModalOpen(false)
+          setImageToCrop("")
+        }
+      }}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-teal-700 text-xl">
+              <Crop className="w-5 h-5" />
+              Ajustar Imagem do Produto
+            </DialogTitle>
+            <DialogDescription>
+              Arraste a imagem e use o zoom para enquadrar da melhor forma. 
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="relative w-full h-80 bg-zinc-900 rounded-xl overflow-hidden my-4">
+            {imageToCrop && (
+              <Cropper
+                image={imageToCrop}
+                crop={crop}
+                zoom={zoom}
+                aspect={16 / 9} // Ou o aspect ratio desejado para o card (ex: 4/3 ou 16/9)
+                onCropChange={setCrop}
+                onCropComplete={(_, croppedPixels) => setCroppedAreaPixels(croppedPixels)}
+                onZoomChange={setZoom}
+              />
+            )}
+          </div>
+          
+          <div className="flex items-center gap-4 px-2">
+            <ZoomIn className="w-5 h-5 text-zinc-500" />
+            <input
+              type="range"
+              value={zoom}
+              min={1}
+              max={3}
+              step={0.1}
+              aria-labelledby="Zoom"
+              onChange={(e) => setZoom(Number(e.target.value))}
+              className="w-full accent-teal-600 cursor-pointer"
+            />
+          </div>
+
+          <DialogFooter className="mt-4 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setCropModalOpen(false)
+                setImageToCrop("")
+              }}
+              className="px-4 py-2 bg-zinc-200 text-zinc-700 rounded-lg font-bold hover:bg-zinc-300 transition-colors cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveCrop}
+              className="px-4 py-2 bg-teal-600 text-white rounded-lg font-bold hover:bg-teal-700 transition-colors cursor-pointer"
+            >
+              Cortar e Salvar Imagem
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
     </div>
   )
 }

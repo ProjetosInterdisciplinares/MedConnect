@@ -5,7 +5,7 @@ import { buildUrl, getAuthHeaders, handleResponse, ServiceResult } from "@/serve
 
 export default async function servicesUpdatePessoaJuridica(pk: number, payload: UpdatePessoaJuridicaForm): Promise<ServiceResult<PessoaJuridica>> {
   const response = await fetch(buildUrl(`/api/medconnect/pessoa_juridica/${pk}`), {
-    method: "PUT",
+    method: "PATCH",
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   })

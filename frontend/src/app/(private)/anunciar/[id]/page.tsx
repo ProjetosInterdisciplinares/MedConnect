@@ -2,11 +2,21 @@
 
 import React, { useEffect, useMemo, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ShoppingCart, Handshake } from "lucide-react"
+import { ShoppingCart, Handshake, CheckCircle, Package, Info, Building2 } from "lucide-react"
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
 
 import servicesGetAnuncioDetails from "@/server/(GET)-anuncio-details"
 import servicesUpdateAnuncio from "@/server/(PUT)-anuncio"
 import { Anuncio } from "@/types"
+import AnimatedBackground from "@/components/ui/animated-background"
 
 export default function AnuncioDetalhePage() {
   const { id } = useParams()
@@ -16,6 +26,9 @@ export default function AnuncioDetalhePage() {
   const [loading, setLoading] = useState(true)
   const [valorProposta, setValorProposta] = useState("")
   const [modo, setModo] = useState<"COMPRA" | "PROPOSTA">("COMPRA")
+  
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false)
+  const [successMessage, setSuccessMessage] = useState("")
 
   useEffect(() => {
     async function load() {
@@ -43,13 +56,13 @@ export default function AnuncioDetalhePage() {
 
     const res = await servicesUpdateAnuncio(Number(id), {
       cd_pessoa_compradora: cdPessoa,
-      val_aceito: anuncio.val_base,
-      ie_status: "N",
+      val_proposta: anuncio.val_base,
     })
 
     if ("isError" in res) { alert("Erro ao realizar compra: " + res.message); return }
-    alert("Solicitação de compra realizada com sucesso!")
-    router.push("/caixa-de-propostas?tab=compras")
+    
+    setSuccessMessage("Compra realizada com sucesso!")
+    setIsSuccessOpen(true)
   }
 
   async function handleProposta() {
@@ -61,62 +74,94 @@ export default function AnuncioDetalhePage() {
     const res = await servicesUpdateAnuncio(Number(id), {
       cd_pessoa_compradora: cdPessoa,
       val_proposta: valorProposta,
-      ie_status: "N",
     })
 
     if ("isError" in res) { alert("Erro ao enviar proposta: " + res.message); return }
-    alert("Proposta enviada com sucesso!")
+    
+    setSuccessMessage("Proposta enviada com sucesso!")
+    setIsSuccessOpen(true)
+  }
+
+  function handleCloseSuccess() {
+    setIsSuccessOpen(false)
     router.push("/caixa-de-propostas?tab=compras")
   }
 
-  if (loading) return <div className="p-10 text-zinc-500">Carregando...</div>
-  if (!anuncio) return <div className="p-10 text-zinc-500">Anúncio não encontrado</div>
+  if (loading) return (
+    <div className="min-h-[70vh] flex items-center justify-center">
+      <div className="w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  )
+  if (!anuncio) return <div className="p-10 text-center font-bold text-slate-500">Anúncio não encontrado</div>
 
   const bloqueado = anuncio.ie_status !== "A"
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
+    <div className="relative min-h-screen w-full antialiased selection:bg-teal-500/20">
+      <AnimatedBackground />
+      <div className="max-w-4xl mx-auto py-8 px-4 relative z-10">
 
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-sky-900">
-          Anúncio #{anuncio.nr_anuncio}
-        </h1>
-        <p className="text-zinc-500 text-sm mt-1">
-          Veja os detalhes abaixo e escolha como deseja negociar.
-        </p>
+        <div className="mb-6 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+            Anúncio <span className="text-teal-600">#{anuncio.nr_anuncio}</span>
+          </h1>
+          <p className="text-slate-500 text-sm mt-1 font-medium">
+            Veja os detalhes do insumo e escolha sua forma de negociação.
+          </p>
+        </div>
       </div>
 
       {/* informações do anúncio */}
-      <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-6 md:p-8 shadow-sm mb-6">
-        <p className="text-base font-semibold text-zinc-700 mb-5">Informações do Anúncio</p>
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 md:p-8 shadow-sm mb-6 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-teal-600 to-teal-400" />
+        <h2 className="text-lg font-bold text-slate-800 mb-5 flex items-center gap-2">
+          <Info className="w-5 h-5 text-teal-600" />
+          Informações do Anúncio
+        </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8 text-sm">
-          <p><span className="font-bold text-zinc-700">Número do Anúncio:</span> <span className="text-zinc-600">{anuncio.nr_anuncio}</span></p>
-          <p><span className="font-bold text-zinc-700">Status:</span> <span className="text-zinc-600">{anuncio.ie_status}</span></p>
-          <p><span className="font-bold text-zinc-700">Quantidade disponível:</span> <span className="text-zinc-600">{anuncio.qtd_mat}</span></p>
-          <p><span className="font-bold text-zinc-700">Valor base:</span> <span className="text-zinc-600">R$ {Number(anuncio.val_base).toFixed(2)}</span></p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-8 text-sm">
+          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Quantidade disponível</p>
+            <p className="text-base font-bold text-slate-700 mt-0.5 flex items-center gap-1.5">
+              <Package className="w-4 h-4 text-slate-400" />
+              {anuncio.qtd_mat} <span className="text-xs font-normal text-slate-500">unidades</span>
+            </p>
+          </div>
+
+          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Valor Base</p>
+            <p className="text-base font-bold text-slate-700 mt-0.5">
+              R$ {Number(anuncio.val_base).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+          </div>
+
           {anuncio.nr_lote && (
-            <p><span className="font-bold text-zinc-700">Lote:</span> <span className="text-zinc-600">{anuncio.nr_lote}</span></p>
+            <div><span className="font-bold text-slate-700">Lote:</span> <span className="text-slate-600">{anuncio.nr_lote}</span></div>
           )}
           {anuncio.cd_pessoa_anunciante && (
-            <p><span className="font-bold text-zinc-700">Anunciante:</span> <span className="text-zinc-600">{anuncio.cd_pessoa_anunciante}</span></p>
+            <div className="flex items-center gap-1.5">
+              <Building2 className="w-4 h-4 text-slate-400 shrink-0" />
+              <span className="font-bold text-slate-700">Anunciante ID:</span> 
+              <span className="text-slate-600">{anuncio.cd_pessoa_anunciante}</span>
+            </div>
           )}
           {anuncio.ds_obs && (
-            <p className="sm:col-span-2">
-              <span className="font-bold text-zinc-700">Observações:</span>{" "}
-              <span className="text-zinc-600">{anuncio.ds_obs}</span>
-            </p>
+            <div className="sm:col-span-2 bg-slate-50 p-3 rounded-xl border border-slate-100 mt-2">
+              <span className="font-bold text-slate-700 text-xs uppercase tracking-wider block mb-1">Observações do Anunciante:</span>
+              <span className="text-slate-600">{anuncio.ds_obs}</span>
+            </div>
           )}
         </div>
       </div>
 
       {bloqueado ? (
-        <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-6 shadow-sm text-center text-red-500 font-semibold text-sm">
-          Este anúncio não está disponível para negociação.
+        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-6 shadow-sm text-center text-rose-600 font-semibold text-sm">
+          Este anúncio não está mais disponível para negociação.
         </div>
       ) : (
-        <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-6 md:p-8 shadow-sm">
-          <p className="text-base font-semibold text-zinc-700 mb-5">Fazer Oferta</p>
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 md:p-8 shadow-sm">
+          <p className="text-lg font-bold text-slate-800 mb-5">Opções de Negociação</p>
 
           {/* toggle modo */}
           <div className="flex gap-2 mb-6">
@@ -124,40 +169,39 @@ export default function AnuncioDetalhePage() {
               <button
                 key={m}
                 onClick={() => setModo(m)}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-all ${
+                className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
                   modo === m
-                    ? "bg-sky-950 text-white border-sky-950"
-                    : "bg-white text-zinc-500 border-zinc-200 hover:border-zinc-300 hover:text-zinc-700"
+                    ? "bg-teal-600 text-white shadow-md"
+                    : "bg-slate-50 text-slate-500 border border-slate-200 hover:border-slate-300 hover:text-slate-700"
                 }`}
               >
-                {m === "COMPRA" ? "Compra Direta" : "Proposta"}
+                {m === "COMPRA" ? "Compra Direta" : "Enviar Nova Proposta"}
               </button>
             ))}
           </div>
 
           <div className="space-y-5">
-
             {/* valor sugerido — só aparece no modo PROPOSTA */}
             {modo === "PROPOSTA" && (
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-semibold text-zinc-700">Valor proposto (R$)</label>
+              <div className="flex flex-col gap-1.5 animate-in slide-in-from-top-2 duration-300">
+                <label className="text-sm font-semibold text-slate-700">Qual o seu valor sugerido? (R$)</label>
                 <input
                   type="number"
                   value={valorProposta}
                   onChange={(e) => setValorProposta(e.target.value)}
-                  placeholder="Ex: 12,50"
-                  className="w-full px-4 py-2 bg-white border border-zinc-200 rounded-lg focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 outline-none transition-all text-sm"
+                  placeholder="Ex: 12.50"
+                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all text-sm shadow-inner"
                 />
               </div>
             )}
 
             {/* resumo valor */}
-            <div className="flex items-center justify-between bg-white border border-zinc-200 rounded-lg px-4 py-3 text-sm">
-              <span className="text-zinc-500">
-                {modo === "COMPRA" ? "Valor base" : "Valor proposto"}
+            <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-5 py-4 text-sm">
+              <span className="text-slate-500 font-medium tracking-wide uppercase text-xs">
+                {modo === "COMPRA" ? "Valor total base" : "Sua Proposta Final"}
               </span>
-              <span className="font-bold text-zinc-800 text-base">
-                R$ {valorUnitario.toFixed(2)}
+              <span className="font-black text-teal-700 text-lg">
+                R$ {valorUnitario.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
 
@@ -165,18 +209,20 @@ export default function AnuncioDetalhePage() {
             {modo === "COMPRA" ? (
               <button
                 onClick={handleCompraDireta}
-                className="w-full flex items-center justify-center gap-2 bg-sky-950 hover:bg-sky-900 text-white font-bold py-3 rounded-lg transition-colors text-sm cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 text-white font-bold py-3.5 rounded-xl transition-all shadow-md hover:shadow-lg hover:-translate-y-px cursor-pointer"
+                style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)" }}
               >
-                <ShoppingCart className="w-4 h-4" />
-                Comprar Agora
+                <ShoppingCart className="w-5 h-5" />
+                Comprar pelo Valor Base
               </button>
             ) : (
               <button
                 onClick={handleProposta}
-                className="w-full flex items-center justify-center gap-2 bg-sky-950 hover:bg-sky-900 text-white font-bold py-3 rounded-lg transition-colors text-sm cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 text-white font-bold py-3.5 rounded-xl transition-all shadow-md hover:shadow-lg hover:-translate-y-px cursor-pointer"
+                style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)" }}
               >
-                <Handshake className="w-4 h-4" />
-                Enviar Proposta
+                <Handshake className="w-5 h-5" />
+                Enviar Proposta ao Vendedor
               </button>
             )}
 
@@ -186,10 +232,38 @@ export default function AnuncioDetalhePage() {
 
       <button
         onClick={() => router.back()}
-        className="mt-6 flex items-center gap-1.5 bg-sky-700 hover:bg-sky-800 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors cursor-pointer"
+        className="mt-6 text-sm font-bold text-slate-500 hover:text-teal-700 transition-colors flex items-center gap-1.5"
       >
-        ‹ Voltar
+        ‹ Voltar para o catálogo
       </button>
+
+      </div>
+
+      <Dialog open={isSuccessOpen} onOpenChange={(open) => { if (!open) handleCloseSuccess() }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-teal-700 text-xl">
+              <CheckCircle className="w-6 h-6" />
+              Tudo Certo!
+            </DialogTitle>
+            <DialogDescription>
+              {successMessage}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 space-y-2 mt-2 text-sm text-center">
+            Você pode acompanhar o andamento da negociação na sua <strong>Caixa de Propostas</strong>.
+          </div>
+          <DialogFooter className="mt-4">
+            <button
+              type="button"
+              onClick={handleCloseSuccess}
+              className="px-4 py-2 bg-teal-600 text-white rounded-lg font-bold hover:bg-teal-700 transition-colors w-full sm:w-auto cursor-pointer"
+            >
+              Ir para Caixa de Propostas
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   )

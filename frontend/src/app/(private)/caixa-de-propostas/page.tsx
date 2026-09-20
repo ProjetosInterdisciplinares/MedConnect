@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation"
 import { Handshake, History } from "lucide-react"
 import { NegociacaoTab } from "@/components/caixa-de-propostas/em-negociacao"
 import { PropostasTab } from "@/components/caixa-de-propostas/minhas-propostas"
+import AnimatedBackground from "@/components/ui/animated-background"
 
 const TABS = [
   {
@@ -35,9 +36,11 @@ export default function CaixaDePropostasPage() {
   }, [searchParams])
 
   return (
-    <div className="max-w-5xl mx-auto py-10 px-4 md:px-0 font-sans">
+    <div className="relative min-h-screen w-full antialiased selection:bg-teal-500/20">
+      <AnimatedBackground />
+      <div className="max-w-5xl mx-auto py-10 px-4 md:px-0 font-sans relative z-10">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-sky-800 dark:text-white flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-teal-800 dark:text-teal-400 flex items-center gap-2">
           Caixa de Propostas
         </h1>
 
@@ -59,8 +62,8 @@ export default function CaixaDePropostasPage() {
               onClick={() => setActiveTab(id)}
               className={`hover:cursor-pointer flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-semibold transition-all ${
                 isActive
-                  ? "bg-sky-800 text-zinc-50 shadow-sm"
-                  : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                  ? "bg-teal-700 text-zinc-50 shadow-sm"
+                  : "text-zinc-500 hover:text-teal-700 dark:hover:text-teal-400"
               }`}
             >
               <Icon size={16} />
@@ -74,6 +77,7 @@ export default function CaixaDePropostasPage() {
       <div className="mt-6">
         {activeTab === "negociacao" && <NegociacaoTab />}
         {activeTab === "compras" && <PropostasTab />}
+      </div>
       </div>
     </div>
   )

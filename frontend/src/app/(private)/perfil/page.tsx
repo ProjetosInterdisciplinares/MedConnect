@@ -10,6 +10,7 @@ import { PessoaJuridica } from "@/types"
 import PerfilHeader from "@/components/perfil/PerfilHeader"
 import MeusAnuncios from "@/components/perfil/HistoricoDeOperacoes"
 import MeusMateriais from "@/components/perfil/MeusMateriais"
+import AnimatedBackground from "@/components/ui/animated-background"
 
 export default function PerfilPage() {
   const [empresa, setEmpresa] =
@@ -37,7 +38,9 @@ export default function PerfilPage() {
   }, [])
 
   return (
-    <div className="max-w-5xl mx-auto py-8">
+    <div className="relative min-h-screen w-full antialiased selection:bg-teal-500/20">
+      <AnimatedBackground />
+      <div className="max-w-5xl mx-auto py-8 px-4 relative z-10">
 
       <PerfilHeader empresa={empresa} />
 
@@ -46,7 +49,7 @@ export default function PerfilPage() {
           onClick={() => setAbaAtiva("anuncios")}
           className={`hover:cursor-pointer px-4 py-3 text-sm font-semibold transition-colors border-b-2 ${
             abaAtiva === "anuncios"
-              ? "border-sky-800 text-sky-800"
+              ? "border-teal-700 text-teal-700"
               : "border-transparent text-zinc-500 hover:text-zinc-800"
           }`}
         >
@@ -58,7 +61,7 @@ export default function PerfilPage() {
           onClick={() => setAbaAtiva("materiais")}
           className={`hover:cursor-pointer px-4 py-3 text-sm font-semibold transition-colors border-b-2 ${
             abaAtiva === "materiais"
-              ? "border-sky-800 text-sky-800"
+              ? "border-teal-700 text-teal-700"
               : "border-transparent text-zinc-500 hover:text-zinc-800"
           }`}
         >
@@ -74,6 +77,7 @@ export default function PerfilPage() {
       {abaAtiva === "materiais" && (
         <MeusMateriais />
       )}
+      </div>
     </div>
   )
 }

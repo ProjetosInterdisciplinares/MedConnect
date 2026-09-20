@@ -13,6 +13,7 @@ import {
 import servicesGetMeusAnuncios from "@/server/(GET)-meus-anuncios"
 import { Anuncio } from "@/types"
 import servicesGetMinhasCompras from "@/server/(GET)-minhas-compras"
+import { useRouter } from "next/navigation"
 
 // Abas baseadas nos STATUS_CHOICES do model Django
 const TABS = [
@@ -42,7 +43,7 @@ const TABS = [
 function getStatusBadge(ie_status: 'A' | 'N' | 'F' | 'I') {
   switch (ie_status) {
     case "A":
-      return { label: "ATIVO", className: "bg-sky-50 text-sky-700 border-sky-200" }
+      return { label: "ATIVO", className: "bg-teal-50 text-teal-700 border-teal-200" }
     case "F":
       return { label: "FINALIZADO", className: "bg-emerald-50 text-emerald-700 border-emerald-200" }
     case "N":
@@ -55,6 +56,7 @@ function getStatusBadge(ie_status: 'A' | 'N' | 'F' | 'I') {
 }
 
 export default function HistoricoPage() {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState<string>("ativos")
   const [anuncios, setAnuncios] = useState<Anuncio[]>([])
   const [compras, setCompras] = useState<Anuncio[]>([])
@@ -114,7 +116,7 @@ export default function HistoricoPage() {
   }, [anuncios, compras, activeTab, cdPessoa])
 
   return (
-    <div className="min-h-screen bg-slate-50 w-full selection:bg-cyan-500/20">
+    <div className="w-full selection:bg-teal-500/20">
       {/* Navegação por Abas */}
       <div className="flex flex-wrap items-center gap-3 mb-8 border-b border-zinc-200 pb-5">
         {TABS.map(({ id, label, icon: Icon }) => {
@@ -124,13 +126,13 @@ export default function HistoricoPage() {
             <button
               key={id}
               onClick={() => setActiveTab(id)}
-              className={`hover:cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 border outline-none focus:ring-2 focus:ring-sky-500/20 ${
+              className={`hover:cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 border outline-none focus:ring-2 focus:ring-teal-500/20 ${
                 isActive
-                  ? "bg-sky-800 text-zinc-50 border-sky-700 shadow-md shadow-sky-900/10"
+                  ? "bg-teal-700 text-zinc-50 border-teal-600 shadow-md shadow-teal-900/10"
                   : "bg-white text-zinc-500 border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-800"
               }`}
             >
-              <Icon size={16} className={isActive ? "text-sky-100" : "text-zinc-400"} />
+              <Icon size={16} className={isActive ? "text-teal-100" : "text-zinc-400"} />
               {label}
             </button>
           )
@@ -141,7 +143,7 @@ export default function HistoricoPage() {
       <div className="space-y-4">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-sky-600 animate-spin" />
+            <Loader2 className="w-8 h-8 text-teal-600 animate-spin" />
           </div>
         ) : itensFiltrados.length === 0 ? (
           <div className="bg-white border border-dashed border-zinc-300 p-12 rounded-2xl flex flex-col items-center justify-center text-center">
@@ -174,16 +176,17 @@ export default function HistoricoPage() {
             return (
               <div
                 key={anuncio.nr_anuncio}
-                className="bg-white border border-zinc-200/80 p-5 md:p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm hover:shadow-md transition-shadow duration-200"
+                onClick={() => router.push(`/anunciar/${anuncio.nr_anuncio}`)}
+                className="bg-white border border-zinc-200/80 p-5 md:p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer hover:border-teal-300"
               >
                 <div className="flex items-start gap-4">
-                  <div className="hidden md:flex w-12 h-12 rounded-full bg-sky-50 items-center justify-center shrink-0 border border-sky-100">
-                    <Package className="w-6 h-6 text-sky-700" />
+                  <div className="hidden md:flex w-12 h-12 rounded-full bg-teal-50 items-center justify-center shrink-0 border border-teal-100">
+                    <Package className="w-6 h-6 text-teal-700" />
                   </div>
 
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[11px] font-bold uppercase tracking-widest text-sky-700">
+                      <span className="text-[11px] font-bold uppercase tracking-widest text-teal-700">
                         Anúncio #{anuncio.nr_anuncio}
                       </span>
                     </div>

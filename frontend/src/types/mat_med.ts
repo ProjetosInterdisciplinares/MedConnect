@@ -12,6 +12,7 @@ export interface MatMed {
   cd_tuss?: string | null
   cd_simpro?: string | null
   cd_brasindice?: string | null
+  marca_nome?: string
 }
 
 export interface CreateMatMedForm {

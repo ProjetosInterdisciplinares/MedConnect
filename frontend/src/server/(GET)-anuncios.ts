@@ -7,6 +7,7 @@ export default async function servicesGetAnuncios(p0: number): Promise<ServiceRe
   const response = await fetch(buildUrl("/api/medconnect/anuncio/"), {
     method: "GET",
     headers: getAuthHeaders(),
+    cache: "no-store",
   })
 
   return handleResponse<Anuncio[]>(response, "Nao foi possivel listar anuncios")

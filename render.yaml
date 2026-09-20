@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: medconnect-backend
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn app.wsgi --bind 0.0.0.0:$PORT"
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: medconnect-db
+          property: connectionString
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+
+databases:
+  - name: medconnect-db
+    plan: free
+    region: oregon

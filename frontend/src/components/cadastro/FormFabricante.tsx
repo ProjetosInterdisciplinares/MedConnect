@@ -1,7 +1,16 @@
 "use client"
 
 import { useState, type FormEvent } from "react"
-import { Factory, Building2 } from "lucide-react"
+import { Factory, Building2, CheckCircle } from "lucide-react"
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
 
 import InputField from "./InputField"
 
@@ -14,6 +23,9 @@ export default function FormFabricante() {
     ds_fabricante: "",
     cnpj_fabri: "",
   })
+  
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false)
+  const [lastSaved, setLastSaved] = useState<CreateFabricanteForm | null>(null)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -25,6 +37,9 @@ export default function FormFabricante() {
       return
     }
 
+    setLastSaved(fabricanteForm)
+    setIsSuccessOpen(true)
+
     setFabricanteForm({
       ds_fabricante: "",
       cnpj_fabri: "",
@@ -33,8 +48,8 @@ export default function FormFabricante() {
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
-      <h2 className="text-lg font-bold flex items-center gap-2 text-sky-800">
-        <Factory className="text-sky-800" />
+      <h2 className="text-lg font-bold flex items-center gap-2 text-teal-800">
+        <Factory className="text-teal-800" />
         Cadastrar Fabricante
       </h2>
 
@@ -66,10 +81,40 @@ export default function FormFabricante() {
 
       <button
         type="submit"
-        className="w-full bg-sky-950 hover:bg-sky-900 text-white font-bold py-3 rounded-lg transition-colors"
+        className="w-full text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-lg cursor-pointer"
+        style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)" }}
       >
         Salvar Fabricante
       </button>
+
+      <Dialog open={isSuccessOpen} onOpenChange={setIsSuccessOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-teal-700 text-xl">
+              <CheckCircle className="w-6 h-6" />
+              Cadastro Concluído!
+            </DialogTitle>
+            <DialogDescription>
+              O fabricante foi registrado com sucesso e já está disponível no sistema.
+            </DialogDescription>
+          </DialogHeader>
+          {lastSaved && (
+            <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 space-y-2 mt-2 text-sm">
+              <p><span className="font-semibold text-slate-600">Fabricante:</span> {lastSaved.ds_fabricante}</p>
+              <p><span className="font-semibold text-slate-600">CNPJ:</span> {lastSaved.cnpj_fabri}</p>
+            </div>
+          )}
+          <DialogFooter className="mt-4">
+            <button
+              type="button"
+              onClick={() => setIsSuccessOpen(false)}
+              className="px-4 py-2 bg-teal-600 text-white rounded-lg font-bold hover:bg-teal-700 transition-colors w-full sm:w-auto"
+            >
+              Fechar
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </form>
   )
 }

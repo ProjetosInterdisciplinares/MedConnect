@@ -10,6 +10,8 @@ export interface Anuncio {
   ds_obs: string
   data_anuncio: string
   ie_status: 'A' | 'N' | 'F' | 'I'
+  imagem_anuncio?: string
+  anunciante_razao?: string
 
   // Novos campos vindos da unificação da negociação
   val_proposta: string | null
@@ -25,6 +27,7 @@ export interface CreateAnuncioForm {
   val_base: string
   cd_pessoa_anunciante: number
   ds_obs?: string
+  imagem_anuncio?: string
   // 1. Removido o status do Create. Quando cria, o Django assume o default='A'
 }
 

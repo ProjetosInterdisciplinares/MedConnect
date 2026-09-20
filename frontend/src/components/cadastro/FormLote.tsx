@@ -6,6 +6,7 @@ import {
   Calendar,
   Hash,
   Layers,
+  CheckCircle,
 } from "lucide-react"
 
 import {
@@ -17,6 +18,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
 
 import InputField from "./InputField"
 
@@ -44,6 +54,9 @@ export default function FormLote() {
     cd_material: 0,
     cd_pessoaj: 0,
   })
+
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false)
+  const [lastSaved, setLastSaved] = useState<CreateLoteForm | null>(null)
 
   useEffect(() => {
     async function initialize() {
@@ -92,6 +105,9 @@ export default function FormLote() {
       return
     }
 
+    setLastSaved(loteForm)
+    setIsSuccessOpen(true)
+
     setLoteForm((prev) => ({
       ...prev,
       ds_lote: "",
@@ -106,8 +122,8 @@ export default function FormLote() {
       className="space-y-6"
       onSubmit={handleSubmitLote}
     >
-      <h2 className="text-lg font-bold flex items-center gap-2 text-sky-800">
-        <Layers className="text-sky-800" />
+      <h2 className="text-lg font-bold flex items-center gap-2 text-teal-800">
+        <Layers className="text-teal-800" />
         Cadastrar Lote
       </h2>
 
@@ -121,7 +137,7 @@ export default function FormLote() {
             value={
               loteForm.cd_material
                 ? String(loteForm.cd_material)
-                : undefined
+                : ""
             }
             onValueChange={(value) =>
               setLoteForm((prev) => ({
@@ -132,7 +148,11 @@ export default function FormLote() {
             disabled={materiais.length === 0}
           >
             <SelectTrigger className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm">
-              <SelectValue placeholder="Selecione o insumo" />
+              <SelectValue placeholder="Selecione o insumo">
+                {loteForm.cd_material
+                  ? materiais.find(m => String(m.cd_mat) === String(loteForm.cd_material))?.ds_mat
+                  : undefined}
+              </SelectValue>
             </SelectTrigger>
 
             <SelectContent>
@@ -204,7 +224,7 @@ export default function FormLote() {
             value={
               loteForm.fabricante
                 ? String(loteForm.fabricante)
-                : undefined
+                : ""
             }
             onValueChange={(value) =>
               setLoteForm((prev) => ({
@@ -215,7 +235,11 @@ export default function FormLote() {
             disabled={fabricantes.length === 0}
           >
             <SelectTrigger className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm">
-              <SelectValue placeholder="Selecione o fabricante" />
+              <SelectValue placeholder="Selecione o fabricante">
+                {loteForm.fabricante
+                  ? fabricantes.find(f => String(f.cd_fabricante) === String(loteForm.fabricante))?.ds_fabricante
+                  : undefined}
+              </SelectValue>
             </SelectTrigger>
 
             <SelectContent>
@@ -264,9 +288,44 @@ export default function FormLote() {
 
       </div>
 
-      <button className="w-full bg-sky-950 hover:bg-sky-900 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors cursor-pointer">
+      <button 
+        type="submit"
+        className="w-full text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-lg cursor-pointer"
+        style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)" }}
+      >
         Registrar Lote
       </button>
+
+      <Dialog open={isSuccessOpen} onOpenChange={setIsSuccessOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-teal-700 text-xl">
+              <CheckCircle className="w-6 h-6" />
+              Lote Registrado!
+            </DialogTitle>
+            <DialogDescription>
+              O novo lote foi cadastrado com sucesso para o insumo selecionado.
+            </DialogDescription>
+          </DialogHeader>
+          {lastSaved && (
+            <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 space-y-2 mt-2 text-sm">
+              <p><span className="font-semibold text-slate-600">Insumo:</span> {materiais.find(m => String(m.cd_mat) === String(lastSaved.cd_material))?.ds_mat}</p>
+              <p><span className="font-semibold text-slate-600">Lote:</span> {lastSaved.ds_lote}</p>
+              <p><span className="font-semibold text-slate-600">Validade:</span> {lastSaved.dt_validade ? new Date(lastSaved.dt_validade).toLocaleDateString("pt-BR") : ""}</p>
+              <p><span className="font-semibold text-slate-600">Quantidade Inicial:</span> {lastSaved.qtd_lote} {lastSaved.unidade_med}</p>
+            </div>
+          )}
+          <DialogFooter className="mt-4">
+            <button
+              type="button"
+              onClick={() => setIsSuccessOpen(false)}
+              className="px-4 py-2 bg-teal-600 text-white rounded-lg font-bold hover:bg-teal-700 transition-colors w-full sm:w-auto cursor-pointer"
+            >
+              Fechar
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </form>
   )
 }

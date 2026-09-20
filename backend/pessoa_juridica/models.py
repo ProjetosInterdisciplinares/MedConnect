@@ -36,6 +36,9 @@ class PessoaJuridica(models.Model):
         choices=STATUS_CHOICES,
         default="PENDENTE"
     )
+
+    imagem_perfil = models.TextField(blank=True, null=True)
+
     @property
     def is_authenticated(self):
         return True

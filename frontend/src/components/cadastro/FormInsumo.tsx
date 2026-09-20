@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Package, Tag, Layers, Hash } from "lucide-react"
+import { Package, Tag, Layers, Hash, CheckCircle } from "lucide-react"
 
 import {
   Select,
@@ -12,6 +12,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
 
 import InputField from "./InputField"
 
@@ -36,11 +45,14 @@ export default function FormInsumo() {
     ds_tipo: "" as any,
     ds_pessoaj: 0,
 
-    cd_tiss: "",
+    cd_tiss: undefined,
     cd_tuss: "",
     cd_simpro: "",
     cd_brasindice: "",
   })
+
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false)
+  const [lastSaved, setLastSaved] = useState<CreateMatMedForm | null>(null)
 
   useEffect(() => {
     async function initialize() {
@@ -89,6 +101,9 @@ export default function FormInsumo() {
       return
     }
 
+    setLastSaved(insumoForm)
+    setIsSuccessOpen(true)
+
     setInsumoForm((prev) => ({
       ...prev,
 
@@ -97,7 +112,7 @@ export default function FormInsumo() {
       ds_tipo: "" as any,
       ds_pessoaj: 0,
 
-      cd_tiss: "",
+      cd_tiss: undefined,
       cd_tuss: "",
       cd_simpro: "",
       cd_brasindice: "",
@@ -109,8 +124,8 @@ export default function FormInsumo() {
       className="space-y-6"
       onSubmit={handleSubmit}
     >
-      <h2 className="text-lg font-bold flex items-center gap-2 text-sky-800">
-        <Package className="text-sky-800" />
+      <h2 className="text-lg font-bold flex items-center gap-2 text-teal-800">
+        <Package className="text-teal-800" />
         Cadastrar Insumo
       </h2>
 
@@ -143,7 +158,11 @@ export default function FormInsumo() {
           }
         >
           <SelectTrigger>
-            <SelectValue placeholder="Selecione uma categoria" />
+            <SelectValue placeholder="Selecione uma categoria">
+              {insumoForm.ds_tipo 
+                ? categories.find(c => String(c.cd_tipo) === String(insumoForm.ds_tipo))?.ds_tipo 
+                : undefined}
+            </SelectValue>
           </SelectTrigger>
 
           <SelectContent>
@@ -170,7 +189,7 @@ export default function FormInsumo() {
             value={
               insumoForm.ds_marca
                 ? String(insumoForm.ds_marca)
-                : undefined
+                : ""
             }
             onValueChange={(value) =>
               setInsumoForm((prev) => ({
@@ -180,7 +199,11 @@ export default function FormInsumo() {
             }
           >
             <SelectTrigger>
-              <SelectValue placeholder="Selecione" />
+              <SelectValue placeholder="Selecione">
+                {insumoForm.ds_marca 
+                  ? brands.find(b => String(b.cd_marca) === String(insumoForm.ds_marca))?.ds_marca 
+                  : undefined}
+              </SelectValue>
             </SelectTrigger>
 
             <SelectContent>
@@ -207,18 +230,30 @@ export default function FormInsumo() {
 
       {/* TISS + TUSS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <InputField
-          label="Código TISS"
-          icon={Hash}
-          placeholder="Ex: 19"
-          value={insumoForm.cd_tiss || ""}
-          onChange={(event) =>
-            setInsumoForm((prev) => ({
-              ...prev,
-              cd_tiss: event.target.value,
-            }))
-          }
-        />
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-semibold">Tabela TISS</label>
+          <Select
+            value={insumoForm.cd_tiss}
+            onValueChange={(value) =>
+              setInsumoForm((prev) => ({
+                ...prev,
+                cd_tiss: value || undefined,
+              }))
+            }
+          >
+            <SelectTrigger className="w-full bg-white border border-zinc-200 rounded-lg text-sm h-11">
+              <SelectValue placeholder="Selecione">
+                {insumoForm.cd_tiss === "19" ? "19 - Brasíndice" : insumoForm.cd_tiss === "20" ? "20 - TUSS" : undefined}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="19">19 - Brasíndice</SelectItem>
+                <SelectItem value="20">20 - TUSS</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
 
         <InputField
           label="Código TUSS"
@@ -263,9 +298,43 @@ export default function FormInsumo() {
         />
       </div>
 
-      <button className="w-full bg-sky-950 hover:bg-sky-900 text-white font-bold py-3 rounded-lg transition-colors">
+      <button 
+        type="submit"
+        className="w-full text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-lg cursor-pointer"
+        style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)" }}
+      >
         Salvar Insumo
       </button>
+
+      <Dialog open={isSuccessOpen} onOpenChange={setIsSuccessOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-teal-700 text-xl">
+              <CheckCircle className="w-6 h-6" />
+              Insumo Cadastrado!
+            </DialogTitle>
+            <DialogDescription>
+              O insumo foi registrado com sucesso e está pronto para receber lotes.
+            </DialogDescription>
+          </DialogHeader>
+          {lastSaved && (
+            <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 space-y-2 mt-2 text-sm">
+              <p><span className="font-semibold text-slate-600">Insumo:</span> {lastSaved.ds_mat}</p>
+              <p><span className="font-semibold text-slate-600">Categoria:</span> {categories.find(c => String(c.cd_tipo) === String(lastSaved.ds_tipo))?.ds_tipo}</p>
+              <p><span className="font-semibold text-slate-600">Marca:</span> {brands.find(b => String(b.cd_marca) === String(lastSaved.ds_marca))?.ds_marca}</p>
+            </div>
+          )}
+          <DialogFooter className="mt-4">
+            <button
+              type="button"
+              onClick={() => setIsSuccessOpen(false)}
+              className="px-4 py-2 bg-teal-600 text-white rounded-lg font-bold hover:bg-teal-700 transition-colors w-full sm:w-auto cursor-pointer"
+            >
+              Fechar
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </form>
   )
 }

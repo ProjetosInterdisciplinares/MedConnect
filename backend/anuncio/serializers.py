@@ -6,6 +6,10 @@ class AnuncioSerializer(serializers.ModelSerializer):
         source="cd_mat.ds_mat",
         read_only=True
     )
+    anunciante_razao = serializers.CharField(
+        source="cd_pessoa_anunciante.razao_social",
+        read_only=True
+    )
 
     class Meta:
         model = Anuncio

@@ -6,6 +6,7 @@ export interface PessoaJuridica {
   resp_tec: string
   nr_cnpj: string
   razao_social: string
+  imagem_perfil?: string | null
 }
 
 export interface CreatePessoaJuridicaForm {
@@ -15,6 +16,7 @@ export interface CreatePessoaJuridicaForm {
   resp_tec: string
   nr_cnpj: string
   razao_social: string
+  imagem_perfil?: string | null
 }
 
 export type UpdatePessoaJuridicaForm = Partial<CreatePessoaJuridicaForm>

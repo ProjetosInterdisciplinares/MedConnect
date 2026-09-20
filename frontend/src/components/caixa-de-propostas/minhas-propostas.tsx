@@ -42,7 +42,7 @@ export function PropostasTab() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 text-sky-600 animate-spin" />
+        <Loader2 className="w-8 h-8 text-teal-600 animate-spin" />
       </div>
     )
   }
@@ -68,11 +68,11 @@ export function PropostasTab() {
         return (
           <div key={anuncio.nr_anuncio} className="bg-white border border-zinc-200/80 p-5 md:p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm hover:shadow-md transition-shadow duration-200">
             <div className="flex items-start gap-4">
-              <div className="hidden md:flex w-12 h-12 rounded-full bg-sky-50 items-center justify-center shrink-0 border border-sky-100">
-                <Package className="w-6 h-6 text-sky-700" />
+              <div className="hidden md:flex w-12 h-12 rounded-full bg-teal-50 items-center justify-center shrink-0 border border-teal-100">
+                <Package className="w-6 h-6 text-teal-700" />
               </div>
               <div>
-                <span className="text-[11px] font-bold uppercase tracking-widest text-sky-700 block mb-1">Anúncio #{anuncio.nr_anuncio}</span>
+                <span className="text-[11px] font-bold uppercase tracking-widest text-teal-700 block mb-1">Anúncio #{anuncio.nr_anuncio}</span>
                 <h3 className="font-bold text-lg text-zinc-800 leading-tight">{nomeMaterial}</h3>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-zinc-500 mt-2">
                   <span className="flex items-center gap-1.5 bg-zinc-50 px-2 py-1 rounded-md border border-zinc-100">
@@ -86,10 +86,10 @@ export function PropostasTab() {
             </div>
 
             <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-t-0 border-zinc-100 pt-4 md:pt-0 mt-2 md:mt-0">
-              <span className="text-sky-700 font-extrabold text-xl">
+              <span className="text-teal-700 font-extrabold text-xl">
                 {Number(valorExibido).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
               </span>
-              <span className="px-3 py-1.5 text-xs font-bold rounded-full border tracking-wide shadow-sm bg-sky-50 text-sky-700 border-sky-200">
+              <span className="px-3 py-1.5 text-xs font-bold rounded-full border tracking-wide shadow-sm bg-teal-50 text-teal-700 border-teal-200">
                 ENVIADA
               </span>
               <div className="flex gap-2 ml-4">
