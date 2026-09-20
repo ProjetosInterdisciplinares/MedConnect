@@ -4,7 +4,8 @@ services:
     env: python
     region: oregon
     plan: free
-    buildCommand: "./build.sh"
+    rootDir: Codigo/backend
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate"
     startCommand: "gunicorn app.wsgi --bind 0.0.0.0:$PORT"
     envVars:
       - key: SECRET_KEY
