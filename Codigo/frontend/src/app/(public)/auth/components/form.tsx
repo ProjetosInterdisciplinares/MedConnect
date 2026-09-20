@@ -218,7 +218,7 @@ export default function Form(): JSX.Element {
         <AnimatedBackground />
 
         {/* container principal da animação */}
-        <div className="relative overflow-hidden w-full max-w-[850px] min-h-[520px] bg-white/85 backdrop-blur-md rounded-3xl z-10"
+        <div className="relative overflow-hidden w-full max-w-[850px] h-[650px] max-h-[85vh] bg-white/85 backdrop-blur-md rounded-3xl z-10"
           style={{ boxShadow: "0 25px 60px -12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.03)" }}
         >
 
