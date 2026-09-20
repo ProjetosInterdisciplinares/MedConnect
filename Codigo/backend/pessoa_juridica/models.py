@@ -39,6 +39,8 @@ class PessoaJuridica(models.Model):
 
     imagem_perfil = models.TextField(blank=True, null=True)
 
+    is_admin = models.BooleanField(default=False)
+
     @property
     def is_authenticated(self):
         return True

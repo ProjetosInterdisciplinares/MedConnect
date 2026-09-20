@@ -9,7 +9,6 @@ const NAV_LINKS = [
   { name: "Sobre Nós", href: "/#sobre", icon: Info },
   { name: "Como Funciona", href: "/#como-funciona", icon: HelpCircle },
   { name: "Planos", href: "/#planos", icon: CreditCard },
-  { name: "Área Restrita", href: "/admin-painel/credenciamentos", icon: Shield },
 ]
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {

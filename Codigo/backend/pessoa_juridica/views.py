@@ -22,14 +22,18 @@ class MinhaPessoaJuridicaView(APIView):
         serializer = PessoaJuridicaSerializer(request.user)
         return Response(serializer.data)
 
+from rest_framework.permissions import BasePermission
+
+class IsAdminUserPJ(BasePermission):
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated and getattr(request.user, 'is_admin', False))
+
 class AdminPessoaJuridicaListView(generics.ListAPIView):
     queryset = PessoaJuridica.objects.all().order_by('-cd_pessoaj')
     serializer_class = PessoaJuridicaSerializer
-    # Rota sem autenticação apenas para apresentação
-    permission_classes = []
+    permission_classes = [IsAdminUserPJ]
 
 class AdminPessoaJuridicaUpdateView(generics.UpdateAPIView):
     queryset = PessoaJuridica.objects.all()
     serializer_class = PessoaJuridicaSerializer
-    # Rota sem autenticação apenas para apresentação
-    permission_classes = []
+    permission_classes = [IsAdminUserPJ]

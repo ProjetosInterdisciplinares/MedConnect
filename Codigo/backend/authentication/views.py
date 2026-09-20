@@ -53,10 +53,12 @@ def login(request):
     refresh["cnpj"] = user.nr_cnpj
     refresh["id"] = user.cd_pessoaj
     refresh["name"] = user.nm_pessoaj
+    refresh["is_admin"] = user.is_admin
 
     return Response({
     "id": user.cd_pessoaj,
     "cnpj": user.nr_cnpj,
+    "is_admin": user.is_admin,
     "access": str(refresh.access_token),
     "refresh": str(refresh),
     })

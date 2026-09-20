@@ -14,7 +14,8 @@ import {
   Inbox,
   Menu,
   X,
-  ArrowRight
+  ArrowRight,
+  Shield
 } from "lucide-react"
 import Footer from "@/components/ui/Footer"
 
@@ -33,6 +34,7 @@ const NAV_LINKS = [
   { name: "Cadastro", href: "/cadastrar", icon: FileText },
   { name: "Publicar Anúncio", href: "/anunciar", icon: SquarePlus },
   { name: "Caixa de propostas", href: "/caixa-de-propostas", icon: Inbox },
+  { name: "Painel Administrativo", href: "/admin-painel/credenciamentos", icon: Shield, isAdminOnly: true },
 ]
 
 interface LayoutProps {
@@ -126,7 +128,7 @@ export default function Layout({ children }: LayoutProps) {
 
         {/* MENU PRINCIPAL (DESKTOP) */}
         <div className="hidden lg:flex items-center gap-1">
-          {NAV_LINKS.map((link) => {
+          {NAV_LINKS.filter(link => !link.isAdminOnly || empresa?.is_admin).map((link) => {
             const Icon = link.icon
             const isActive = pathname === link.href
 
@@ -220,7 +222,7 @@ export default function Layout({ children }: LayoutProps) {
           style={{ backgroundColor: "rgba(4, 47, 46, 0.98)", backdropFilter: "blur(20px)" }}
         >
           <div className={`relative flex flex-col items-center gap-2 pt-8 px-6 transition-all duration-400 ${isMobileMenuOpen ? "translate-y-0 opacity-100" : "-translate-y-4 opacity-0"}`}>
-            {NAV_LINKS.map((link, i) => {
+            {NAV_LINKS.filter(link => !link.isAdminOnly || empresa?.is_admin).map((link, i) => {
               const Icon = link.icon
               const isActive = pathname === link.href
 

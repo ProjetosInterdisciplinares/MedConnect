@@ -21,11 +21,22 @@ export default function AdminCredenciamentos() {
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<number | null>(null)
 
+  const [acessoNegado, setAcessoNegado] = useState(false)
+
   const fetchEmpresas = async () => {
     try {
       setLoading(true)
+      const token = localStorage.getItem("token")
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-      const res = await fetch(`${apiUrl}/api/medconnect/admin/pessoas/`)
+      const res = await fetch(`${apiUrl}/api/medconnect/admin/pessoas/`, {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      })
+      if (res.status === 401 || res.status === 403) {
+        setAcessoNegado(true)
+        return
+      }
       if (!res.ok) throw new Error("Erro ao carregar")
       const data = await res.json()
       setEmpresas(data)
@@ -44,10 +55,12 @@ export default function AdminCredenciamentos() {
     try {
       setActionLoading(id)
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+      const token = localStorage.getItem("token")
       const res = await fetch(`${apiUrl}/api/medconnect/admin/pessoas/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({ status: novoStatus }),
       })
@@ -65,6 +78,16 @@ export default function AdminCredenciamentos() {
 
   const pendentes = empresas.filter(e => e.status === "PENDENTE")
   const resolvidas = empresas.filter(e => e.status !== "PENDENTE")
+
+  if (acessoNegado) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh]">
+        <AlertCircle className="w-16 h-16 text-red-500 mb-4" />
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Acesso Negado</h1>
+        <p className="text-gray-500">Você não tem permissão para acessar esta área.</p>
+      </div>
+    )
+  }
 
   return (
     <div className="relative min-h-screen w-full font-sans text-gray-900 bg-gray-50/50 p-6 md:p-12 overflow-x-hidden">
