@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { Handshake, History } from "lucide-react"
 import { NegociacaoTab } from "@/components/caixa-de-propostas/em-negociacao"
@@ -20,7 +20,7 @@ const TABS = [
   },
 ]
 
-export default function CaixaDePropostasPage() {
+function CaixaDePropostasContent() {
   const searchParams = useSearchParams()
 
   const [activeTab, setActiveTab] = useState<string>(
@@ -80,5 +80,13 @@ export default function CaixaDePropostasPage() {
       </div>
       </div>
     </div>
+  )
+}
+
+export default function CaixaDePropostasPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen w-full flex items-center justify-center">Carregando...</div>}>
+      <CaixaDePropostasContent />
+    </Suspense>
   )
 }
