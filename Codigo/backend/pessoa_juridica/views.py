@@ -21,3 +21,15 @@ class MinhaPessoaJuridicaView(APIView):
     def get(self, request):
         serializer = PessoaJuridicaSerializer(request.user)
         return Response(serializer.data)
+
+class AdminPessoaJuridicaListView(generics.ListAPIView):
+    queryset = PessoaJuridica.objects.all().order_by('-cd_pessoaj')
+    serializer_class = PessoaJuridicaSerializer
+    # Rota sem autenticação apenas para apresentação
+    permission_classes = []
+
+class AdminPessoaJuridicaUpdateView(generics.UpdateAPIView):
+    queryset = PessoaJuridica.objects.all()
+    serializer_class = PessoaJuridicaSerializer
+    # Rota sem autenticação apenas para apresentação
+    permission_classes = []

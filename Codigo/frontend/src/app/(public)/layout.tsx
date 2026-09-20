@@ -3,12 +3,13 @@
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Info, HelpCircle, CreditCard, Menu, X, ArrowRight } from "lucide-react"
+import { Info, HelpCircle, CreditCard, Menu, X, ArrowRight, Shield } from "lucide-react"
 
 const NAV_LINKS = [
   { name: "Sobre Nós", href: "/#sobre", icon: Info },
   { name: "Como Funciona", href: "/#como-funciona", icon: HelpCircle },
   { name: "Planos", href: "/#planos", icon: CreditCard },
+  { name: "Área Restrita", href: "/admin-painel/credenciamentos", icon: Shield },
 ]
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {

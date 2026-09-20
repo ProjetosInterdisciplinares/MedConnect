@@ -19,4 +19,16 @@ urlpatterns = [
         views.PessoaJuridicaRetrieveUpdateDestroy.as_view(),
         name='pessoa_juridica-detail-view'
     ),
+
+    path(
+        'admin/pessoas/',
+        views.AdminPessoaJuridicaListView.as_view(),
+        name='admin-pessoa_juridica-list'
+    ),
+
+    path(
+        'admin/pessoas/<int:pk>',
+        views.AdminPessoaJuridicaUpdateView.as_view(),
+        name='admin-pessoa_juridica-update'
+    ),
 ]
