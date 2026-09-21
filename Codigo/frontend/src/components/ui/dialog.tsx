@@ -83,7 +83,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-header"
-      className={cn("-mx-4 -mt-4 mb-2 flex flex-col gap-1.5 rounded-t-xl bg-teal-700 p-4 text-white [&_[data-slot=dialog-description]]:!text-teal-100 [&_[data-slot=dialog-title]]:!text-white [&_svg]:!text-teal-50", className)}
+      className={cn("-mx-4 -mt-4 mb-2 flex flex-col gap-1.5 rounded-t-xl bg-blue-700 p-4 text-white [&_[data-slot=dialog-description]]:!text-blue-100 [&_[data-slot=dialog-title]]:!text-white [&_svg]:!text-blue-50", className)}
       {...props}
     />
   )

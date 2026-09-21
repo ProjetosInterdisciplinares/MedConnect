@@ -74,17 +74,17 @@ export default function PerfilHeader({ empresa }: Props) {
     <>
       <div className="bg-white border border-slate-200 p-8 rounded-3xl shadow-sm mb-8 relative overflow-hidden">
         {/* Decorative gradient top bar */}
-        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-teal-600 to-teal-400" />
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-600 to-blue-400" />
         
         <div className="flex flex-col md:flex-row items-start justify-between gap-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 w-full text-center sm:text-left">
             {/* Foto de Perfil */}
             <div className="relative group shrink-0">
-              <div className="w-28 h-28 bg-teal-50 rounded-full flex items-center justify-center border-[3px] border-teal-100 overflow-hidden shadow-sm">
+              <div className="w-28 h-28 bg-blue-50 rounded-full flex items-center justify-center border-[3px] border-blue-100 overflow-hidden shadow-sm">
                 {empresa?.imagem_perfil ? (
                   <img src={empresa.imagem_perfil} alt="Perfil" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="font-bold text-3xl text-teal-700">
+                  <span className="font-bold text-3xl text-blue-700">
                     {empresa?.nm_pessoaj?.substring(0, 2).toUpperCase() ?? "PJ"}
                   </span>
                 )}
@@ -96,23 +96,23 @@ export default function PerfilHeader({ empresa }: Props) {
                 {empresa?.razao_social ?? "Carregando..."}
               </h1>
 
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 mt-2 bg-emerald-50 text-emerald-700 text-[11px] font-bold uppercase tracking-wider rounded-full border border-emerald-200">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 mt-2 bg-sky-50 text-sky-700 text-[11px] font-bold uppercase tracking-wider rounded-full border border-sky-200">
                 <CheckCircle className="w-3 h-3" /> Empresa Verificada
               </span>
 
               <div className="mt-5 space-y-2.5 text-sm text-slate-600 font-medium">
                 <p className="flex items-center justify-center sm:justify-start gap-2.5">
-                  <Mail className="w-4 h-4 text-teal-600 shrink-0" />
+                  <Mail className="w-4 h-4 text-blue-600 shrink-0" />
                   {empresa?.email_pj}
                 </p>
 
                 <p className="flex items-center justify-center sm:justify-start gap-2.5">
-                  <Phone className="w-4 h-4 text-teal-600 shrink-0" />
+                  <Phone className="w-4 h-4 text-blue-600 shrink-0" />
                   Responsável: <span className="font-bold text-slate-800">{empresa?.resp_tec}</span>
                 </p>
 
                 <p className="flex items-center justify-center sm:justify-start gap-2.5">
-                  <MapPin className="w-4 h-4 text-teal-600 shrink-0" />
+                  <MapPin className="w-4 h-4 text-blue-600 shrink-0" />
                   CNPJ: <span className="font-bold text-slate-800">{empresa?.nr_cnpj}</span>
                 </p>
               </div>
@@ -121,7 +121,7 @@ export default function PerfilHeader({ empresa }: Props) {
 
           <button 
             onClick={handleOpenEdit}
-            className="w-full md:w-auto flex items-center justify-center gap-2 text-sm font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-5 py-2.5 rounded-xl transition-all cursor-pointer shadow-sm hover:shadow"
+            className="w-full md:w-auto flex items-center justify-center gap-2 text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-5 py-2.5 rounded-xl transition-all cursor-pointer shadow-sm hover:shadow"
           >
             <Edit className="w-4 h-4" />
             Editar Perfil
@@ -134,7 +134,7 @@ export default function PerfilHeader({ empresa }: Props) {
         <DialogContent className="sm:max-w-[500px]">
           <form onSubmit={handleSave}>
             <DialogHeader>
-              <DialogTitle className="text-xl text-teal-800 flex items-center gap-2">
+              <DialogTitle className="text-xl text-blue-800 flex items-center gap-2">
                 <Edit className="w-5 h-5" /> Editar Informações
               </DialogTitle>
               <DialogDescription>
@@ -146,11 +146,11 @@ export default function PerfilHeader({ empresa }: Props) {
               {/* Image Upload Area */}
               <div className="flex flex-col items-center justify-center gap-3">
                 <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                  <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center overflow-hidden border-2 border-dashed border-slate-300 group-hover:border-teal-500 transition-colors">
+                  <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center overflow-hidden border-2 border-dashed border-slate-300 group-hover:border-blue-500 transition-colors">
                     {formData.imagem_perfil ? (
                       <img src={formData.imagem_perfil} alt="Preview" className="w-full h-full object-cover group-hover:opacity-50 transition-opacity" />
                     ) : (
-                      <Camera className="w-8 h-8 text-slate-400 group-hover:text-teal-500 transition-colors" />
+                      <Camera className="w-8 h-8 text-slate-400 group-hover:text-blue-500 transition-colors" />
                     )}
                   </div>
                   <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -175,7 +175,7 @@ export default function PerfilHeader({ empresa }: Props) {
                     type="text"
                     value={formData.razao_social}
                     onChange={(e) => setFormData({ ...formData, razao_social: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all text-sm shadow-inner"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm shadow-inner"
                   />
                 </div>
 
@@ -186,7 +186,7 @@ export default function PerfilHeader({ empresa }: Props) {
                     type="email"
                     value={formData.email_pj}
                     onChange={(e) => setFormData({ ...formData, email_pj: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all text-sm shadow-inner"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm shadow-inner"
                   />
                 </div>
 
@@ -197,7 +197,7 @@ export default function PerfilHeader({ empresa }: Props) {
                     type="text"
                     value={formData.resp_tec}
                     onChange={(e) => setFormData({ ...formData, resp_tec: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all text-sm shadow-inner"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm shadow-inner"
                   />
                 </div>
               </div>
@@ -216,7 +216,7 @@ export default function PerfilHeader({ empresa }: Props) {
                 type="submit"
                 disabled={isSaving}
                 className="flex items-center justify-center gap-2 px-5 py-2.5 text-white rounded-xl font-bold hover:opacity-90 transition-opacity cursor-pointer shadow-md disabled:opacity-70"
-                style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)" }}
+                style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)" }}
               >
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                 Salvar Alterações

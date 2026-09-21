@@ -3,36 +3,48 @@
 import React, { useEffect, useState, useMemo } from "react"
 import servicesGetAnuncios from "@/server/(GET)-anuncios"
 import servicesGetMaterials from "@/server/(GET)-materials-and-brands" 
-import { Button } from "@/components/ui/button"
+import servicesGetLotes from "@/server/(GET)-lotes"
 import { Input } from "@/components/ui/input"
-import { Search, PackageX, ShoppingCart, Building2, Package, Info, ChevronRight } from "lucide-react"
-import { Anuncio, MatMed } from "@/types"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Search, PackageX, SlidersHorizontal, MapPin } from "lucide-react"
+import { Anuncio, MatMed, Lote } from "@/types"
 import { useRouter } from "next/navigation"
 import { Pagination } from "@/components/ui/pagination"
 import AnimatedBackground from "@/components/ui/animated-background"
 
-
-const ITEMS_PER_PAGE = 12;
+const ITEMS_PER_PAGE = 6;
 
 export default function Anuncios() {
   const [anuncios, setAnuncios] = useState<Anuncio[]>([])
   const [materiais, setMateriais] = useState<MatMed[]>([])
+  const [lotes, setLotes] = useState<Lote[]>([])
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
+  const [loggedUserId, setLoggedUserId] = useState<number | null>(null)
   
+  const [categoria, setCategoria] = useState("Todas")
+  const [fabricanteFiltro, setFabricanteFiltro] = useState("")
+  const [localizacaoFiltro, setLocalizacaoFiltro] = useState("")
+  const [ordenacao, setOrdenacao] = useState("recentes")
+
   const [currentPage, setCurrentPage] = useState(1)
   const router = useRouter()
 
   useEffect(() => {
     async function load() {
       try {
-        const [anunciosResult, materiaisResult] = await Promise.all([
+        const storedUserId = localStorage.getItem("userId")
+        if (storedUserId) setLoggedUserId(Number(storedUserId))
+
+        const [anunciosResult, materiaisResult, lotesResult] = await Promise.all([
           servicesGetAnuncios(0),
           servicesGetMaterials(),
+          servicesGetLotes(),
         ])
 
         if (Array.isArray(anunciosResult)) setAnuncios(anunciosResult)
         if (Array.isArray(materiaisResult)) setMateriais(materiaisResult)
+        if (Array.isArray(lotesResult)) setLotes(lotesResult)
       } catch (error) {
         console.error("Erro ao buscar dados do catálogo:", error)
       } finally {
@@ -44,28 +56,78 @@ export default function Anuncios() {
   }, [])
 
   const materiaisMap = useMemo(() => {
-    return new Map(materiais.map((m) => [m.cd_mat, m.ds_mat]))
+    return new Map(materiais.map((m) => [m.cd_mat, m]))
   }, [materiais])
+
+  const lotesMap = useMemo(() => {
+    return new Map(lotes.map((l) => [l.nr_lote, l]))
+  }, [lotes])
+
+  const fabricantesUnicos = useMemo(() => {
+    const fabs = new Set<string>()
+    anuncios.forEach(a => {
+      if (loggedUserId !== null && a.cd_pessoa_anunciante === loggedUserId) return;
+      const materialObj = materiaisMap.get(a.cd_mat)
+      const fab = String(materialObj?.marca_nome || (a as any).nm_fabricante || (a as any).ds_marca_mat || "Outros").trim()
+      if (fab && fab !== "undefined") fabs.add(fab)
+    })
+    return Array.from(fabs).sort()
+  }, [anuncios, loggedUserId, materiaisMap])
+
+  const localizacoesUnicas = useMemo(() => {
+    const locs = new Set<string>()
+    anuncios.forEach(a => {
+      if (loggedUserId !== null && a.cd_pessoa_anunciante === loggedUserId) return;
+      // Usando o nome do anunciante como "localização" caso não exista cidade no banco
+      const loc = String(a.anunciante_razao || (a as any).ds_cidade || (a as any).nm_cidade || "Desconhecida").trim()
+      if (loc && loc !== "undefined") locs.add(loc)
+    })
+    return Array.from(locs).sort()
+  }, [anuncios, loggedUserId])
 
   const filteredAnuncios = useMemo(() => {
     const term = search.toLowerCase().trim()
-    return anuncios.filter((a) => {
-      const nomeProduct = materiaisMap.get(a.cd_mat)?.toLowerCase() ?? ""
-      const vendedor = String((a as any).nm_vendedor || (a as any).ds_empresa || "").toLowerCase()
+    let filtered = anuncios.filter((a) => {
+      if (loggedUserId !== null && a.cd_pessoa_anunciante === loggedUserId) return false;
+
+      const materialObj = materiaisMap.get(a.cd_mat)
+      const nomeProduct = materialObj?.ds_mat.toLowerCase() ?? ""
+      const tipoProduct = materialObj?.ds_tipo ?? ""
+      const vendedor = String((a as any).nm_vendedor || (a as any).ds_empresa || (a as any).anunciante_razao || "").toLowerCase()
       const nrAnuncio = a.nr_anuncio?.toString() || ""
-      const fabricante = String((a as any).ds_marca || (a as any).nm_fabricante || (a as any).ds_marca_mat || "").toLowerCase()
+      const fabricante = String(materialObj?.marca_nome || (a as any).nm_fabricante || (a as any).ds_marca_mat || "Outros").toLowerCase()
+      const cidade = String(a.anunciante_razao || (a as any).ds_cidade || (a as any).nm_cidade || "Desconhecida").toLowerCase()
       
-      return (
+      const matchesSearch = (
         nrAnuncio.includes(term) ||
         nomeProduct.includes(term) ||
         vendedor.includes(term) ||
         fabricante.includes(term)
       )
+
+      const matchesFabricante = !fabricanteFiltro || fabricante.includes(fabricanteFiltro.toLowerCase())
+      const matchesLocalizacao = !localizacaoFiltro || cidade.includes(localizacaoFiltro.toLowerCase())
+      
+      const matchesCategoria = 
+        categoria === "Todas" || 
+        (categoria === "Medicamentos" && tipoProduct === "MD01") ||
+        (categoria === "Materiais Hospitalares" && tipoProduct === "MT01");
+
+      return matchesSearch && matchesFabricante && matchesLocalizacao && matchesCategoria
     })
-  }, [anuncios, materiaisMap, search])
+    
+    // Ordenação básica se a API retornou campos úteis
+    if (ordenacao === "recentes") {
+      filtered = filtered.sort((a, b) => b.nr_anuncio - a.nr_anuncio)
+    } else if (ordenacao === "antigos") {
+      filtered = filtered.sort((a, b) => a.nr_anuncio - b.nr_anuncio)
+    }
+
+    return filtered;
+  }, [anuncios, materiaisMap, search, fabricanteFiltro, localizacaoFiltro, loggedUserId, categoria, ordenacao])
 
   const totalPages = useMemo(() => {
-    return Math.ceil(filteredAnuncios.length / ITEMS_PER_PAGE)
+    return Math.ceil(filteredAnuncios.length / ITEMS_PER_PAGE) || 1
   }, [filteredAnuncios])
 
   const paginatedAnuncios = useMemo(() => {
@@ -78,11 +140,16 @@ export default function Anuncios() {
     setCurrentPage(1)
   }
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-transparent w-full flex items-center justify-center p-6">
         <div className="text-center space-y-3">
-          <div className="w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
           <p className="text-slate-500 font-medium">Carregando catálogo de anúncios...</p>
         </div>
       </div>
@@ -90,168 +157,239 @@ export default function Anuncios() {
   }
 
   return (
-    <div className="min-h-screen bg-transparent w-full selection:bg-teal-500/20 antialiased relative">
+    <div className="min-h-screen bg-transparent w-full selection:bg-blue-500/20 antialiased relative">
       <AnimatedBackground />
-      <div className="w-full max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10">
+      <div className="w-full max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 relative z-10">
 
-        {/* cabecalho e barra de pesquisa  */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 p-6 sm:p-8 rounded-3xl shadow-lg border border-teal-900/10"
-          style={{ background: "linear-gradient(135deg, #042f2e 0%, #0f766e 100%)" }}
-        >
-          <div className="space-y-1.5">
-            <h1 className="text-3xl font-black text-white tracking-tight">Catálogo de Insumos</h1>
-            <p className="text-sm font-medium text-teal-100/80">
-              Encontre medicamentos e produtos hospitalares disponíveis para compra!
-            </p>
-          </div>
-          <div className="relative w-full md:w-96 group">
-            <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400 group-focus-within:text-teal-600 transition-colors duration-200" />
-            <Input
-              placeholder="Buscar por produto, fabricante, ID..."
-              className="pl-11 h-11 bg-white border-white/20 focus-visible:ring-4 focus-visible:ring-teal-500/30 focus-visible:border-teal-400 text-slate-800 placeholder:text-slate-400 rounded-xl transition-all duration-300 text-sm shadow-inner"
-              value={search}
-              onChange={handleSearchChange}
-            />
-          </div>
+        {/* Título da página */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-blue-950 tracking-tight">Catálogo de Insumos</h1>
+          <p className="text-sm font-medium text-slate-500 mt-1">
+            {filteredAnuncios.length} anúncios disponíveis
+          </p>
         </div>
 
-        {/* display dos anuncios */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-3">
-          {paginatedAnuncios.length > 0 ? (
-            paginatedAnuncios.map((anuncio) => {
-              const nomeMaterial = materiaisMap.get(anuncio.cd_mat) ?? "Material não identificado"
-              const anunciante = anuncio.anunciante_razao || "Distribuidora Hospitalar"
-              
-              let statusLabel = "Inativo"
-              let statusColor = "bg-slate-100 text-slate-700 border-slate-200"
-              let statusDot = "bg-slate-400"
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Sidebar Filtros */}
+          <aside className="w-full lg:w-[260px] shrink-0 bg-white p-6 rounded-2xl shadow-sm h-fit space-y-6">
+            <div className="flex items-center gap-2 text-slate-800 font-bold mb-4">
+              <SlidersHorizontal className="w-4 h-4 text-slate-500" />
+              Filtros
+            </div>
 
-              if (anuncio.ie_status === "A") {
-                statusLabel = "Ativo"
-                statusColor = "bg-emerald-50 text-emerald-700 border-emerald-200"
-                statusDot = "bg-emerald-500"
-              } else if (anuncio.ie_status === "F") {
-                statusLabel = "Finalizado"
-                statusColor = "bg-amber-50 text-amber-700 border-amber-200"
-                statusDot = "bg-amber-500"
-              }
-
-              return (
-                <div
-                  key={anuncio.nr_anuncio}
-                  className="group flex flex-col bg-white border border-slate-200 shadow-sm hover:shadow-xl hover:shadow-teal-900/10 hover:-translate-y-1 transition-all duration-300 rounded-2xl overflow-hidden"
-                >
-                  {/* Cabeçalho Verde: Nome + ID */}
-                  <div className="w-full bg-teal-700 px-4 py-3 flex items-start justify-between gap-3 shrink-0 border-b border-teal-800">
-                    <h3 className="text-base font-bold text-white leading-snug line-clamp-2">
-                      {nomeMaterial}
-                    </h3>
-                    <span className="text-teal-200/80 text-xs font-bold shrink-0 mt-0.5">
-                      #{anuncio.nr_anuncio}
-                    </span>
-                  </div>
-
-                  {/* Razão Social + Status */}
-                  <div className="bg-slate-50 border-b border-slate-100 px-4 py-2.5 flex items-center justify-between gap-2 shrink-0">
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 max-w-[65%] truncate">
-                      <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="truncate" title={anunciante}>{anunciante}</span>
-                    </div>
-                    
-                    <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${statusColor}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${statusDot}`} />
-                      {statusLabel}
-                    </span>
-                  </div>
-
-                  {/* Área da imagem (Sempre presente para travar altura) */}
-                  <div className="w-full h-44 bg-zinc-100 border-b border-slate-100 shrink-0 relative overflow-hidden flex items-center justify-center">
-                    {anuncio.imagem_anuncio ? (
-                      <img 
-                        src={anuncio.imagem_anuncio} 
-                        alt={nomeMaterial} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-all duration-500"
+            {/* Categoria */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold text-slate-700">Categoria</h3>
+              <div className="space-y-3">
+                {["Todas", "Medicamentos", "Materiais Hospitalares"].map((cat) => (
+                  <label key={cat} className="flex items-center gap-3 cursor-pointer group">
+                    <div className="relative flex items-center justify-center">
+                      <input
+                        type="radio"
+                        name="categoria"
+                        value={cat}
+                        checked={categoria === cat}
+                        onChange={(e) => { setCategoria(e.target.value); setCurrentPage(1); }}
+                        className="peer sr-only"
                       />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center text-slate-300 opacity-60">
-                        <PackageX className="w-10 h-10 mb-2" />
-                        <span className="text-xs font-bold uppercase tracking-widest">Sem foto</span>
+                      <div className="w-4 h-4 rounded-full border border-slate-300 peer-checked:border-blue-600 flex items-center justify-center transition-colors bg-white">
+                        <div className={`w-2 h-2 rounded-full bg-blue-600 transition-transform ${categoria === cat ? 'scale-100' : 'scale-0'}`} />
                       </div>
-                    )}
-                  </div>
+                    </div>
+                    <span className="text-xs text-slate-600 font-medium group-hover:text-blue-700 transition-colors">
+                      {cat}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
 
-                  {/* Conteúdo: Preço e Quantidade */}
-                  <div className="p-4 py-4 space-y-3 grow flex flex-col justify-center">
-                    <div className="flex flex-col mb-1">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                        Valor Base
-                      </p>
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="text-sm font-bold text-teal-700">R$</span>
-                        <span className="text-3xl font-extrabold text-teal-700 tracking-tight">
+            {/* Fabricante */}
+            <div className="space-y-3 pt-4 border-t border-slate-100">
+              <label className="text-sm font-bold text-slate-700 block">Fabricante</label>
+              <div className="relative">
+                <Select
+                  value={fabricanteFiltro || "todos"}
+                  onValueChange={(val) => { setFabricanteFiltro(val === "todos" ? "" : val); setCurrentPage(1); }}
+                >
+                  <SelectTrigger className="w-full bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-xl h-10 shadow-sm">
+                    <SelectValue placeholder="Todos os fabricantes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos os fabricantes</SelectItem>
+                    {fabricantesUnicos.map(f => (
+                      <SelectItem key={f} value={f}>{f}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Localização */}
+            <div className="space-y-3 pt-4 border-t border-slate-100">
+              <label className="text-sm font-bold text-slate-700 block">Localização</label>
+              <div className="relative">
+                <Select
+                  value={localizacaoFiltro || "todas"}
+                  onValueChange={(val) => { setLocalizacaoFiltro(val === "todas" ? "" : val); setCurrentPage(1); }}
+                >
+                  <SelectTrigger className="w-full bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-xl h-10 shadow-sm">
+                    <SelectValue placeholder="Todas as localizações..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Todas as localizações...</SelectItem>
+                    {localizacoesUnicas.map(l => (
+                      <SelectItem key={l} value={l}>{l}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </aside>
+
+          {/* Main Content Area */}
+          <div className="flex-1 w-full flex flex-col min-w-0">
+            
+            {/* Search bar and Sort */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Buscar insumos, fabricantes..."
+                  className="pl-11 h-11 bg-white border-0 shadow-sm text-slate-800 placeholder:text-slate-400 rounded-2xl transition-all duration-300 text-sm focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                  value={search}
+                  onChange={handleSearchChange}
+                />
+              </div>
+              <div className="w-full sm:w-48">
+                <Select value={ordenacao} onValueChange={setOrdenacao}>
+                  <SelectTrigger className="h-11 bg-white border-0 shadow-sm text-slate-700 font-medium rounded-2xl text-sm focus:ring-blue-500/30">
+                    <SelectValue placeholder="Mais recentes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="recentes">Mais recentes</SelectItem>
+                    <SelectItem value="antigos">Mais antigos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* display dos anuncios */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {paginatedAnuncios.length > 0 ? (
+                paginatedAnuncios.map((anuncio) => {
+                  const materialObj = materiaisMap.get(anuncio.cd_mat)
+                  const nomeMaterial = materialObj?.ds_mat ?? "Material não identificado"
+                  const fabricante = materialObj?.marca_nome || (anuncio as any).nm_fabricante || (anuncio as any).ds_marca_mat || "Fabricante não informado"
+                  const anunciante = (anuncio as any).anunciante_razao || (anuncio as any).nm_vendedor || (anuncio as any).ds_empresa || "Usuário"
+                  const lote = (anuncio as any).nr_lote || "Não informado"
+                  
+                  let dataValidade = "Não informada"
+                  const loteObj = anuncio.nr_lote ? lotesMap.get(anuncio.nr_lote) : null
+                  const rawValidade = loteObj?.dt_validade || (anuncio as any).dt_validade
+                  
+                  if (rawValidade) {
+                     const dateObj = new Date(rawValidade)
+                     if (!isNaN(dateObj.getTime())) {
+                        dataValidade = dateObj.toLocaleDateString('pt-BR')
+                     }
+                  }
+
+                  return (
+                    <div
+                      key={anuncio.nr_anuncio}
+                      onClick={() => router.push(`/anunciar/${anuncio.nr_anuncio}`)}
+                      className="bg-white rounded-[1.25rem] p-5 shadow-sm hover:shadow-2xl hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 ease-out flex flex-col cursor-pointer border border-transparent hover:border-blue-100 relative overflow-hidden group"
+                    >
+                      {/* Hover Top Bar */}
+                      <div className="absolute top-0 left-0 h-1.5 w-0 bg-blue-600 group-hover:w-full transition-all duration-500 ease-out" />
+
+                      {/* Image Area */}
+                      <div className="w-full aspect-square bg-slate-50/50 rounded-xl mb-4 flex items-center justify-center border border-slate-100 overflow-hidden relative">
+                        {anuncio.imagem_anuncio ? (
+                          <img 
+                            src={anuncio.imagem_anuncio} 
+                            alt={nomeMaterial} 
+                            className="w-full h-full object-contain mix-blend-multiply p-2 group-hover:scale-105 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center text-slate-300 opacity-60">
+                            <PackageX className="w-10 h-10 mb-2" />
+                            <span className="text-[10px] font-bold uppercase tracking-widest">Sem foto</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Title & Subtitle */}
+                      <div className="mb-3">
+                        <h3 className="font-bold text-slate-800 group-hover:text-blue-700 transition-colors text-[17px] leading-tight mb-1 line-clamp-2" title={nomeMaterial}>
+                          {nomeMaterial}
+                        </h3>
+                        <p className="text-slate-500 text-sm truncate" title={fabricante}>
+                          {fabricante}
+                        </p>
+                      </div>
+
+                      {/* Preço */}
+                      <div className="mb-5 flex items-baseline gap-1">
+                        <span className="text-sm font-bold text-blue-700">R$</span>
+                        <span className="text-[26px] font-extrabold text-blue-700 tracking-tight leading-none">
                           {Number((anuncio as any).val_base || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-3 bg-teal-50/50 p-2.5 rounded-xl border border-teal-100/50">
-                      <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm">
-                        <Package className="w-4 h-4 text-teal-600" />
+                      {/* Info Table */}
+                      <div className="space-y-3 text-xs text-slate-500 mt-auto mb-5">
+                        <div className="flex justify-between items-center">
+                          <span>Lote</span>
+                          <span className="font-medium text-slate-700">{lote}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>Validade</span>
+                          <span className="font-medium text-slate-700">{dataValidade}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>Qtd.</span>
+                          <span className="font-medium text-slate-700">{anuncio.qtd_mat} unidades</span>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-teal-600/80">Quantidade Disponível</p>
-                        <p className="text-sm font-bold text-teal-900">{anuncio.qtd_mat} un.</p>
+
+                      {/* Footer (Location / User) */}
+                      <div className="pt-4 border-t border-slate-100 flex items-center gap-2 text-xs font-bold text-slate-700 bg-white">
+                        <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
+                        <span className="truncate" title={anunciante}>{anunciante}</span>
                       </div>
                     </div>
+                  )
+                })
+              ) : (
+                <div className="col-span-full flex flex-col items-center justify-center py-20 text-center bg-white rounded-2xl shadow-sm px-6">
+                  <div className="p-4 bg-slate-50 rounded-full mb-4">
+                    <PackageX className="w-10 h-10 text-slate-400" />
                   </div>
-
-                  <div className="h-px bg-slate-100 mx-4" />
-
-                  {/* Botão de Ação */}
-                  <div className="p-4 pt-3 shrink-0">
-                    <Button
-                      onClick={() => router.push(`/anunciar/${anuncio.nr_anuncio}`)}
-                      className="w-full text-white font-bold rounded-xl h-11 transition-all duration-300 flex items-center justify-center gap-2 group/btn shadow-md hover:shadow-lg"
-                      style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)" }}
-                    >
-                      <ShoppingCart className="w-4 h-4 group-hover/btn:-rotate-12 transition-transform duration-300" />
-                      Ver Oferta
-                      <ChevronRight className="w-4 h-4 transition-transform duration-300 group-hover/btn:translate-x-1" />
-                    </Button>
-                  </div>
+                  <h3 className="text-xl font-bold text-slate-800">Nenhum anúncio encontrado</h3>
+                  <p className="text-slate-500 max-w-sm mt-2 text-sm">
+                    Não localizamos registros correspondentes para seus filtros de busca.
+                  </p>
                 </div>
-              )
-            })
-          ) : (
-            <div className="col-span-full flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl border border-slate-200 shadow-sm">
-              <div className="p-3 bg-slate-50 rounded-full mb-3">
-                <PackageX className="w-8 h-8 text-slate-400" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-800">Nenhum anúncio encontrado</h3>
-              <p className="text-slate-500 max-w-sm mt-1 text-xs">
-                Não localizamos registros correspondentes para <span className="font-semibold text-slate-700">"{search}"</span>.
-              </p>
-              {search && (
-                <Button
-                  variant="link"
-                  onClick={() => { setSearch(""); setCurrentPage(1); }}
-                  className="mt-3 text-teal-600 p-0 h-auto text-xs font-bold hover:text-teal-700"
-                >
-                  Limpar filtros de busca
-                </Button>
               )}
             </div>
-          )}
-        </div>
 
-        {/* paginacao no rodape da pagina */}
-        <Pagination 
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={filteredAnuncios.length}
-          itemsPerPage={ITEMS_PER_PAGE}
-          onPageChange={setCurrentPage}
-        />
+            {/* paginacao no rodape da pagina */}
+            {totalPages > 1 && (
+              <div className="mt-8 flex justify-center">
+                <Pagination 
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={filteredAnuncios.length}
+                  itemsPerPage={ITEMS_PER_PAGE}
+                  onPageChange={handlePageChange}
+                />
+              </div>
+            )}
+            
+          </div>
+        </div>
 
       </div>
     </div>

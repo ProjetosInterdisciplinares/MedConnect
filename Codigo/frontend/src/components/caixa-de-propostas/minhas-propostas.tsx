@@ -12,6 +12,7 @@ export function PropostasTab() {
   const [propostas, setPropostas] = useState<Anuncio[]>([])
   const [materiais, setMateriais] = useState<MatMed[]>([])
   const [loading, setLoading] = useState(true)
+  const [filtroStatus, setFiltroStatus] = useState("Todas")
 
   useEffect(() => {
     async function load() {
@@ -34,6 +35,16 @@ export function PropostasTab() {
     return new Map(materiais.map((m) => [m.cd_mat, m.ds_mat]))
   }, [materiais])
 
+  const propostasFiltradas = useMemo(() => {
+    return propostas.filter((a) => {
+      if (filtroStatus === "Todas") return true;
+      if (filtroStatus === "Aguardando" && a.ie_status === "N") return true;
+      if (filtroStatus === "Aprovada" && a.ie_status === "F") return true;
+      if (filtroStatus === "Recusada" && a.ie_status === "A") return true;
+      return false;
+    });
+  }, [propostas, filtroStatus])
+
   async function cancelarProposta(anuncio: Anuncio) {
     const result = await servicesUpdateAnuncio(anuncio.nr_anuncio, { ie_status: "A" })
     if (!(result as any)?.isError) window.location.reload()
@@ -42,65 +53,108 @@ export function PropostasTab() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 text-teal-600 animate-spin" />
-      </div>
-    )
-  }
-
-  if (propostas.length === 0) {
-    return (
-      <div className="bg-white border border-dashed border-zinc-300 p-12 rounded-2xl flex flex-col items-center justify-center text-center">
-        <div className="w-16 h-16 bg-zinc-50 rounded-full flex items-center justify-center mb-4">
-          <Inbox className="w-8 h-8 text-zinc-400" />
-        </div>
-        <h3 className="font-bold text-lg text-zinc-800 mb-1">Nenhuma proposta enviada</h3>
-        <p className="text-zinc-500 text-sm max-w-sm">Você ainda não enviou propostas para anúncios de outros hospitais.</p>
+        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
       </div>
     )
   }
 
   return (
     <div className="space-y-4">
-      {propostas.map((anuncio) => {
-        const nomeMaterial = anuncio.material_nome ?? "Material não identificado"
-        const valorExibido = anuncio.val_proposta || anuncio.val_base
+      {/* Filtro Status */}
+      {propostas.length > 0 && (
+        <div className="bg-white p-5 rounded-2xl border border-slate-100 flex flex-col sm:flex-row sm:items-center gap-4 shadow-sm mb-4">
+          <span className="text-sm font-bold text-slate-700 whitespace-nowrap">Filtrar por Status:</span>
+          <div className="flex flex-wrap gap-4">
+            {["Todas", "Aguardando", "Aprovada", "Recusada"].map((status) => (
+              <label key={status} className="flex items-center gap-2.5 cursor-pointer group">
+                <div className="relative flex items-center justify-center">
+                  <input
+                    type="radio"
+                    name="statusProposta"
+                    value={status}
+                    checked={filtroStatus === status}
+                    onChange={(e) => setFiltroStatus(e.target.value)}
+                    className="peer sr-only"
+                  />
+                  <div className="w-4 h-4 rounded-full border border-slate-300 peer-checked:border-blue-600 flex items-center justify-center transition-colors bg-white">
+                    <div className={`w-2 h-2 rounded-full bg-blue-600 transition-transform ${filtroStatus === status ? 'scale-100' : 'scale-0'}`} />
+                  </div>
+                </div>
+                <span className="text-sm text-slate-600 font-medium group-hover:text-blue-700 transition-colors">
+                  {status}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
-        return (
-          <div key={anuncio.nr_anuncio} className="bg-white border border-zinc-200/80 p-5 md:p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm hover:shadow-md transition-shadow duration-200">
-            <div className="flex items-start gap-4">
-              <div className="hidden md:flex w-12 h-12 rounded-full bg-teal-50 items-center justify-center shrink-0 border border-teal-100">
-                <Package className="w-6 h-6 text-teal-700" />
+      {propostasFiltradas.length === 0 ? (
+        <div className="bg-white border border-dashed border-zinc-300 p-12 rounded-2xl flex flex-col items-center justify-center text-center mt-4">
+          <div className="w-16 h-16 bg-zinc-50 rounded-full flex items-center justify-center mb-4">
+            <Inbox className="w-8 h-8 text-zinc-400" />
+          </div>
+          <h3 className="font-bold text-lg text-zinc-800 mb-1">Nenhuma proposta encontrada</h3>
+          <p className="text-zinc-500 text-sm max-w-sm">Você não possui propostas correspondentes a este filtro.</p>
+        </div>
+      ) : (
+        propostasFiltradas.map((anuncio) => {
+          const nomeMaterial = anuncio.material_nome ?? "Material não identificado"
+          const valorExibido = anuncio.val_proposta || anuncio.val_base
+
+          return (
+            <div key={anuncio.nr_anuncio} className="bg-white border border-zinc-200/80 p-5 md:p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm hover:shadow-md transition-shadow duration-200">
+              <div className="flex items-start gap-4">
+                <div className="hidden md:flex w-12 h-12 rounded-full bg-blue-50 items-center justify-center shrink-0 border border-blue-100">
+                  <Package className="w-6 h-6 text-blue-700" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-blue-700 block mb-1">Anúncio #{anuncio.nr_anuncio}</span>
+                  <h3 className="font-bold text-lg text-zinc-800 leading-tight">{nomeMaterial}</h3>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-zinc-500 mt-2">
+                    <span className="flex items-center gap-1.5 bg-zinc-50 px-2 py-1 rounded-md border border-zinc-100">
+                      <span className="font-semibold text-zinc-700">Qtd:</span> {anuncio.qtd_mat}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="w-4 h-4 text-zinc-400" /> {anuncio.data_anuncio ?? "—"}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div>
-                <span className="text-[11px] font-bold uppercase tracking-widest text-teal-700 block mb-1">Anúncio #{anuncio.nr_anuncio}</span>
-                <h3 className="font-bold text-lg text-zinc-800 leading-tight">{nomeMaterial}</h3>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-zinc-500 mt-2">
-                  <span className="flex items-center gap-1.5 bg-zinc-50 px-2 py-1 rounded-md border border-zinc-100">
-                    <span className="font-semibold text-zinc-700">Qtd:</span> {anuncio.qtd_mat}
+
+              <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-t-0 border-zinc-100 pt-4 md:pt-0 mt-2 md:mt-0">
+                <span className="text-blue-700 font-extrabold text-xl">
+                  {Number(valorExibido).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                </span>
+                
+                {anuncio.ie_status === 'N' && (
+                  <span className="px-3 py-1.5 text-xs font-bold rounded-full border tracking-wide shadow-sm bg-amber-50 text-amber-600 border-amber-200">
+                    AGUARDANDO
                   </span>
-                  <span className="flex items-center gap-1.5">
-                    <Calendar className="w-4 h-4 text-zinc-400" /> {anuncio.data_anuncio ?? "—"}
+                )}
+                {anuncio.ie_status === 'F' && (
+                  <span className="px-3 py-1.5 text-xs font-bold rounded-full border tracking-wide shadow-sm bg-emerald-50 text-emerald-600 border-emerald-200">
+                    APROVADA
                   </span>
+                )}
+                {anuncio.ie_status === 'A' && (
+                  <span className="px-3 py-1.5 text-xs font-bold rounded-full border tracking-wide shadow-sm bg-rose-50 text-rose-600 border-rose-200">
+                    RECUSADA
+                  </span>
+                )}
+
+                <div className="flex gap-2 ml-4">
+                  {anuncio.ie_status === 'N' && (
+                    <button onClick={() => cancelarProposta(anuncio)} className="px-4 py-2 bg-zinc-100 text-zinc-700 border border-zinc-300 rounded-lg font-semibold hover:bg-zinc-200 transition">
+                      Cancelar Envio
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
-
-            <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-t-0 border-zinc-100 pt-4 md:pt-0 mt-2 md:mt-0">
-              <span className="text-teal-700 font-extrabold text-xl">
-                {Number(valorExibido).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-              </span>
-              <span className="px-3 py-1.5 text-xs font-bold rounded-full border tracking-wide shadow-sm bg-teal-50 text-teal-700 border-teal-200">
-                ENVIADA
-              </span>
-              <div className="flex gap-2 ml-4">
-                <button onClick={() => cancelarProposta(anuncio)} className="px-4 py-2 bg-zinc-100 text-zinc-700 border border-zinc-300 rounded-lg font-semibold hover:bg-zinc-200 transition">
-                  Cancelar Envio
-                </button>
-              </div>
-            </div>
-          </div>
-        )
-      })}
+          )
+        })
+      )}
     </div>
   )
 }

@@ -1,15 +1,15 @@
 export default function AnimatedBackground() {
   return (
     <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden"
-      style={{ background: "linear-gradient(160deg, #ffffff 0%, #f0fdfa 20%, #ccfbf1 45%, #e0f2fe 65%, #f0fdfa 85%, #ffffff 100%)" }}
+      style={{ background: "linear-gradient(160deg, #ffffff 0%, #eff6ff 20%, #dbeafe 45%, #e0f2fe 65%, #eff6ff 85%, #ffffff 100%)" }}
     >
       {/* Grid pattern */}
       <div
         className="absolute inset-0 animate-grid-shimmer pointer-events-none"
         style={{
           backgroundImage: `
-            linear-gradient(rgba(20,184,166,0.5) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(20,184,166,0.5) 1px, transparent 1px)
+            linear-gradient(rgba(59,130,246,0.5) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(59,130,246,0.5) 1px, transparent 1px)
           `,
           backgroundSize: "60px 60px",
         }}
@@ -23,7 +23,7 @@ export default function AnimatedBackground() {
           height: "700px",
           top: "-20%",
           right: "-15%",
-          background: "radial-gradient(circle, rgba(20,184,166,0.35) 0%, rgba(13,148,136,0.15) 40%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(59,130,246,0.35) 0%, rgba(37,99,235,0.15) 40%, transparent 70%)",
           animationDelay: "0s",
         }}
       />
@@ -34,7 +34,7 @@ export default function AnimatedBackground() {
           height: "650px",
           bottom: "-20%",
           left: "-12%",
-          background: "radial-gradient(circle, rgba(14,165,233,0.28) 0%, rgba(20,184,166,0.12) 40%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(14,165,233,0.28) 0%, rgba(59,130,246,0.12) 40%, transparent 70%)",
           animationDelay: "4s",
           animationDirection: "reverse",
         }}
@@ -47,7 +47,7 @@ export default function AnimatedBackground() {
           top: "40%",
           left: "2%",
           transform: "translateY(-50%)",
-          background: "radial-gradient(circle, rgba(153,246,228,0.35) 0%, rgba(20,184,166,0.1) 50%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(191,219,254,0.35) 0%, rgba(59,130,246,0.1) 50%, transparent 70%)",
           animationDelay: "2s",
         }}
       />
@@ -58,7 +58,7 @@ export default function AnimatedBackground() {
           height: "400px",
           top: "10%",
           right: "10%",
-          background: "radial-gradient(circle, rgba(20,184,166,0.22) 0%, rgba(45,212,191,0.08) 50%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(59,130,246,0.22) 0%, rgba(96,165,250,0.08) 50%, transparent 70%)",
           animationDelay: "6s",
         }}
       />
@@ -69,8 +69,8 @@ export default function AnimatedBackground() {
         style={{ top: "-5%", right: "5%", width: "300px", height: "300px" }}
         viewBox="0 0 300 300"
       >
-        <circle cx="150" cy="150" r="120" fill="none" stroke="rgba(20,184,166,0.15)" strokeWidth="1.5" strokeDasharray="8 12" className="animate-dash-orbit" />
-        <circle cx="150" cy="150" r="90" fill="none" stroke="rgba(20,184,166,0.1)" strokeWidth="1" strokeDasharray="4 16" />
+        <circle cx="150" cy="150" r="120" fill="none" stroke="rgba(59,130,246,0.15)" strokeWidth="1.5" strokeDasharray="8 12" className="animate-dash-orbit" />
+        <circle cx="150" cy="150" r="90" fill="none" stroke="rgba(59,130,246,0.1)" strokeWidth="1" strokeDasharray="4 16" />
       </svg>
       <svg
         className="absolute animate-ring-spin pointer-events-none"
@@ -78,7 +78,7 @@ export default function AnimatedBackground() {
         viewBox="0 0 250 250"
       >
         <circle cx="125" cy="125" r="100" fill="none" stroke="rgba(14,165,233,0.12)" strokeWidth="1.5" strokeDasharray="6 14" className="animate-dash-orbit" />
-        <circle cx="125" cy="125" r="70" fill="none" stroke="rgba(20,184,166,0.08)" strokeWidth="1" strokeDasharray="3 12" />
+        <circle cx="125" cy="125" r="70" fill="none" stroke="rgba(59,130,246,0.08)" strokeWidth="1" strokeDasharray="3 12" />
       </svg>
 
       {/* Prominent bordered circles */}
@@ -89,8 +89,8 @@ export default function AnimatedBackground() {
           height: "180px",
           top: "8%",
           left: "8%",
-          border: "2px solid rgba(20,184,166,0.18)",
-          background: "rgba(20,184,166,0.04)",
+          border: "2px solid rgba(59,130,246,0.18)",
+          background: "rgba(59,130,246,0.04)",
           animationDuration: "18s",
         }}
       />
@@ -101,8 +101,8 @@ export default function AnimatedBackground() {
           height: "120px",
           bottom: "12%",
           right: "8%",
-          border: "2px solid rgba(153,246,228,0.25)",
-          background: "rgba(153,246,228,0.06)",
+          border: "2px solid rgba(191,219,254,0.25)",
+          background: "rgba(191,219,254,0.06)",
           animationDuration: "22s",
           animationDirection: "reverse",
         }}
@@ -114,8 +114,8 @@ export default function AnimatedBackground() {
           height: "60px",
           top: "55%",
           right: "20%",
-          border: "1.5px solid rgba(20,184,166,0.15)",
-          background: "rgba(20,184,166,0.03)",
+          border: "1.5px solid rgba(59,130,246,0.15)",
+          background: "rgba(59,130,246,0.03)",
         }}
       />
 
@@ -140,8 +140,8 @@ export default function AnimatedBackground() {
             height: `${p.size}px`,
             left: p.left,
             top: p.top,
-            background: `radial-gradient(circle, rgba(20,184,166,${0.6 - i * 0.03}) 0%, rgba(20,184,166,0.1) 50%, transparent 70%)`,
-            boxShadow: `0 0 ${p.size * 2}px rgba(20,184,166,${0.15 - i * 0.01})`,
+            background: `radial-gradient(circle, rgba(59,130,246,${0.6 - i * 0.03}) 0%, rgba(59,130,246,0.1) 50%, transparent 70%)`,
+            boxShadow: `0 0 ${p.size * 2}px rgba(59,130,246,${0.15 - i * 0.01})`,
             animationDelay: p.delay,
             animationDuration: p.duration,
           }}
@@ -172,11 +172,11 @@ export default function AnimatedBackground() {
         >
           <div
             className="absolute left-1/2 top-0 -translate-x-1/2"
-            style={{ width: "2px", height: `${m.size}px`, background: "rgba(20,184,166,0.35)", borderRadius: "1px" }}
+            style={{ width: "2px", height: `${m.size}px`, background: "rgba(59,130,246,0.35)", borderRadius: "1px" }}
           />
           <div
             className="absolute top-1/2 left-0 -translate-y-1/2"
-            style={{ width: `${m.size}px`, height: "2px", background: "rgba(20,184,166,0.35)", borderRadius: "1px" }}
+            style={{ width: `${m.size}px`, height: "2px", background: "rgba(59,130,246,0.35)", borderRadius: "1px" }}
           />
         </div>
       ))}
@@ -195,7 +195,7 @@ export default function AnimatedBackground() {
             top: d.top,
             width: "10px",
             height: "10px",
-            background: "rgba(20,184,166,0.25)",
+            background: "rgba(59,130,246,0.25)",
             transform: "rotate(45deg)",
             borderRadius: "2px",
             animationDelay: d.delay,
@@ -213,7 +213,7 @@ export default function AnimatedBackground() {
           top: "50%",
           left: "50%",
           transform: "translate(-50%, -50%)",
-          background: "radial-gradient(ellipse, rgba(20,184,166,0.18) 0%, rgba(153,246,228,0.1) 35%, rgba(14,165,233,0.04) 55%, transparent 70%)",
+          background: "radial-gradient(ellipse, rgba(59,130,246,0.18) 0%, rgba(191,219,254,0.1) 35%, rgba(14,165,233,0.04) 55%, transparent 70%)",
         }}
       />
     </div>

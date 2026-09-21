@@ -58,7 +58,7 @@ function getStatusBadge(ie_status: 'A' | 'N' | 'F' | 'I') {
     case "N":
       return { label: "EM NEGOCIAÇÃO", className: "bg-amber-50 text-amber-700 border-amber-200" }
     case "F":
-      return { label: "FINALIZADO", className: "bg-emerald-50 text-emerald-700 border-emerald-200" }
+      return { label: "FINALIZADO", className: "bg-sky-50 text-sky-700 border-sky-200" }
     case "I":
       return { label: "INATIVO", className: "bg-zinc-100 text-zinc-600 border-zinc-200" }
   }
@@ -229,7 +229,7 @@ export default function HistoricoPage() {
                 </div>
 
                 <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-t-0 border-zinc-100 pt-4 md:pt-0 mt-2 md:mt-0">
-                  <span className="text-emerald-600 font-extrabold text-xl">
+                  <span className="text-sky-600 font-extrabold text-xl">
                     {Number(valorExibido).toLocaleString("pt-BR", {
                       style: "currency",
                       currency: "BRL",

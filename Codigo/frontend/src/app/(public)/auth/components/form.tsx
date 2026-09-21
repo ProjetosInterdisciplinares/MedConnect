@@ -233,7 +233,7 @@ export default function Form(): JSX.Element {
               <div className="w-full max-w-[340px]">
                 <div className="mb-5">
                   <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl mb-3"
-                    style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)" }}
+                    style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)" }}
                   >
                     <Building2 className="w-6 h-6 text-white" />
                   </div>
@@ -257,7 +257,7 @@ export default function Form(): JSX.Element {
                         className={`pl-10 h-10 bg-gray-50 border rounded-xl transition-all duration-200
                           ${registerForm.formState.errors.nm_pessoaj
                             ? "border-red-300 focus-visible:ring-red-400"
-                            : "border-gray-200 focus-visible:ring-teal-500 hover:border-gray-300"}`}
+                            : "border-gray-200 focus-visible:ring-blue-500 hover:border-gray-300"}`}
                         {...registerForm.register("nm_pessoaj")}
                       />
                     </div>
@@ -280,7 +280,7 @@ export default function Form(): JSX.Element {
                         className={`pl-10 h-10 bg-gray-50 border rounded-xl transition-all duration-200
                           ${registerForm.formState.errors.razao_social
                             ? "border-red-300 focus-visible:ring-red-400"
-                            : "border-gray-200 focus-visible:ring-teal-500 hover:border-gray-300"}`}
+                            : "border-gray-200 focus-visible:ring-blue-500 hover:border-gray-300"}`}
                         {...registerForm.register("razao_social")}
                       />
                     </div>
@@ -304,7 +304,7 @@ export default function Form(): JSX.Element {
                         className={`pl-10 h-10 bg-gray-50 border rounded-xl transition-all duration-200
                           ${registerForm.formState.errors.nr_cnpj
                             ? "border-red-300 focus-visible:ring-red-400"
-                            : "border-gray-200 focus-visible:ring-teal-500 hover:border-gray-300"}`}
+                            : "border-gray-200 focus-visible:ring-blue-500 hover:border-gray-300"}`}
                         {...registerForm.register("nr_cnpj", {
                           onChange: (e) => {
                             e.target.value = formatCNPJ(e.target.value)
@@ -332,7 +332,7 @@ export default function Form(): JSX.Element {
                         className={`pl-10 h-10 bg-gray-50 border rounded-xl transition-all duration-200
                           ${registerForm.formState.errors.email_pj
                             ? "border-red-300 focus-visible:ring-red-400"
-                            : "border-gray-200 focus-visible:ring-teal-500 hover:border-gray-300"}`}
+                            : "border-gray-200 focus-visible:ring-blue-500 hover:border-gray-300"}`}
                         {...registerForm.register("email_pj")}
                       />
                     </div>
@@ -355,7 +355,7 @@ export default function Form(): JSX.Element {
                         className={`pl-10 h-10 bg-gray-50 border rounded-xl transition-all duration-200
                           ${registerForm.formState.errors.resp_tec
                             ? "border-red-300 focus-visible:ring-red-400"
-                            : "border-gray-200 focus-visible:ring-teal-500 hover:border-gray-300"}`}
+                            : "border-gray-200 focus-visible:ring-blue-500 hover:border-gray-300"}`}
                         {...registerForm.register("resp_tec")}
                       />
                     </div>
@@ -373,7 +373,7 @@ export default function Form(): JSX.Element {
                       <RequiredLabel htmlFor="reg-senha">Senha</RequiredLabel>
                       <Tooltip>
                         <TooltipTrigger
-                          className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 hover:bg-teal-100 transition-colors cursor-help"
+                          className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 hover:bg-blue-100 transition-colors cursor-help"
                           type="button"
                           aria-label="Requisitos de senha"
                         >
@@ -384,31 +384,31 @@ export default function Form(): JSX.Element {
                           <ul className="text-xs space-y-1">
                             <li className="flex items-center gap-1.5">
                               {(watchPassword?.length || 0) >= 8
-                                ? <CheckCircle2 className="w-3 h-3 text-green-400 shrink-0" />
+                                ? <CheckCircle2 className="w-3 h-3 text-cyan-400 shrink-0" />
                                 : <AlertCircle className="w-3 h-3 text-gray-400 shrink-0" />}
                               Mínimo 8 caracteres
                             </li>
                             <li className="flex items-center gap-1.5">
                               {/[A-Z]/.test(watchPassword || "")
-                                ? <CheckCircle2 className="w-3 h-3 text-green-400 shrink-0" />
+                                ? <CheckCircle2 className="w-3 h-3 text-cyan-400 shrink-0" />
                                 : <AlertCircle className="w-3 h-3 text-gray-400 shrink-0" />}
                               1 letra maiúscula (A-Z)
                             </li>
                             <li className="flex items-center gap-1.5">
                               {/[a-z]/.test(watchPassword || "")
-                                ? <CheckCircle2 className="w-3 h-3 text-green-400 shrink-0" />
+                                ? <CheckCircle2 className="w-3 h-3 text-cyan-400 shrink-0" />
                                 : <AlertCircle className="w-3 h-3 text-gray-400 shrink-0" />}
                               1 letra minúscula (a-z)
                             </li>
                             <li className="flex items-center gap-1.5">
                               {/[0-9]/.test(watchPassword || "")
-                                ? <CheckCircle2 className="w-3 h-3 text-green-400 shrink-0" />
+                                ? <CheckCircle2 className="w-3 h-3 text-cyan-400 shrink-0" />
                                 : <AlertCircle className="w-3 h-3 text-gray-400 shrink-0" />}
                               1 número (0-9)
                             </li>
                             <li className="flex items-center gap-1.5">
                               {/[^A-Za-z0-9]/.test(watchPassword || "")
-                                ? <CheckCircle2 className="w-3 h-3 text-green-400 shrink-0" />
+                                ? <CheckCircle2 className="w-3 h-3 text-cyan-400 shrink-0" />
                                 : <AlertCircle className="w-3 h-3 text-gray-400 shrink-0" />}
                               1 caractere especial (!@#$%...)
                             </li>
@@ -425,7 +425,7 @@ export default function Form(): JSX.Element {
                         className={`pl-10 pr-10 h-10 bg-gray-50 border rounded-xl transition-all duration-200
                           ${registerForm.formState.errors.senha_pj
                             ? "border-red-300 focus-visible:ring-red-400"
-                            : "border-gray-200 focus-visible:ring-teal-500 hover:border-gray-300"}`}
+                            : "border-gray-200 focus-visible:ring-blue-500 hover:border-gray-300"}`}
                         {...registerForm.register("senha_pj")}
                       />
                       <button
@@ -468,7 +468,7 @@ export default function Form(): JSX.Element {
                     type="submit"
                     disabled={isSubmit}
                     className="rounded-xl text-white font-semibold text-sm py-2.5 h-11 mt-1 transition-all duration-300 hover:shadow-lg active:scale-[0.98]"
-                    style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)" }}
+                    style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)" }}
                   >
                     {isSubmit ? (
                       <span className="flex items-center gap-2">Enviando... <Spinner className="w-4 h-4" /></span>
@@ -484,7 +484,7 @@ export default function Form(): JSX.Element {
 
                 <button
                   onClick={() => setIsRightPanelActive(false)}
-                  className="md:hidden mt-4 text-sm text-teal-700 font-semibold hover:underline transition-colors"
+                  className="md:hidden mt-4 text-sm text-blue-700 font-semibold hover:underline transition-colors"
                 >
                   Já tem uma conta? Entrar
                 </button>
@@ -505,7 +505,7 @@ export default function Form(): JSX.Element {
                   <>
                     <div className="mb-5">
                       <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl mb-3"
-                        style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)" }}
+                        style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)" }}
                       >
                         <Lock className="w-6 h-6 text-white" />
                       </div>
@@ -540,7 +540,7 @@ export default function Form(): JSX.Element {
                             className={`w-full pl-10 h-10 bg-gray-50 border rounded-xl transition-all duration-200
                               ${form.formState.errors.cnpj
                                 ? "border-red-300 focus-visible:ring-red-400"
-                                : "border-gray-200 focus-visible:ring-teal-500 hover:border-gray-300"}`}
+                                : "border-gray-200 focus-visible:ring-blue-500 hover:border-gray-300"}`}
                             {...form.register("cnpj", {
                               onChange: (e) => {
                                 e.target.value = formatCNPJ(e.target.value)
@@ -572,7 +572,7 @@ export default function Form(): JSX.Element {
                             className={`w-full pl-10 pr-10 h-10 bg-gray-50 border rounded-xl transition-all duration-200
                               ${form.formState.errors.password
                                 ? "border-red-300 focus-visible:ring-red-400"
-                                : "border-gray-200 focus-visible:ring-teal-500 hover:border-gray-300"}`}
+                                : "border-gray-200 focus-visible:ring-blue-500 hover:border-gray-300"}`}
                             {...form.register("password", {
                               onChange: () => setLoginError(null)
                             })}
@@ -601,7 +601,7 @@ export default function Form(): JSX.Element {
                           setLoginError(null)
                           form.reset()
                         }}
-                        className="text-sm text-gray-500 hover:text-teal-700 hover:underline transition-colors self-end -mt-1"
+                        className="text-sm text-gray-500 hover:text-blue-700 hover:underline transition-colors self-end -mt-1"
                       >
                         Esqueceu sua senha?
                       </button>
@@ -610,7 +610,7 @@ export default function Form(): JSX.Element {
                         type="submit"
                         disabled={isSubmit}
                         className="w-full rounded-xl text-white font-semibold text-sm py-3.5 h-12 flex items-center justify-center transition-all duration-300 hover:shadow-lg active:scale-[0.98] mt-2"
-                        style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", boxShadow: "0 4px 15px rgba(13, 148, 136, 0.2)" }}
+                        style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)", boxShadow: "0 4px 15px rgba(13, 148, 136, 0.2)" }}
                       >
                         {isSubmit ? (
                           <span className="flex items-center gap-2">Entrando... <Spinner className="w-4 h-4" /></span>
@@ -622,7 +622,7 @@ export default function Form(): JSX.Element {
 
                     <button
                       onClick={() => setIsRightPanelActive(true)}
-                      className="md:hidden mt-6 text-sm text-teal-700 font-semibold hover:underline transition-colors"
+                      className="md:hidden mt-6 text-sm text-blue-700 font-semibold hover:underline transition-colors"
                     >
                       Não tem conta? Cadastre-se
                     </button>
@@ -631,7 +631,7 @@ export default function Form(): JSX.Element {
                   <>
                     <div className="mb-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
                       <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl mb-3"
-                        style={{ background: "linear-gradient(135deg, #042f2e, #134e4a)" }}
+                        style={{ background: "linear-gradient(135deg, #172554, #1e3a8a)" }}
                       >
                         <UserCog className="w-6 h-6 text-white" />
                       </div>
@@ -663,7 +663,7 @@ export default function Form(): JSX.Element {
                             maxLength={18}
                             disabled={isSubmit}
                             className={`w-full pl-10 h-10 bg-gray-50 border rounded-xl transition-all duration-200
-                              ${resetPasswordForm.formState.errors.cnpj ? "border-red-300 focus-visible:ring-red-400" : "border-gray-200 focus-visible:ring-teal-500 hover:border-gray-300"}`}
+                              ${resetPasswordForm.formState.errors.cnpj ? "border-red-300 focus-visible:ring-red-400" : "border-gray-200 focus-visible:ring-blue-500 hover:border-gray-300"}`}
                             {...resetPasswordForm.register("cnpj", {
                               onChange: (e) => {
                                 e.target.value = formatCNPJ(e.target.value)
@@ -691,7 +691,7 @@ export default function Form(): JSX.Element {
                             disabled={isSubmit}
                             placeholder="exemplo@empresa.com"
                             className={`w-full pl-10 pr-4 bg-gray-50 border py-2.5 h-11 rounded-xl transition-all duration-200
-                              ${resetPasswordForm.formState.errors.email ? "border-red-300 focus-visible:ring-red-400" : "border-gray-200 focus-visible:ring-teal-500"}`}
+                              ${resetPasswordForm.formState.errors.email ? "border-red-300 focus-visible:ring-red-400" : "border-gray-200 focus-visible:ring-blue-500"}`}
                             {...resetPasswordForm.register("email", {
                               onChange: () => setResetError(null)
                             })}
@@ -716,7 +716,7 @@ export default function Form(): JSX.Element {
                             disabled={isSubmit}
                             placeholder="Digite a nova senha"
                             className={`w-full pl-10 pr-10 bg-gray-50 border py-2.5 h-11 rounded-xl transition-all duration-200
-                              ${resetPasswordForm.formState.errors.new_password ? "border-red-300 focus-visible:ring-red-400" : "border-gray-200 focus-visible:ring-teal-500"}`}
+                              ${resetPasswordForm.formState.errors.new_password ? "border-red-300 focus-visible:ring-red-400" : "border-gray-200 focus-visible:ring-blue-500"}`}
                             {...resetPasswordForm.register("new_password", {
                               onChange: () => setResetError(null)
                             })}
@@ -748,7 +748,7 @@ export default function Form(): JSX.Element {
                             disabled={isSubmit}
                             placeholder="Repita a nova senha"
                             className={`w-full pl-10 pr-10 bg-gray-50 border py-2.5 h-11 rounded-xl transition-all duration-200
-                              ${resetPasswordForm.formState.errors.confirm_password ? "border-red-300 focus-visible:ring-red-400" : "border-gray-200 focus-visible:ring-teal-500"}`}
+                              ${resetPasswordForm.formState.errors.confirm_password ? "border-red-300 focus-visible:ring-red-400" : "border-gray-200 focus-visible:ring-blue-500"}`}
                             {...resetPasswordForm.register("confirm_password", {
                               onChange: () => setResetError(null)
                             })}
@@ -774,7 +774,7 @@ export default function Form(): JSX.Element {
                           type="submit"
                           disabled={isSubmit}
                           className="w-full rounded-xl text-white font-semibold text-sm py-3.5 h-12 flex items-center justify-center transition-all duration-300 hover:shadow-lg active:scale-[0.98]"
-                          style={{ background: "linear-gradient(135deg, #042f2e, #134e4a)", boxShadow: "0 4px 15px rgba(4, 47, 46, 0.2)" }}
+                          style={{ background: "linear-gradient(135deg, #172554, #1e3a8a)", boxShadow: "0 4px 15px rgba(23, 37, 84, 0.2)" }}
                         >
                           {isSubmit ? (
                             <span className="flex items-center gap-2">Redefinindo... <Spinner className="w-4 h-4" /></span>
@@ -812,7 +812,7 @@ export default function Form(): JSX.Element {
             <div
               className={`relative -left-full h-full w-[200%] transition-transform duration-700 ease-in-out
               ${isRightPanelActive ? 'translate-x-1/2' : 'translate-x-0'}`}
-              style={{ background: "linear-gradient(135deg, #0d9488, #0f766e, #115e59)" }}
+              style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8, #1e40af)" }}
             >
               {/* Decorative shapes */}
               <div className="absolute inset-0 overflow-hidden opacity-10">
@@ -827,13 +827,13 @@ export default function Form(): JSX.Element {
                 ${isRightPanelActive ? 'translate-x-0' : 'translate-x-[-20%]'}`}
               >
                 <h1 className="font-bold text-4xl mb-6 text-white leading-tight">Bem-vindo<br />de volta!</h1>
-                <p className="text-sm font-light leading-relaxed tracking-wide mb-8 text-teal-100">
+                <p className="text-sm font-light leading-relaxed tracking-wide mb-8 text-blue-100">
                   Para se manter conectado conosco, faça login com suas credenciais corporativas.
                 </p>
                 <Button
                   onClick={() => setIsRightPanelActive(false)}
                   variant="outline"
-                  className="rounded-xl border-2 border-white/80 bg-transparent text-white hover:bg-white hover:text-teal-800 font-semibold text-sm py-3 px-10 h-11 transition-all duration-300 active:scale-95"
+                  className="rounded-xl border-2 border-white/80 bg-transparent text-white hover:bg-white hover:text-blue-800 font-semibold text-sm py-3 px-10 h-11 transition-all duration-300 active:scale-95"
                 >
                   Entrar
                 </Button>
@@ -845,13 +845,13 @@ export default function Form(): JSX.Element {
                 ${isRightPanelActive ? 'translate-x-[20%]' : 'translate-x-0'}`}
               >
                 <h1 className="font-bold text-4xl mb-6 text-white leading-tight">Olá,<br />Parceiro!</h1>
-                <p className="text-sm font-light leading-relaxed tracking-wide mb-8 text-teal-100">
+                <p className="text-sm font-light leading-relaxed tracking-wide mb-8 text-blue-100">
                   Ainda não faz parte da nossa rede? Solicite seu credenciamento agora mesmo!
                 </p>
                 <Button
                   onClick={() => setIsRightPanelActive(true)}
                   variant="outline"
-                  className="rounded-xl border-2 border-white/80 bg-transparent text-white hover:bg-white hover:text-teal-800 font-semibold text-sm py-3 px-10 h-11 transition-all duration-300 active:scale-95"
+                  className="rounded-xl border-2 border-white/80 bg-transparent text-white hover:bg-white hover:text-blue-800 font-semibold text-sm py-3 px-10 h-11 transition-all duration-300 active:scale-95"
                 >
                   Solicitar Credenciamento
                 </Button>

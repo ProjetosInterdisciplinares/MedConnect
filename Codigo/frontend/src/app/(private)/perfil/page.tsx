@@ -38,7 +38,7 @@ export default function PerfilPage() {
   }, [])
 
   return (
-    <div className="relative min-h-screen w-full antialiased selection:bg-teal-500/20">
+    <div className="relative min-h-screen w-full antialiased selection:bg-blue-500/20">
       <AnimatedBackground />
       <div className="max-w-5xl mx-auto py-8 px-4 relative z-10">
 
@@ -49,7 +49,7 @@ export default function PerfilPage() {
           onClick={() => setAbaAtiva("anuncios")}
           className={`hover:cursor-pointer px-4 py-3 text-sm font-semibold transition-colors border-b-2 ${
             abaAtiva === "anuncios"
-              ? "border-teal-700 text-teal-700"
+              ? "border-blue-700 text-blue-700"
               : "border-transparent text-zinc-500 hover:text-zinc-800"
           }`}
         >
@@ -61,7 +61,7 @@ export default function PerfilPage() {
           onClick={() => setAbaAtiva("materiais")}
           className={`hover:cursor-pointer px-4 py-3 text-sm font-semibold transition-colors border-b-2 ${
             abaAtiva === "materiais"
-              ? "border-teal-700 text-teal-700"
+              ? "border-blue-700 text-blue-700"
               : "border-transparent text-zinc-500 hover:text-zinc-800"
           }`}
         >

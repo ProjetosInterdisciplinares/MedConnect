@@ -122,8 +122,8 @@ export default function FormLote() {
       className="space-y-6"
       onSubmit={handleSubmitLote}
     >
-      <h2 className="text-lg font-bold flex items-center gap-2 text-teal-800">
-        <Layers className="text-teal-800" />
+      <h2 className="text-lg font-bold flex items-center gap-2 text-blue-800">
+        <Layers className="text-blue-800" />
         Cadastrar Lote
       </h2>
 
@@ -291,7 +291,7 @@ export default function FormLote() {
       <button 
         type="submit"
         className="w-full text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-lg cursor-pointer"
-        style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)" }}
+        style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)" }}
       >
         Registrar Lote
       </button>
@@ -299,7 +299,7 @@ export default function FormLote() {
       <Dialog open={isSuccessOpen} onOpenChange={setIsSuccessOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-teal-700 text-xl">
+            <DialogTitle className="flex items-center gap-2 text-blue-700 text-xl">
               <CheckCircle className="w-6 h-6" />
               Lote Registrado!
             </DialogTitle>
@@ -319,7 +319,7 @@ export default function FormLote() {
             <button
               type="button"
               onClick={() => setIsSuccessOpen(false)}
-              className="px-4 py-2 bg-teal-600 text-white rounded-lg font-bold hover:bg-teal-700 transition-colors w-full sm:w-auto cursor-pointer"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors w-full sm:w-auto cursor-pointer"
             >
               Fechar
             </button>

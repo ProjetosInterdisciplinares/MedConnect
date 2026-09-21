@@ -19,17 +19,17 @@ export default function Footer() {
       {/* Top gradient divider */}
       <div
         className="w-full h-px"
-        style={{ background: "linear-gradient(to right, transparent, rgba(20,184,166,0.3), transparent)" }}
+        style={{ background: "linear-gradient(to right, transparent, rgba(59,130,246,0.3), transparent)" }}
       />
 
       <div
         className="py-16 px-6 md:px-10"
-        style={{ background: "linear-gradient(180deg, #042f2e, #0a1f1e)" }}
+        style={{ background: "linear-gradient(180deg, #172554, #080f24)" }}
       >
         {/* Radial glow */}
         <div
           className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-full pointer-events-none"
-          style={{ background: "rgba(20,184,166,0.04)", filter: "blur(60px)" }}
+          style={{ background: "rgba(59,130,246,0.04)", filter: "blur(60px)" }}
         />
 
         {/* Dot pattern */}
@@ -50,14 +50,14 @@ export default function Footer() {
                 <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-105 transition-all duration-300"
                   style={{
-                    background: "linear-gradient(135deg, #14b8a6, #0d9488)",
-                    boxShadow: "0 4px 14px rgba(20,184,166,0.2)",
+                    background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+                    boxShadow: "0 4px 14px rgba(59,130,246,0.2)",
                   }}
                 >
                   <span className="text-white font-black text-lg">M</span>
                 </div>
                 <span className="font-extrabold text-2xl text-white tracking-wider">
-                  Med<span style={{ color: "#2dd4bf" }}>Connect</span>
+                  Med<span style={{ color: "#60a5fa" }}>Connect</span>
                 </span>
               </Link>
               <p className="text-zinc-400 leading-relaxed text-sm max-w-md">
@@ -69,17 +69,17 @@ export default function Footer() {
               <div className="flex items-center gap-3 mt-2">
                 <div className="flex -space-x-2">
                   {[
-                    { bg: "#14b8a6", label: "MC" },
-                    { bg: "#0d9488", label: "HS" },
-                    { bg: "#0f766e", label: "UF" },
-                    { bg: "#115e59", label: "SP" },
+                    { bg: "#3b82f6", label: "MC" },
+                    { bg: "#2563eb", label: "HS" },
+                    { bg: "#1d4ed8", label: "UF" },
+                    { bg: "#1e40af", label: "SP" },
                   ].map((item, i) => (
                     <div
                       key={i}
                       className="w-7 h-7 rounded-full flex items-center justify-center"
                       style={{
                         backgroundColor: item.bg,
-                        border: "2px solid #042f2e",
+                        border: "2px solid #172554",
                       }}
                     >
                       <span className="text-white text-[10px] font-bold">
@@ -98,7 +98,7 @@ export default function Footer() {
             <div className="md:col-span-3 md:col-start-7">
               <h3
                 className="text-xs font-bold mb-5 uppercase tracking-[0.2em]"
-                style={{ color: "#2dd4bf" }}
+                style={{ color: "#60a5fa" }}
               >
                 Navegação
               </h3>
@@ -111,7 +111,7 @@ export default function Footer() {
                     >
                       <span
                         className="w-0 group-hover:w-3 h-px transition-all duration-300"
-                        style={{ backgroundColor: "#2dd4bf" }}
+                        style={{ backgroundColor: "#60a5fa" }}
                       />
                       {link.name}
                     </Link>
@@ -124,7 +124,7 @@ export default function Footer() {
             <div className="md:col-span-3">
               <h3
                 className="text-xs font-bold mb-5 uppercase tracking-[0.2em]"
-                style={{ color: "#2dd4bf" }}
+                style={{ color: "#60a5fa" }}
               >
                 Legal
               </h3>
@@ -137,7 +137,7 @@ export default function Footer() {
                     >
                       <span
                         className="w-0 group-hover:w-3 h-px transition-all duration-300"
-                        style={{ backgroundColor: "#2dd4bf" }}
+                        style={{ backgroundColor: "#60a5fa" }}
                       />
                       {link.name}
                       <ArrowUpRight

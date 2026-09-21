@@ -43,9 +43,9 @@ const TABS = [
 function getStatusBadge(ie_status: 'A' | 'N' | 'F' | 'I') {
   switch (ie_status) {
     case "A":
-      return { label: "ATIVO", className: "bg-teal-50 text-teal-700 border-teal-200" }
+      return { label: "ATIVO", className: "bg-blue-50 text-blue-700 border-blue-200" }
     case "F":
-      return { label: "FINALIZADO", className: "bg-emerald-50 text-emerald-700 border-emerald-200" }
+      return { label: "FINALIZADO", className: "bg-sky-50 text-sky-700 border-sky-200" }
     case "N":
       return { label: "NEGOCIANDO", className: "bg-amber-50 text-amber-700 border-amber-200" }
     case "I":
@@ -116,7 +116,7 @@ export default function HistoricoPage() {
   }, [anuncios, compras, activeTab, cdPessoa])
 
   return (
-    <div className="w-full selection:bg-teal-500/20">
+    <div className="w-full selection:bg-blue-500/20">
       {/* Navegação por Abas */}
       <div className="flex flex-wrap items-center gap-3 mb-8 border-b border-zinc-200 pb-5">
         {TABS.map(({ id, label, icon: Icon }) => {
@@ -126,13 +126,13 @@ export default function HistoricoPage() {
             <button
               key={id}
               onClick={() => setActiveTab(id)}
-              className={`hover:cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 border outline-none focus:ring-2 focus:ring-teal-500/20 ${
+              className={`hover:cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 border outline-none focus:ring-2 focus:ring-blue-500/20 ${
                 isActive
-                  ? "bg-teal-700 text-zinc-50 border-teal-600 shadow-md shadow-teal-900/10"
+                  ? "bg-blue-700 text-zinc-50 border-blue-600 shadow-md shadow-blue-900/10"
                   : "bg-white text-zinc-500 border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-800"
               }`}
             >
-              <Icon size={16} className={isActive ? "text-teal-100" : "text-zinc-400"} />
+              <Icon size={16} className={isActive ? "text-blue-100" : "text-zinc-400"} />
               {label}
             </button>
           )
@@ -143,7 +143,7 @@ export default function HistoricoPage() {
       <div className="space-y-4">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-teal-600 animate-spin" />
+            <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
           </div>
         ) : itensFiltrados.length === 0 ? (
           <div className="bg-white border border-dashed border-zinc-300 p-12 rounded-2xl flex flex-col items-center justify-center text-center">
@@ -177,16 +177,16 @@ export default function HistoricoPage() {
               <div
                 key={anuncio.nr_anuncio}
                 onClick={() => router.push(`/anunciar/${anuncio.nr_anuncio}`)}
-                className="bg-white border border-zinc-200/80 p-5 md:p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer hover:border-teal-300"
+                className="bg-white border border-zinc-200/80 p-5 md:p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer hover:border-blue-300"
               >
                 <div className="flex items-start gap-4">
-                  <div className="hidden md:flex w-12 h-12 rounded-full bg-teal-50 items-center justify-center shrink-0 border border-teal-100">
-                    <Package className="w-6 h-6 text-teal-700" />
+                  <div className="hidden md:flex w-12 h-12 rounded-full bg-blue-50 items-center justify-center shrink-0 border border-blue-100">
+                    <Package className="w-6 h-6 text-blue-700" />
                   </div>
 
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[11px] font-bold uppercase tracking-widest text-teal-700">
+                      <span className="text-[11px] font-bold uppercase tracking-widest text-blue-700">
                         Anúncio #{anuncio.nr_anuncio}
                       </span>
                     </div>
@@ -210,7 +210,7 @@ export default function HistoricoPage() {
                 </div>
 
                 <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-t-0 border-zinc-100 pt-4 md:pt-0 mt-2 md:mt-0">
-                  <span className="text-emerald-600 font-extrabold text-xl">
+                  <span className="text-sky-600 font-extrabold text-xl">
                     {Number(valorExibido).toLocaleString("pt-BR", {
                       style: "currency",
                       currency: "BRL",

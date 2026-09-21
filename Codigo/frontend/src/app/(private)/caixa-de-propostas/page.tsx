@@ -36,11 +36,11 @@ function CaixaDePropostasContent() {
   }, [searchParams])
 
   return (
-    <div className="relative min-h-screen w-full antialiased selection:bg-teal-500/20">
+    <div className="relative min-h-screen w-full antialiased selection:bg-blue-500/20">
       <AnimatedBackground />
       <div className="max-w-5xl mx-auto py-10 px-4 md:px-0 font-sans relative z-10">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-teal-800 dark:text-teal-400 flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-blue-800 dark:text-blue-400 flex items-center gap-2">
           Caixa de Propostas
         </h1>
 
@@ -62,8 +62,8 @@ function CaixaDePropostasContent() {
               onClick={() => setActiveTab(id)}
               className={`hover:cursor-pointer flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-semibold transition-all ${
                 isActive
-                  ? "bg-teal-700 text-zinc-50 shadow-sm"
-                  : "text-zinc-500 hover:text-teal-700 dark:hover:text-teal-400"
+                  ? "bg-blue-700 text-zinc-50 shadow-sm"
+                  : "text-zinc-500 hover:text-blue-700 dark:hover:text-blue-400"
               }`}
             >
               <Icon size={16} />

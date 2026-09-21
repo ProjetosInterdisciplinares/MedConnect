@@ -15,7 +15,8 @@ import {
 
 import servicesGetAnuncioDetails from "@/server/(GET)-anuncio-details"
 import servicesUpdateAnuncio from "@/server/(PUT)-anuncio"
-import { Anuncio } from "@/types"
+import servicesGetMaterials from "@/server/(GET)-materials-and-brands"
+import { Anuncio, MatMed } from "@/types"
 import AnimatedBackground from "@/components/ui/animated-background"
 
 export default function AnuncioDetalhePage() {
@@ -23,6 +24,7 @@ export default function AnuncioDetalhePage() {
   const router = useRouter()
 
   const [anuncio, setAnuncio] = useState<Anuncio | null>(null)
+  const [material, setMaterial] = useState<MatMed | null>(null)
   const [loading, setLoading] = useState(true)
   const [valorProposta, setValorProposta] = useState("")
   const [modo, setModo] = useState<"COMPRA" | "PROPOSTA">("COMPRA")
@@ -33,8 +35,19 @@ export default function AnuncioDetalhePage() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await servicesGetAnuncioDetails(Number(id))
-        if (!("isError" in res)) setAnuncio(res)
+        const [res, matRes] = await Promise.all([
+          servicesGetAnuncioDetails(Number(id)),
+          servicesGetMaterials()
+        ])
+
+        if (!("isError" in res)) {
+           setAnuncio(res)
+           
+           if (Array.isArray(matRes)) {
+              const foundMat = matRes.find(m => m.cd_mat === res.cd_mat)
+              if (foundMat) setMaterial(foundMat)
+           }
+        }
       } catch (err) {
         console.error(err)
       } finally {
@@ -89,7 +102,7 @@ export default function AnuncioDetalhePage() {
 
   if (loading) return (
     <div className="min-h-[70vh] flex items-center justify-center">
-      <div className="w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+      <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
     </div>
   )
   if (!anuncio) return <div className="p-10 text-center font-bold text-slate-500">Anúncio não encontrado</div>
@@ -97,14 +110,14 @@ export default function AnuncioDetalhePage() {
   const bloqueado = anuncio.ie_status !== "A"
 
   return (
-    <div className="relative min-h-screen w-full antialiased selection:bg-teal-500/20">
+    <div className="relative min-h-screen w-full antialiased selection:bg-blue-500/20">
       <AnimatedBackground />
       <div className="max-w-4xl mx-auto py-8 px-4 relative z-10">
 
         <div className="mb-6 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
-            Anúncio <span className="text-teal-600">#{anuncio.nr_anuncio}</span>
+            Anúncio <span className="text-blue-600">#{anuncio.nr_anuncio}</span>
           </h1>
           <p className="text-slate-500 text-sm mt-1 font-medium">
             Veja os detalhes do insumo e escolha sua forma de negociação.
@@ -113,51 +126,91 @@ export default function AnuncioDetalhePage() {
       </div>
 
       {/* informações do anúncio */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 md:p-8 shadow-sm mb-6 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-teal-600 to-teal-400" />
-        <h2 className="text-lg font-bold text-slate-800 mb-5 flex items-center gap-2">
-          <Info className="w-5 h-5 text-teal-600" />
-          Informações do Anúncio
-        </h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-8 text-sm">
-          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Quantidade disponível</p>
-            <p className="text-base font-bold text-slate-700 mt-0.5 flex items-center gap-1.5">
-              <Package className="w-4 h-4 text-slate-400" />
-              {anuncio.qtd_mat} <span className="text-xs font-normal text-slate-500">unidades</span>
-            </p>
-          </div>
-
-          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Valor Base</p>
-            <p className="text-base font-bold text-slate-700 mt-0.5">
-              R$ {Number(anuncio.val_base).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </p>
-          </div>
-
-          {anuncio.nr_lote && (
-            <div><span className="font-bold text-slate-700">Lote:</span> <span className="text-slate-600">{anuncio.nr_lote}</span></div>
-          )}
-          {anuncio.cd_pessoa_anunciante && (
-            <div className="flex items-center gap-1.5">
-              <Building2 className="w-4 h-4 text-slate-400 shrink-0" />
-              <span className="font-bold text-slate-700">Anunciante ID:</span> 
-              <span className="text-slate-600">{anuncio.cd_pessoa_anunciante}</span>
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm mb-6 relative overflow-hidden flex flex-col md:flex-row">
+        <div className="absolute top-0 left-0 w-full md:w-1.5 md:h-full h-1.5 bg-gradient-to-b from-blue-600 to-blue-400" />
+        
+        {/* Lado Esquerdo: Imagem */}
+        <div className="w-full md:w-1/3 bg-slate-50/50 border-r border-slate-100 flex items-center justify-center p-6 min-h-[250px]">
+          {anuncio.imagem_anuncio ? (
+            <img src={anuncio.imagem_anuncio} alt="Imagem do Anúncio" className="w-full h-full object-contain mix-blend-multiply drop-shadow-sm" />
+          ) : (
+            <div className="flex flex-col items-center justify-center text-slate-300 opacity-60">
+              <Package className="w-16 h-16 mb-2" />
+              <span className="text-xs font-bold uppercase tracking-widest">Sem foto</span>
             </div>
           )}
-          {anuncio.ds_obs && (
-            <div className="sm:col-span-2 bg-slate-50 p-3 rounded-xl border border-slate-100 mt-2">
-              <span className="font-bold text-slate-700 text-xs uppercase tracking-wider block mb-1">Observações do Anunciante:</span>
-              <span className="text-slate-600">{anuncio.ds_obs}</span>
+        </div>
+
+        {/* Lado Direito: Detalhes */}
+        <div className="w-full md:w-2/3 p-6 md:p-8">
+          <h2 className="text-2xl font-bold text-slate-800 mb-1 leading-tight">
+             {material?.ds_mat ?? "Material não identificado"}
+          </h2>
+          <p className="text-slate-500 text-sm mb-6 font-medium">
+             Fabricante: {material?.ds_marca || material?.ds_pessoaj || (anuncio as any).nm_fabricante || "Não informado"}
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-8 text-sm">
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Quantidade disponível</p>
+              <p className="text-base font-bold text-slate-700 mt-0.5 flex items-center gap-1.5">
+                <Package className="w-4 h-4 text-slate-400" />
+                {anuncio.qtd_mat} <span className="text-xs font-normal text-slate-500">unidades</span>
+              </p>
             </div>
-          )}
+
+            <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-blue-500">Valor Base</p>
+              <p className="text-base font-bold text-blue-700 mt-0.5">
+                R$ {Number(anuncio.val_base).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+
+            {anuncio.nr_lote && (
+              <div>
+                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Lote</p>
+                 <p className="font-bold text-slate-700">{anuncio.nr_lote}</p>
+              </div>
+            )}
+
+            {(anuncio as any).dt_validade && (
+              <div>
+                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Validade</p>
+                 <p className="font-bold text-slate-700">{new Date((anuncio as any).dt_validade).toLocaleDateString('pt-BR')}</p>
+              </div>
+            )}
+
+            <div className="sm:col-span-2 flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0 border border-slate-200">
+                  <Building2 className="w-4 h-4 text-slate-400" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Anunciante</p>
+                  <p className="font-bold text-slate-700 text-xs truncate">
+                     {anuncio.anunciante_razao || (anuncio as any).nm_vendedor || (anuncio as any).ds_empresa || `Usuário ID: ${anuncio.cd_pessoa_anunciante}`}
+                  </p>
+                </div>
+            </div>
+
+            {anuncio.ds_obs && (
+              <div className="sm:col-span-2 bg-slate-50 p-4 rounded-xl border border-slate-100 mt-2">
+                <span className="font-bold text-slate-700 text-[10px] uppercase tracking-wider block mb-1">Observações:</span>
+                <span className="text-slate-600 text-sm leading-relaxed">{anuncio.ds_obs}</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {bloqueado ? (
         <div className="bg-rose-50 border border-rose-200 rounded-2xl p-6 shadow-sm text-center text-rose-600 font-semibold text-sm">
           Este anúncio não está mais disponível para negociação.
+        </div>
+      ) : anuncio.cd_pessoa_anunciante === Number(localStorage.getItem("userId")) ? (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 shadow-sm text-center text-blue-700 font-semibold text-sm flex flex-col items-center justify-center gap-2">
+          <Info className="w-6 h-6 text-blue-500 mb-1" />
+          Este é o seu próprio anúncio.
+          <span className="font-normal text-blue-600/80 text-xs">Você não pode enviar propostas ou realizar compras em seus próprios produtos.</span>
         </div>
       ) : (
         <div className="bg-white border border-slate-200 rounded-2xl p-6 md:p-8 shadow-sm">
@@ -171,7 +224,7 @@ export default function AnuncioDetalhePage() {
                 onClick={() => setModo(m)}
                 className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
                   modo === m
-                    ? "bg-teal-600 text-white shadow-md"
+                    ? "bg-blue-600 text-white shadow-md"
                     : "bg-slate-50 text-slate-500 border border-slate-200 hover:border-slate-300 hover:text-slate-700"
                 }`}
               >
@@ -190,7 +243,7 @@ export default function AnuncioDetalhePage() {
                   value={valorProposta}
                   onChange={(e) => setValorProposta(e.target.value)}
                   placeholder="Ex: 12.50"
-                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all text-sm shadow-inner"
+                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm shadow-inner"
                 />
               </div>
             )}
@@ -200,7 +253,7 @@ export default function AnuncioDetalhePage() {
               <span className="text-slate-500 font-medium tracking-wide uppercase text-xs">
                 {modo === "COMPRA" ? "Valor total base" : "Sua Proposta Final"}
               </span>
-              <span className="font-black text-teal-700 text-lg">
+              <span className="font-black text-blue-700 text-lg">
                 R$ {valorUnitario.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
@@ -210,7 +263,7 @@ export default function AnuncioDetalhePage() {
               <button
                 onClick={handleCompraDireta}
                 className="w-full flex items-center justify-center gap-2 text-white font-bold py-3.5 rounded-xl transition-all shadow-md hover:shadow-lg hover:-translate-y-px cursor-pointer"
-                style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)" }}
+                style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)" }}
               >
                 <ShoppingCart className="w-5 h-5" />
                 Comprar pelo Valor Base
@@ -219,7 +272,7 @@ export default function AnuncioDetalhePage() {
               <button
                 onClick={handleProposta}
                 className="w-full flex items-center justify-center gap-2 text-white font-bold py-3.5 rounded-xl transition-all shadow-md hover:shadow-lg hover:-translate-y-px cursor-pointer"
-                style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)" }}
+                style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)" }}
               >
                 <Handshake className="w-5 h-5" />
                 Enviar Proposta ao Vendedor
@@ -232,7 +285,7 @@ export default function AnuncioDetalhePage() {
 
       <button
         onClick={() => router.back()}
-        className="mt-6 text-sm font-bold text-slate-500 hover:text-teal-700 transition-colors flex items-center gap-1.5"
+        className="mt-6 text-sm font-bold text-slate-500 hover:text-blue-700 transition-colors flex items-center gap-1.5"
       >
         ‹ Voltar para o catálogo
       </button>
@@ -242,7 +295,7 @@ export default function AnuncioDetalhePage() {
       <Dialog open={isSuccessOpen} onOpenChange={(open) => { if (!open) handleCloseSuccess() }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-teal-700 text-xl">
+            <DialogTitle className="flex items-center gap-2 text-blue-700 text-xl">
               <CheckCircle className="w-6 h-6" />
               Tudo Certo!
             </DialogTitle>
@@ -257,7 +310,7 @@ export default function AnuncioDetalhePage() {
             <button
               type="button"
               onClick={handleCloseSuccess}
-              className="px-4 py-2 bg-teal-600 text-white rounded-lg font-bold hover:bg-teal-700 transition-colors w-full sm:w-auto cursor-pointer"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors w-full sm:w-auto cursor-pointer"
             >
               Ir para Caixa de Propostas
             </button>

@@ -53,17 +53,17 @@ export default function MeusMateriais() {
   }
 
   return (
-      <div className="w-full selection:bg-teal-500/20">
+      <div className="w-full selection:bg-blue-500/20">
   
           {/* Cabeçalho e Pesquisa */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6 bg-white p-8 rounded-2xl shadow-sm border border-slate-200/60 transition-all duration-300">
 
             {/* Input de Busca com Micro-interação */}
             <div className="relative w-full md:w-96 group">
-              <Search className="absolute left-3.5 top-3.5 h-5 w-5 text-slate-400 group-focus-within:text-teal-900 transition-colors duration-300" />
+              <Search className="absolute left-3.5 top-3.5 h-5 w-5 text-slate-400 group-focus-within:text-blue-900 transition-colors duration-300" />
               <Input
                 placeholder="Buscar material por nome..."
-                className="pl-11 h-12 bg-slate-50 border-slate-200 focus-visible:ring-2 focus-visible:ring-teal-500/30 focus-visible:border-teal-900 text-slate-800 placeholder:text-slate-400 rounded-xl shadow-inner transition-all duration-300"
+                className="pl-11 h-12 bg-slate-50 border-slate-200 focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:border-blue-900 text-slate-800 placeholder:text-slate-400 rounded-xl shadow-inner transition-all duration-300"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -76,7 +76,7 @@ export default function MeusMateriais() {
               filteredMaterials.map((material, index) => (
                 <Card
                   key={index}
-                  className="group flex flex-col bg-white border border-slate-200 border-t-[3px] border-t-teal-600 shadow-sm hover:shadow-xl hover:shadow-teal-900/5 hover:-translate-y-1 transition-all duration-300 rounded-2xl overflow-hidden"
+                  className="group flex flex-col bg-white border border-slate-200 border-t-[3px] border-t-blue-600 shadow-sm hover:shadow-xl hover:shadow-blue-900/5 hover:-translate-y-1 transition-all duration-300 rounded-2xl overflow-hidden"
                 >
   
                   <CardHeader className="p-4 pb-2 space-y-1.5">
@@ -86,7 +86,7 @@ export default function MeusMateriais() {
                         <span>MATERIAL HOSPITALAR</span>
                       </div>
                     </div>
-                    <CardTitle className="text-base font-bold text-slate-800 leading-snug line-clamp-2 min-h-11 group-hover:text-teal-700 transition-colors duration-300">
+                    <CardTitle className="text-base font-bold text-slate-800 leading-snug line-clamp-2 min-h-11 group-hover:text-blue-700 transition-colors duration-300">
                       {material.ds_mat}
                     </CardTitle>
                   </CardHeader>
@@ -114,7 +114,7 @@ export default function MeusMateriais() {
                   <CardFooter className="p-4 pt-3">
                   <Button
                     onClick={() => router.push(`/cadastrar/insumo/${material.cd_mat}`)}
-                    className="w-full bg-teal-700 hover:bg-teal-900 text-white font-semibold rounded-xl h-12 transition-all duration-300 flex items-center justify-center gap-2 group/btn shadow-sm active:scale-[0.98]"
+                    className="w-full bg-blue-700 hover:bg-blue-900 text-white font-semibold rounded-xl h-12 transition-all duration-300 flex items-center justify-center gap-2 group/btn shadow-sm active:scale-[0.98]"
                   >
                     Ver detalhes
   
@@ -137,7 +137,7 @@ export default function MeusMateriais() {
                   <Button
                     variant="link"
                     onClick={() => setSearch("")}
-                    className="mt-4 text-teal-600 p-0 h-auto font-semibold"
+                    className="mt-4 text-blue-600 p-0 h-auto font-semibold"
                   >
                     Limpar filtro de busca
                   </Button>

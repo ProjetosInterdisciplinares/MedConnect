@@ -96,8 +96,8 @@ export default function AdminCredenciamentos() {
       <div className="relative z-10 max-w-6xl mx-auto space-y-8 mt-12 md:mt-0">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-teal-900 flex items-center gap-3">
-              <Building2 className="w-8 h-8 text-teal-600" />
+            <h1 className="text-3xl font-bold text-blue-900 flex items-center gap-3">
+              <Building2 className="w-8 h-8 text-blue-600" />
               Painel Administrativo
             </h1>
             <p className="text-gray-500 mt-2">Gerencie as solicitações de credenciamento das empresas.</p>
@@ -113,7 +113,7 @@ export default function AdminCredenciamentos() {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl shadow-sm border border-gray-100">
-            <Spinner className="w-8 h-8 text-teal-600 mb-4" />
+            <Spinner className="w-8 h-8 text-blue-600 mb-4" />
             <p className="text-gray-500">Carregando solicitações...</p>
           </div>
         ) : (
@@ -165,7 +165,7 @@ export default function AdminCredenciamentos() {
                               <button
                                 disabled={actionLoading === emp.cd_pessoaj}
                                 onClick={() => updateStatus(emp.cd_pessoaj, "ATIVA")}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 text-teal-700 hover:bg-teal-100 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
                               >
                                 <CheckCircle2 className="w-4 h-4" /> Aprovar
                               </button>
@@ -201,7 +201,7 @@ export default function AdminCredenciamentos() {
                           <td className="px-6 py-4">{emp.nr_cnpj}</td>
                           <td className="px-6 py-4">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              emp.status === "ATIVA" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                              emp.status === "ATIVA" ? "bg-cyan-100 text-cyan-800" : "bg-red-100 text-red-800"
                             }`}>
                               {emp.status}
                             </span>

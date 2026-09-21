@@ -18,17 +18,17 @@ import {
 import Footer from "@/components/ui/Footer"
 
 // ─── PALETA DE CORES ──────────────────────────────────────────────────────
-// Teal-950: #042f2e  (fundos escuros)
-// Teal-900: #134e4a  (fundos escuros secundários)
-// Teal-800: #115e59  (textos destaque escuro)
-// Teal-700: #0f766e  (textos destaque)
-// Teal-600: #0d9488  (CTA principal)
-// Teal-500: #14b8a6  (acentos vibrantes)
-// Teal-400: #2dd4bf  (acentos claros)
-// Teal-300: #5eead4  (badges, destaques leves)
-// Teal-200: #99f6e4  (fundos sutis)
-// Teal-100: #ccfbf1  (fundos cards)
-// Teal-50:  #f0fdfa  (fundos seção)
+// Teal-950: #172554  (fundos escuros)
+// Teal-900: #1e3a8a  (fundos escuros secundários)
+// Teal-800: #1e40af  (textos destaque escuro)
+// Teal-700: #1d4ed8  (textos destaque)
+// Teal-600: #2563eb  (CTA principal)
+// Teal-500: #3b82f6  (acentos vibrantes)
+// Teal-400: #60a5fa  (acentos claros)
+// Teal-300: #93c5fd  (badges, destaques leves)
+// Teal-200: #bfdbfe  (fundos sutis)
+// Teal-100: #dbeafe  (fundos cards)
+// Teal-50:  #eff6ff  (fundos seção)
 
 // ─── DATA ────────────────────────────────────────────────────────────────
 const HOW_IT_WORKS_STEPS = [
@@ -110,7 +110,7 @@ function FloatingParticles() {
           style={{
             width: `${6 + i * 5}px`,
             height: `${6 + i * 5}px`,
-            background: `radial-gradient(circle, rgba(20,184,166,${0.5 - i * 0.08}) 0%, transparent 70%)`,
+            background: `radial-gradient(circle, rgba(59,130,246,${0.5 - i * 0.08}) 0%, transparent 70%)`,
             left: `${12 + i * 18}%`,
             top: `${25 + ((i * 31) % 50)}%`,
             animationDelay: `${i * 1.5}s`,
@@ -194,7 +194,7 @@ function StepCard({
           className="absolute -inset-2 rounded-3xl transition-opacity duration-500"
           style={{
             background:
-              "radial-gradient(circle, rgba(20,184,166,0.06) 0%, transparent 70%)",
+              "radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%)",
             opacity: isHovered ? 1 : 0,
           }}
         />
@@ -202,25 +202,25 @@ function StepCard({
         <div
           className="relative w-18 h-18 rounded-2xl flex items-center justify-center mb-6 group-hover:-translate-y-1 transition-all duration-500"
           style={{
-            background: "linear-gradient(135deg, #f0fdfa, #ccfbf1)",
-            border: "1px solid rgba(20,184,166,0.2)",
+            background: "linear-gradient(135deg, #eff6ff, #dbeafe)",
+            border: "1px solid rgba(59,130,246,0.2)",
             boxShadow: isHovered
-              ? "0 12px 30px rgba(20,184,166,0.15)"
-              : "0 4px 12px rgba(20,184,166,0.08)",
+              ? "0 12px 30px rgba(59,130,246,0.15)"
+              : "0 4px 12px rgba(59,130,246,0.08)",
           }}
         >
-          <Icon className="w-8 h-8 text-teal-600 group-hover:text-teal-500 transition-colors duration-300" />
+          <Icon className="w-8 h-8 text-blue-600 group-hover:text-blue-500 transition-colors duration-300" />
           <div
             className="absolute -top-2 -right-2 w-6 h-6 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white"
             style={{
-              background: "linear-gradient(135deg, #0d9488, #0f766e)",
-              boxShadow: "0 2px 8px rgba(13,148,136,0.3)",
+              background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+              boxShadow: "0 2px 8px rgba(37,99,235,0.3)",
             }}
           >
             {id}
           </div>
         </div>
-        <h3 className="text-lg font-bold text-slate-800 mb-2 group-hover:text-teal-800 transition-colors duration-300">
+        <h3 className="text-lg font-bold text-slate-800 mb-2 group-hover:text-blue-800 transition-colors duration-300">
           {title}
         </h3>
         <p className="text-slate-500 text-sm leading-relaxed max-w-xs">
@@ -246,7 +246,7 @@ export default function MedConnectLanding() {
         className="relative w-full min-h-screen flex items-center px-6 lg:px-8 overflow-hidden"
         style={{
           background:
-            "linear-gradient(160deg, #ffffff 0%, #f0fdfa 25%, #ccfbf1 50%, #f0fdfa 75%, #ffffff 100%)",
+            "linear-gradient(160deg, #ffffff 0%, #eff6ff 25%, #dbeafe 50%, #eff6ff 75%, #ffffff 100%)",
         }}
       >
         <FloatingParticles />
@@ -256,8 +256,8 @@ export default function MedConnectLanding() {
           className="absolute inset-0 opacity-[0.03] z-0"
           style={{
             backgroundImage: `
-              linear-gradient(rgba(20,184,166,0.5) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(20,184,166,0.5) 1px, transparent 1px)
+              linear-gradient(rgba(59,130,246,0.5) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(59,130,246,0.5) 1px, transparent 1px)
             `,
             backgroundSize: "60px 60px",
           }}
@@ -271,11 +271,11 @@ export default function MedConnectLanding() {
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-sm"
                 style={{
                   background: "rgba(204,251,241,0.6)",
-                  border: "1px solid rgba(20,184,166,0.2)",
+                  border: "1px solid rgba(59,130,246,0.2)",
                 }}
               >
-                <Sparkles className="w-4 h-4 text-teal-600" />
-                <span className="text-sm font-semibold text-teal-700">
+                <Sparkles className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-semibold text-blue-700">
                   Plataforma B2B para Saúde
                 </span>
               </div>
@@ -288,7 +288,7 @@ export default function MedConnectLanding() {
                   <span
                     className="relative z-10"
                     style={{
-                      backgroundImage: "linear-gradient(135deg, #0d9488, #0f766e)",
+                      backgroundImage: "linear-gradient(135deg, #2563eb, #1d4ed8)",
                       WebkitBackgroundClip: "text",
                       WebkitTextFillColor: "transparent",
                       backgroundClip: "text",
@@ -298,7 +298,7 @@ export default function MedConnectLanding() {
                   </span>
                   <span
                     className="absolute bottom-1 left-0 w-full h-3 rounded-sm -z-0"
-                    style={{ backgroundColor: "rgba(153,246,228,0.35)" }}
+                    style={{ backgroundColor: "rgba(191,219,254,0.35)" }}
                   />
                 </span>
               </h1>
@@ -320,16 +320,16 @@ export default function MedConnectLanding() {
                   <button
                     className="group relative h-13 px-8 text-white font-bold rounded-xl text-base transition-all duration-300 hover:-translate-y-0.5 overflow-hidden"
                     style={{
-                      background: "linear-gradient(135deg, #14b8a6, #0d9488)",
-                      boxShadow: "0 6px 24px rgba(20,184,166,0.25)",
+                      background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+                      boxShadow: "0 6px 24px rgba(59,130,246,0.25)",
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.boxShadow = "0 8px 32px rgba(20,184,166,0.35)"
-                      e.currentTarget.style.background = "linear-gradient(135deg, #2dd4bf, #14b8a6)"
+                      e.currentTarget.style.boxShadow = "0 8px 32px rgba(59,130,246,0.35)"
+                      e.currentTarget.style.background = "linear-gradient(135deg, #60a5fa, #3b82f6)"
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.boxShadow = "0 6px 24px rgba(20,184,166,0.25)"
-                      e.currentTarget.style.background = "linear-gradient(135deg, #14b8a6, #0d9488)"
+                      e.currentTarget.style.boxShadow = "0 6px 24px rgba(59,130,246,0.25)"
+                      e.currentTarget.style.background = "linear-gradient(135deg, #3b82f6, #2563eb)"
                     }}
                   >
                     <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
@@ -341,10 +341,10 @@ export default function MedConnectLanding() {
                 </Link>
                 <Link
                   href="#como-funciona"
-                  className="flex items-center gap-2 text-slate-600 hover:text-teal-700 font-semibold transition-colors duration-300 group"
+                  className="flex items-center gap-2 text-slate-600 hover:text-blue-700 font-semibold transition-colors duration-300 group"
                 >
                   Saiba mais
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300 text-teal-600" />
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300 text-blue-600" />
                 </Link>
               </div>
             </AnimatedSection>
@@ -358,10 +358,10 @@ export default function MedConnectLanding() {
                       className="w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-105 transition-all duration-300"
                       style={{
                         background: "rgba(240,253,250,0.8)",
-                        border: "1px solid rgba(20,184,166,0.15)",
+                        border: "1px solid rgba(59,130,246,0.15)",
                       }}
                     >
-                      <Icon className="w-5 h-5 text-teal-600" />
+                      <Icon className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
                       <div className="text-lg font-black text-slate-800">
@@ -382,7 +382,7 @@ export default function MedConnectLanding() {
               alt="Profissionais da saúde negociando insumos"
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-teal-900/30 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-blue-900/30 to-transparent" />
           </div>
         </div>
 
@@ -393,7 +393,7 @@ export default function MedConnectLanding() {
             alt="Profissionais da saúde negociando insumos"
             className="w-full h-full object-cover mask-[linear-gradient(to_right,transparent,black_35%,black_100%)]"
           />
-          <div className="absolute inset-0 bg-gradient-to-l from-teal-950/15 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-l from-blue-950/15 via-transparent to-transparent" />
         </div>
 
         {/* Bottom fade */}
@@ -414,8 +414,8 @@ export default function MedConnectLanding() {
                 className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-4 uppercase tracking-wider"
                 style={{
                   background: "rgba(240,253,250,0.8)",
-                  border: "1px solid rgba(20,184,166,0.15)",
-                  color: "#0f766e",
+                  border: "1px solid rgba(59,130,246,0.15)",
+                  color: "#1d4ed8",
                 }}
               >
                 Processo
@@ -435,7 +435,7 @@ export default function MedConnectLanding() {
             <div className="hidden md:block absolute top-14 left-[20%] right-[20%] h-px">
               <div
                 className="w-full h-full"
-                style={{ background: "linear-gradient(to right, rgba(20,184,166,0.1), rgba(20,184,166,0.2), rgba(20,184,166,0.1))" }}
+                style={{ background: "linear-gradient(to right, rgba(59,130,246,0.1), rgba(59,130,246,0.2), rgba(59,130,246,0.1))" }}
               />
             </div>
 
@@ -473,8 +473,8 @@ export default function MedConnectLanding() {
               className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-4 uppercase tracking-wider"
               style={{
                 background: "rgba(240,253,250,0.8)",
-                border: "1px solid rgba(20,184,166,0.15)",
-                color: "#0f766e",
+                border: "1px solid rgba(59,130,246,0.15)",
+                color: "#1d4ed8",
               }}
             >
               Vídeo
@@ -492,8 +492,8 @@ export default function MedConnectLanding() {
             <div
               className="relative group rounded-2xl overflow-hidden transition-shadow duration-500"
               style={{
-                boxShadow: "0 25px 60px rgba(4,47,46,0.08), 0 4px 20px rgba(20,184,166,0.06)",
-                border: "1px solid rgba(20,184,166,0.1)",
+                boxShadow: "0 25px 60px rgba(4,47,46,0.08), 0 4px 20px rgba(59,130,246,0.06)",
+                border: "1px solid rgba(59,130,246,0.1)",
               }}
             >
               <video
@@ -512,7 +512,7 @@ export default function MedConnectLanding() {
                     className="w-16 h-16 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300"
                     style={{ boxShadow: "0 8px 30px rgba(4,47,46,0.15)" }}
                   >
-                    <Play className="w-6 h-6 text-teal-700 ml-1" />
+                    <Play className="w-6 h-6 text-blue-700 ml-1" />
                   </div>
                 </div>
               )}
@@ -526,7 +526,7 @@ export default function MedConnectLanding() {
         id="planos"
         className="scroll-mt-24 relative py-28 px-6 lg:px-8 overflow-hidden"
         style={{
-          background: "linear-gradient(180deg, #ffffff 0%, #f0fdfa 50%, #ffffff 100%)",
+          background: "linear-gradient(180deg, #ffffff 0%, #eff6ff 50%, #ffffff 100%)",
         }}
       >
         <div
@@ -541,8 +541,8 @@ export default function MedConnectLanding() {
                 className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-4 uppercase tracking-wider"
                 style={{
                   background: "rgba(240,253,250,0.8)",
-                  border: "1px solid rgba(20,184,166,0.15)",
-                  color: "#0f766e",
+                  border: "1px solid rgba(59,130,246,0.15)",
+                  color: "#1d4ed8",
                 }}
               >
                 Planos
@@ -562,15 +562,15 @@ export default function MedConnectLanding() {
               <Card
                 className="w-full max-w-5xl overflow-hidden grid grid-cols-1 md:grid-cols-5 p-0 group transition-all duration-500"
                 style={{
-                  border: "1px solid rgba(20,184,166,0.1)",
-                  boxShadow: "0 25px 60px rgba(4,47,46,0.06), 0 4px 20px rgba(20,184,166,0.04)",
+                  border: "1px solid rgba(59,130,246,0.1)",
+                  boxShadow: "0 25px 60px rgba(4,47,46,0.06), 0 4px 20px rgba(59,130,246,0.04)",
                 }}
               >
                 {/* Price panel */}
                 <div
                   className="relative p-10 md:col-span-2 flex flex-col justify-center items-center text-center overflow-hidden"
                   style={{
-                    background: "linear-gradient(135deg, #115e59, #134e4a, #042f2e)",
+                    background: "linear-gradient(135deg, #1e40af, #1e3a8a, #172554)",
                   }}
                 >
                   <div
@@ -581,18 +581,18 @@ export default function MedConnectLanding() {
                       backgroundSize: "24px 24px",
                     }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-teal-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
 
-                  <h3 className="text-lg font-semibold text-teal-200 mb-3 relative z-10">
+                  <h3 className="text-lg font-semibold text-blue-200 mb-3 relative z-10">
                     Plano Profissional
                   </h3>
                   <div className="flex items-start justify-center gap-1 relative z-10">
-                    <span className="text-xl font-bold text-teal-100 mt-3">R$</span>
+                    <span className="text-xl font-bold text-blue-100 mt-3">R$</span>
                     <span className="text-6xl font-black text-white tracking-tighter">
                       15,99
                     </span>
                   </div>
-                  <span className="text-teal-300/70 font-medium mt-2 text-sm relative z-10">
+                  <span className="text-blue-300/70 font-medium mt-2 text-sm relative z-10">
                     por mês (R$191,98 anualmente)
                   </span>
                 </div>
@@ -609,10 +609,10 @@ export default function MedConnectLanding() {
                           className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 group-hover/item:scale-110 transition-all duration-300"
                           style={{
                             background: "rgba(240,253,250,0.8)",
-                            border: "1px solid rgba(20,184,166,0.2)",
+                            border: "1px solid rgba(59,130,246,0.2)",
                           }}
                         >
-                          <CheckCircle2 className="w-3.5 h-3.5 text-teal-600" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
                         </div>
                         <span className="text-slate-600 text-sm font-medium group-hover/item:text-slate-800 transition-colors duration-300">
                           {feature}
@@ -626,8 +626,8 @@ export default function MedConnectLanding() {
                       <button
                         className="group/btn relative w-full sm:w-auto h-12 px-8 text-white font-bold rounded-xl text-sm transition-all duration-300 hover:-translate-y-0.5 overflow-hidden"
                         style={{
-                          background: "linear-gradient(135deg, #14b8a6, #0d9488)",
-                          boxShadow: "0 6px 24px rgba(20,184,166,0.2)",
+                          background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+                          boxShadow: "0 6px 24px rgba(59,130,246,0.2)",
                         }}
                       >
                         <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700 ease-in-out" />
@@ -654,7 +654,7 @@ export default function MedConnectLanding() {
       <section
         className="relative py-24 px-6 lg:px-8 overflow-hidden"
         style={{
-          background: "linear-gradient(135deg, #134e4a, #042f2e, #0a2726)",
+          background: "linear-gradient(135deg, #1e3a8a, #172554, #0b1735)",
         }}
       >
         <div
@@ -669,7 +669,7 @@ export default function MedConnectLanding() {
         />
         <div
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full pointer-events-none"
-          style={{ background: "rgba(20,184,166,0.08)", filter: "blur(80px)" }}
+          style={{ background: "rgba(59,130,246,0.08)", filter: "blur(80px)" }}
         />
 
         <AnimatedSection>
@@ -677,7 +677,7 @@ export default function MedConnectLanding() {
             <h2 className="text-3xl lg:text-4xl font-black text-white tracking-tight mb-6">
               Pronto para transformar a gestão dos seus insumos?
             </h2>
-            <p className="text-lg mb-10 max-w-2xl mx-auto" style={{ color: "rgba(153,246,228,0.6)" }}>
+            <p className="text-lg mb-10 max-w-2xl mx-auto" style={{ color: "rgba(191,219,254,0.6)" }}>
               Junte-se a centenas de empresas que já estão reduzindo desperdícios
               e conectando seus estoques de forma inteligente.
             </p>
@@ -686,11 +686,11 @@ export default function MedConnectLanding() {
                 className="group relative h-14 px-10 font-bold rounded-xl text-base transition-all duration-300 hover:-translate-y-1 overflow-hidden"
                 style={{
                   background: "#ffffff",
-                  color: "#134e4a",
+                  color: "#1e3a8a",
                   boxShadow: "0 8px 30px rgba(4,47,46,0.3)",
                 }}
               >
-                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-teal-100/50 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
+                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-100/50 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
                 <span className="relative flex items-center gap-2">
                   Comece Gratuitamente
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />

@@ -291,11 +291,11 @@ export default function PublicarAnuncioPage() {
   )
 
   return (
-    <div className="relative min-h-screen w-full antialiased selection:bg-teal-500/20">
+    <div className="relative min-h-screen w-full antialiased selection:bg-blue-500/20">
       <AnimatedBackground />
       <div className="max-w-4xl mx-auto py-8 px-4 relative z-10">
         <div className="mb-8">
-        <h1 className="text-2xl font-bold text-teal-800 flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-blue-800 flex items-center gap-2">
          Publicar Anúncio
         </h1>
         <p className="text-zinc-500 text-sm mt-1">
@@ -416,7 +416,7 @@ export default function PublicarAnuncioPage() {
                   onClick={handleGenerateAIDescription}
                   disabled={isGenerating}
                   className="text-xs flex items-center gap-1.5 text-zinc-50 font-bold px-3 py-1.5 rounded-lg shadow-sm transition-all duration-200 disabled:opacity-60 cursor-pointer"
-                  style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)" }}
+                  style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)" }}
                 >
                   {isGenerating ? (
                     <>
@@ -444,7 +444,7 @@ export default function PublicarAnuncioPage() {
               <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-zinc-300 rounded-xl bg-zinc-50 hover:bg-zinc-100 transition-colors cursor-pointer group">
                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
                   <div className="w-10 h-10 mb-3 text-zinc-400 bg-white shadow-sm rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <ImagePlus size={20} className="text-teal-600" />
+                    <ImagePlus size={20} className="text-blue-600" />
                   </div>
                   <p className="mb-1 text-sm text-zinc-600 font-semibold">
                     Clique para fazer upload
@@ -483,7 +483,7 @@ export default function PublicarAnuncioPage() {
           <button
             type="submit"
             className="w-full text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-lg mt-4 cursor-pointer"
-            style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)" }}
+            style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)" }}
           >
             Publicar no Marketplace
           </button>
@@ -495,7 +495,7 @@ export default function PublicarAnuncioPage() {
       }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-teal-700 text-xl">
+            <DialogTitle className="flex items-center gap-2 text-blue-700 text-xl">
               <CheckCircle className="w-6 h-6" />
               Anúncio Publicado!
             </DialogTitle>
@@ -515,7 +515,7 @@ export default function PublicarAnuncioPage() {
             <button
               type="button"
               onClick={handleCloseSuccess}
-              className="px-4 py-2 bg-teal-600 text-white rounded-lg font-bold hover:bg-teal-700 transition-colors w-full sm:w-auto cursor-pointer"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors w-full sm:w-auto cursor-pointer"
             >
               Ir para o Catálogo
             </button>
@@ -532,7 +532,7 @@ export default function PublicarAnuncioPage() {
       }}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-teal-700 text-xl">
+            <DialogTitle className="flex items-center gap-2 text-blue-700 text-xl">
               <Crop className="w-5 h-5" />
               Ajustar Imagem do Produto
             </DialogTitle>
@@ -565,7 +565,7 @@ export default function PublicarAnuncioPage() {
               step={0.1}
               aria-labelledby="Zoom"
               onChange={(e) => setZoom(Number(e.target.value))}
-              className="w-full accent-teal-600 cursor-pointer"
+              className="w-full accent-blue-600 cursor-pointer"
             />
           </div>
 
@@ -583,7 +583,7 @@ export default function PublicarAnuncioPage() {
             <button
               type="button"
               onClick={handleSaveCrop}
-              className="px-4 py-2 bg-teal-600 text-white rounded-lg font-bold hover:bg-teal-700 transition-colors cursor-pointer"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors cursor-pointer"
             >
               Cortar e Salvar Imagem
             </button>
