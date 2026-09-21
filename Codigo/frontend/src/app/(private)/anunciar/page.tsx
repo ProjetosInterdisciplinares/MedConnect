@@ -26,6 +26,7 @@ import servicesGetLotes from "@/server/(GET)-lotes"
 import servicesCreateAnuncio from "@/server/(POST)-anuncio"
 import { CreateAnuncioForm, MatMed } from "@/types"
 import AnimatedBackground from "@/components/ui/animated-background"
+import { MeusAnuncios } from "@/components/anunciar/meus-anuncios"
 
 
 // CORREÇÃO 1: Adicionado ds_lote na interface
@@ -102,6 +103,7 @@ async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<string>
 
 export default function PublicarAnuncioPage() {
   const router = useRouter()
+  const [activeTab, setActiveTab] = useState<"publicar" | "meus_anuncios">("publicar")
   const [materiais, setMateriais] = useState<MatMed[]>([])
   const [lotes, setLotes] = useState<Lote[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
