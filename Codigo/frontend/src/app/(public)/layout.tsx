@@ -45,7 +45,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
               width: scrolled ? "30px" : "34px",
               height: scrolled ? "30px" : "34px",
               background: "linear-gradient(135deg, #3b82f6, #2563eb)",
-              boxShadow: "0 4px 14px rgba(20, 184, 166, 0.25)",
+              boxShadow: "0 4px 14px rgba(59, 130, 246, 0.25)",
               transition: "width 0.4s cubic-bezier(0.4,0,0.2,1), height 0.4s cubic-bezier(0.4,0,0.2,1)",
             }}
           >
@@ -89,7 +89,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             className="group relative flex items-center gap-2 text-white font-bold text-sm px-6 py-2.5 rounded-full transition-all duration-300 hover:-translate-y-px overflow-hidden"
             style={{
               background: "linear-gradient(135deg, #3b82f6, #2563eb)",
-              boxShadow: "0 4px 20px rgba(20, 184, 166, 0.3)",
+              boxShadow: "0 4px 20px rgba(59, 130, 246, 0.3)",
             }}
           >
             <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
@@ -144,7 +144,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
                 className="text-center text-white font-bold text-base px-6 py-3.5 rounded-xl transition-all duration-300"
                 style={{
                   background: "linear-gradient(135deg, #3b82f6, #2563eb)",
-                  boxShadow: "0 4px 20px rgba(20, 184, 166, 0.3)",
+                  boxShadow: "0 4px 20px rgba(59, 130, 246, 0.3)",
                 }}
               >
                 Cadastre-se

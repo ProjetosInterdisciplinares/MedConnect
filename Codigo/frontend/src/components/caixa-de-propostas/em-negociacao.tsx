@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState, useMemo } from "react"
-import { Package, Calendar, Inbox, Loader2, Eye, TrendingDown, CheckCircle, XCircle } from "lucide-react"
+import { Package, Inbox, Loader2, Eye, TrendingDown, CheckCircle2, XCircle, Building2, Tag, Info, ArrowRight } from "lucide-react"
 import servicesGetMeusAnuncios from "@/server/(GET)-meus-anuncios"
 import servicesGetMeusMaaterials from "@/server/(GET)-meus-materiais"
 import servicesGetPessoasJuridicas from "@/server/(GET)-pessoas-juridicas"
@@ -51,7 +51,6 @@ export function NegociacaoTab() {
     return new Map(pessoas.map((p) => [p.cd_pessoaj, p]))
   }, [pessoas])
 
-  // Filtra apenas os anúncios em negociação do usuário
   const itensFiltrados = useMemo(() => {
     return anuncios.filter((a) => a.ie_status === "N")
   }, [anuncios])
@@ -68,165 +67,223 @@ export function NegociacaoTab() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-      </div>
-    )
-  }
-
-  if (itensFiltrados.length === 0) {
-    return (
-      <div className="bg-white border border-dashed border-zinc-300 p-12 rounded-2xl flex flex-col items-center justify-center text-center">
-        <div className="w-16 h-16 bg-zinc-50 rounded-full flex items-center justify-center mb-4">
-          <Inbox className="w-8 h-8 text-zinc-400" />
-        </div>
-        <h3 className="font-bold text-lg text-zinc-800 mb-1">Nenhum registro encontrado</h3>
-        <p className="text-zinc-500 text-sm max-w-sm">Ainda não existem negociações pendentes no seu histórico.</p>
+      <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-4">
+        <Loader2 className="w-10 h-10 text-blue-900 animate-spin" />
+        <p className="text-slate-500 font-medium animate-pulse">Carregando propostas...</p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-4">
-      {itensFiltrados.map((anuncio) => {
-        const materialObj = materiaisMap.get(anuncio.cd_mat)
-        const nomeMaterial = materialObj?.ds_mat ?? "Material não identificado"
-        const valBase = Number(anuncio.val_base || 0)
-        const valProposta = Number(anuncio.val_proposta || anuncio.val_base || 0)
-        const isDesconto = valProposta < valBase
+    <div className="flex flex-col h-full bg-white">
+      {/* Header Interno */}
+      <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white/80 backdrop-blur-md z-10">
+        <div>
+          <h2 className="text-xl font-bold text-slate-800">Propostas Recebidas</h2>
+          <p className="text-sm text-slate-500 mt-1">Gerencie os lances e ofertas para os seus insumos anunciados.</p>
+        </div>
+        <div className="bg-blue-50 text-blue-950 px-3 py-1 rounded-full text-xs font-bold border border-blue-100 shadow-inner">
+          {itensFiltrados.length} Pendente{itensFiltrados.length !== 1 && 's'}
+        </div>
+      </div>
 
-        return (
-          <div key={anuncio.nr_anuncio} className="bg-white border border-blue-100 p-5 md:p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm hover:shadow-md transition-shadow duration-200">
-            <div className="flex items-start gap-4">
-              <div className="hidden md:flex w-12 h-12 rounded-full bg-blue-50 items-center justify-center shrink-0 border border-blue-100">
-                <Package className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <span className="text-[11px] font-bold uppercase tracking-widest text-blue-600 block mb-1">Anúncio #{anuncio.nr_anuncio}</span>
-                <h3 className="font-bold text-lg text-slate-800 leading-tight">{nomeMaterial}</h3>
-                
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500 mt-2">
-                  <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
-                    <span className="font-semibold text-slate-700">Qtd:</span> {anuncio.qtd_mat}
-                  </span>
-                  {anuncio.cd_pessoa_compradora && (
-                    <span className="flex items-center gap-1.5 bg-amber-50 px-2 py-1 rounded-md border border-amber-100 text-amber-700 font-medium">
-                      {pessoasMap.get(anuncio.cd_pessoa_compradora)?.razao_social || `Comprador #${anuncio.cd_pessoa_compradora}`}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-t-0 border-slate-100 pt-4 md:pt-0 mt-2 md:mt-0 flex-1 md:flex-none">
-              
-              {/* Box de Preços (Original vs Proposto) */}
-              <div className="flex flex-col text-right">
-                <span className="text-xs font-medium text-slate-400 line-through mb-0.5">
-                  De: {valBase.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                </span>
-                <div className="flex items-center gap-2 justify-end">
-                  {isDesconto && <TrendingDown className="w-4 h-4 text-emerald-500" />}
-                  <span className="text-blue-600 font-extrabold text-xl">
-                    {valProposta.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => setSelectedAnuncio(anuncio)}
-                  className="p-2.5 bg-slate-50 text-slate-500 border border-slate-200 hover:border-blue-300 hover:text-blue-600 rounded-lg transition-colors"
-                  title="Ver detalhes da proposta"
-                >
-                  <Eye className="w-5 h-5" />
-                </button>
-                <button onClick={() => aceitarProposta(anuncio)} className="p-2.5 bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-600 hover:text-white rounded-lg transition-colors" title="Aceitar">
-                  <CheckCircle className="w-5 h-5" />
-                </button>
-                <button onClick={() => recusarProposta(anuncio)} className="p-2.5 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-600 hover:text-white rounded-lg transition-colors" title="Recusar">
-                  <XCircle className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
+      {itensFiltrados.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-12 text-center min-h-[400px]">
+          <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 shadow-inner ring-1 ring-slate-100">
+            <Inbox className="w-10 h-10 text-slate-300" />
           </div>
-        )
-      })}
+          <h3 className="font-bold text-xl text-slate-700 mb-2">Caixa Vazia</h3>
+          <p className="text-slate-500 text-base max-w-md">
+            Você ainda não tem novas propostas para analisar. Quando alguém fizer um lance nos seus anúncios, ele aparecerá aqui.
+          </p>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto">
+          <ul className="divide-y divide-slate-100">
+            {itensFiltrados.map((anuncio) => {
+              const materialObj = materiaisMap.get(anuncio.cd_mat)
+              const nomeMaterial = materialObj?.ds_mat ?? "Material não identificado"
+              const valBase = Number(anuncio.val_base || 0)
+              const valProposta = Number(anuncio.val_proposta || anuncio.val_base || 0)
+              const isDesconto = valProposta < valBase
 
-      {/* Detalhes da Proposta Dialog */}
+              return (
+                <li key={anuncio.nr_anuncio} className="group relative flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 hover:bg-blue-50/30 transition-colors">
+                  {/* Left info */}
+                  <div className="flex items-start gap-5 flex-1 min-w-0">
+                    <div className="hidden md:flex mt-1 w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-blue-100 items-center justify-center shrink-0 border border-slate-200 group-hover:border-blue-200 transition-colors">
+                      <Package className="w-6 h-6 text-slate-400 group-hover:text-blue-900 transition-colors" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">ID #{anuncio.nr_anuncio}</span>
+                        {isDesconto && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                            <TrendingDown size={12} /> Desconto Solicitado
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="font-semibold text-lg text-slate-800 truncate pr-4">{nomeMaterial}</h3>
+                      
+                      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm mt-2">
+                        <span className="flex items-center gap-2 text-slate-600">
+                          <Tag size={14} className="text-slate-400" />
+                          <span className="font-medium">Qtd: {anuncio.qtd_mat}</span>
+                        </span>
+                        {anuncio.cd_pessoa_compradora && (
+                          <span className="flex items-center gap-2 text-slate-600">
+                            <Building2 size={14} className="text-slate-400" />
+                            <span className="font-medium text-blue-950 hover:underline cursor-pointer">
+                              {pessoasMap.get(anuncio.cd_pessoa_compradora)?.razao_social || `Comprador #${anuncio.cd_pessoa_compradora}`}
+                            </span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right actions / pricing */}
+                  <div className="flex items-center justify-between md:justify-end gap-8 pl-0 md:pl-6 md:border-l border-slate-100">
+                    <div className="flex flex-col text-right">
+                      <span className="text-xs font-medium text-slate-400 line-through mb-1">
+                        De: {valBase.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      </span>
+                      <span className="text-slate-800 font-black text-xl tracking-tight">
+                        {valProposta.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <button 
+                        onClick={() => setSelectedAnuncio(anuncio)}
+                        className="p-2 text-slate-400 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-all"
+                        title="Analisar proposta"
+                      >
+                        <Eye className="w-5 h-5" />
+                      </button>
+                      <button onClick={() => aceitarProposta(anuncio)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="Aceitar rapidamente">
+                        <CheckCircle2 className="w-5 h-5" />
+                      </button>
+                      <button onClick={() => recusarProposta(anuncio)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Recusar">
+                        <XCircle className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
+
+      {/* Detalhes da Proposta Dialog (Modernizado) */}
       <Dialog open={!!selectedAnuncio} onOpenChange={(open) => !open && setSelectedAnuncio(null)}>
         {selectedAnuncio && (
-          <DialogContent className="sm:max-w-md md:max-w-lg">
-            <DialogHeader>
-              <DialogTitle className="text-xl text-blue-900 font-bold">Analisar Proposta</DialogTitle>
-              <DialogDescription>
-                Confira os detalhes do seu anúncio e a proposta recebida antes de tomar uma decisão.
+          <DialogContent className="sm:max-w-2xl p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
+            <DialogHeader className="m-0 bg-blue-900 px-6 py-5 rounded-t-xl border-b border-blue-950">
+              <DialogTitle className="flex items-center justify-between text-xl font-black text-white">
+                Análise de Proposta
+                <span className="text-xs font-bold text-blue-900 bg-blue-50 px-3 py-1 rounded-full uppercase tracking-widest border border-blue-100">
+                  ID #{selectedAnuncio.nr_anuncio}
+                </span>
+              </DialogTitle>
+              <DialogDescription className="text-blue-100 mt-2">
+                Confira as condições propostas pelo comprador antes de tomar sua decisão.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="mt-4 space-y-5">
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Produto Anunciado</p>
-                <p className="font-bold text-slate-800">{materiaisMap.get(selectedAnuncio.cd_mat)?.ds_mat}</p>
-                <div className="flex gap-4 mt-3 text-sm">
-                  <div>
-                    <span className="text-slate-500">Qtd:</span> <span className="font-bold text-slate-700">{selectedAnuncio.qtd_mat}</span>
+            <div className="p-6 space-y-6">
+              {/* Resumo do Pedido */}
+              <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center shrink-0 border border-blue-100 text-blue-900">
+                    <Package className="w-6 h-6" />
                   </div>
-                  {selectedAnuncio.nr_lote && (
-                    <div>
-                      <span className="text-slate-500">Lote:</span> <span className="font-bold text-slate-700">{selectedAnuncio.nr_lote}</span>
+                  <div>
+                    <h4 className="font-bold text-lg text-slate-800 mb-1">{materiaisMap.get(selectedAnuncio.cd_mat)?.ds_mat}</h4>
+                    <div className="flex gap-6 text-sm text-slate-600">
+                      <div><span className="text-slate-400 mr-1">Quantidade:</span><span className="font-semibold">{selectedAnuncio.qtd_mat}</span></div>
+                      {selectedAnuncio.nr_lote && (
+                        <div><span className="text-slate-400 mr-1">Lote:</span><span className="font-semibold">{selectedAnuncio.nr_lote}</span></div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
 
+              {/* Valores Comparativos */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col items-center justify-center text-center">
-                  <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Valor Original (Base)</p>
-                  <p className="font-medium text-slate-500 line-through">
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-slate-200" />
+                  <p className="text-xs uppercase font-bold text-slate-400 mb-1 pl-2">Valor Base do Anúncio</p>
+                  <p className="font-semibold text-xl text-slate-500 line-through pl-2">
                     {Number(selectedAnuncio.val_base).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                   </p>
                 </div>
-                <div className="bg-blue-50 p-4 rounded-xl border border-blue-200 flex flex-col items-center justify-center text-center relative overflow-hidden">
-                  <div className="absolute top-0 w-full h-1 bg-blue-500" />
-                  <p className="text-[10px] uppercase font-bold text-blue-600 mb-1">Valor Proposto</p>
-                  <p className="font-black text-2xl text-blue-700 tracking-tight">
+                
+                <div className="bg-blue-900 p-5 rounded-2xl shadow-lg relative overflow-hidden">
+                  <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-800 rounded-full blur-2xl opacity-50 pointer-events-none" />
+                  <p className="text-xs uppercase font-bold text-blue-100 mb-1 relative z-10">Valor Proposto</p>
+                  <p className="font-black text-3xl text-white tracking-tight relative z-10 flex items-center justify-between">
                     {Number(selectedAnuncio.val_proposta || selectedAnuncio.val_base).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    {(Number(selectedAnuncio.val_proposta) < Number(selectedAnuncio.val_base)) && (
+                      <TrendingDown className="w-6 h-6 text-emerald-300" />
+                    )}
                   </p>
                 </div>
               </div>
 
-              {selectedAnuncio.ds_obs && (
-                <div className="bg-amber-50/50 p-4 rounded-xl border border-amber-100">
-                  <p className="text-[10px] uppercase font-bold text-amber-600 mb-1">Observações do seu anúncio</p>
-                  <p className="text-sm text-amber-800">{selectedAnuncio.ds_obs}</p>
+              {/* Observações / Info extra */}
+              {(selectedAnuncio.ds_obs || selectedAnuncio.cd_pessoa_compradora) && (
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col gap-4">
+                  {selectedAnuncio.cd_pessoa_compradora && (
+                    <div className="flex items-start gap-3">
+                      <Building2 className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs uppercase font-bold text-slate-400 mb-0.5">Comprador Interessado</p>
+                        <p className="font-semibold text-slate-700">
+                          {pessoasMap.get(selectedAnuncio.cd_pessoa_compradora)?.razao_social || `Razão Social Não Encontrada (ID: ${selectedAnuncio.cd_pessoa_compradora})`}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {selectedAnuncio.ds_obs && (
+                    <div className="flex items-start gap-3 pt-4 border-t border-slate-100">
+                      <Info className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs uppercase font-bold text-amber-600/80 mb-0.5">Suas Observações Iniciais</p>
+                        <p className="text-sm text-slate-600 italic leading-relaxed">{selectedAnuncio.ds_obs}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
-            <DialogFooter className="mt-6 sm:justify-between flex-row">
+            {/* Ações */}
+            <div className="bg-white px-6 py-5 border-t border-slate-100 flex flex-col-reverse sm:flex-row justify-between items-center gap-3">
               <button
                 type="button"
                 onClick={() => setSelectedAnuncio(null)}
-                className="px-4 py-2 text-sm font-semibold text-slate-500 hover:text-slate-700 transition-colors"
+                className="w-full sm:w-auto px-5 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-all"
               >
                 Voltar
               </button>
-              <div className="flex gap-2">
+              <div className="flex w-full sm:w-auto gap-3">
                 <button 
                   onClick={() => { recusarProposta(selectedAnuncio); setSelectedAnuncio(null) }} 
-                  className="px-4 py-2 bg-white text-rose-600 border border-rose-200 rounded-lg font-semibold hover:bg-rose-50 transition-colors"
+                  className="flex-1 sm:flex-none px-5 py-2.5 bg-white text-rose-600 border border-rose-200 hover:border-rose-300 hover:bg-rose-50 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
                 >
-                  Recusar Proposta
+                  <XCircle className="w-4 h-4" /> Recusar
                 </button>
                 <button 
                   onClick={() => { aceitarProposta(selectedAnuncio); setSelectedAnuncio(null) }} 
-                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors shadow-sm"
+                  className="flex-1 sm:flex-none px-6 py-2.5 bg-blue-900 text-white rounded-xl font-bold hover:bg-blue-950 transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 group"
                 >
-                  Aceitar Proposta
+                  Aceitar Proposta <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </button>
               </div>
-            </DialogFooter>
+            </div>
           </DialogContent>
         )}
       </Dialog>

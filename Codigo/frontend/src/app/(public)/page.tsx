@@ -270,7 +270,7 @@ export default function MedConnectLanding() {
               <div
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-sm"
                 style={{
-                  background: "rgba(204,251,241,0.6)",
+                  background: "rgba(219,234,254,0.6)",
                   border: "1px solid rgba(59,130,246,0.2)",
                 }}
               >
@@ -460,11 +460,11 @@ export default function MedConnectLanding() {
       >
         <div
           className="absolute top-20 -right-40 w-80 h-80 rounded-full pointer-events-none"
-          style={{ background: "rgba(204,251,241,0.3)", filter: "blur(60px)" }}
+          style={{ background: "rgba(219,234,254,0.3)", filter: "blur(60px)" }}
         />
         <div
           className="absolute bottom-20 -left-40 w-80 h-80 rounded-full pointer-events-none"
-          style={{ background: "rgba(204,251,241,0.3)", filter: "blur(60px)" }}
+          style={{ background: "rgba(219,234,254,0.3)", filter: "blur(60px)" }}
         />
 
         <div className="max-w-4xl mx-auto text-center relative">
@@ -531,7 +531,7 @@ export default function MedConnectLanding() {
       >
         <div
           className="absolute top-0 left-1/4 w-96 h-96 rounded-full pointer-events-none"
-          style={{ background: "rgba(204,251,241,0.3)", filter: "blur(80px)" }}
+          style={{ background: "rgba(219,234,254,0.3)", filter: "blur(80px)" }}
         />
 
         <div className="max-w-7xl mx-auto relative">
