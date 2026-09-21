@@ -280,7 +280,7 @@ export default function AdminCredenciamentos() {
                   {/* Filtro de Status (Apenas Histórico) */}
                   {activeTab === "historico" && (
                     <div className="relative min-w-[160px]">
-                      <Select value={historyFilter} onValueChange={setHistoryFilter}>
+                      <Select value={historyFilter} onValueChange={(val) => setHistoryFilter(val || "TODAS")}>
                         <SelectTrigger className="w-full pl-10 bg-slate-50 border-slate-200 rounded-xl h-[38px] text-slate-600 font-medium focus:ring-blue-900/20 focus:border-blue-900">
                           <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                           <SelectValue placeholder="Status" />
