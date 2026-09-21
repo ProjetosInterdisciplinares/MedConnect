@@ -210,7 +210,7 @@ export default function Anuncios() {
               <div className="relative">
                 <Select
                   value={fabricanteFiltro || "todos"}
-                  onValueChange={(val) => { setFabricanteFiltro(val === "todos" ? "" : val); setCurrentPage(1); }}
+                  onValueChange={(val) => { setFabricanteFiltro((val === "todos" || !val) ? "" : val); setCurrentPage(1); }}
                 >
                   <SelectTrigger className="w-full bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-xl h-10 shadow-sm">
                     <SelectValue placeholder="Todos os fabricantes" />
@@ -231,7 +231,7 @@ export default function Anuncios() {
               <div className="relative">
                 <Select
                   value={localizacaoFiltro || "todas"}
-                  onValueChange={(val) => { setLocalizacaoFiltro(val === "todas" ? "" : val); setCurrentPage(1); }}
+                  onValueChange={(val) => { setLocalizacaoFiltro((val === "todas" || !val) ? "" : val); setCurrentPage(1); }}
                 >
                   <SelectTrigger className="w-full bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-xl h-10 shadow-sm">
                     <SelectValue placeholder="Todas as localizações..." />
@@ -262,7 +262,7 @@ export default function Anuncios() {
                 />
               </div>
               <div className="w-full sm:w-48">
-                <Select value={ordenacao} onValueChange={setOrdenacao}>
+                <Select value={ordenacao} onValueChange={(val) => setOrdenacao(val || "recentes")}>
                   <SelectTrigger className="h-11 bg-white border-0 shadow-sm text-slate-700 font-medium rounded-2xl text-sm focus:ring-blue-500/30">
                     <SelectValue placeholder="Mais recentes" />
                   </SelectTrigger>
