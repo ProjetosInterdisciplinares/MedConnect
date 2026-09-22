@@ -26,6 +26,7 @@ import InputField from "./InputField"
 import { CreateMatMedForm } from "@/types"
 
 import servicesCreateMatMed from "@/server/(POST)-mat-med"
+import { AuthManager } from "@/lib/AuthManager"
 
 export default function FormInsumo() {
   const [insumoForm, setInsumoForm] = useState<CreateMatMedForm>({

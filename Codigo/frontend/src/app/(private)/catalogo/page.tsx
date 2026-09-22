@@ -10,6 +10,7 @@ import { Anuncio, MatMed } from "@/types"
 import { useRouter } from "next/navigation"
 import { Pagination } from "@/components/ui/pagination"
 import AnimatedBackground from "@/components/ui/animated-background"
+import { AuthManager } from "@/lib/AuthManager"
 
 const ITEMS_PER_PAGE = 6;
 

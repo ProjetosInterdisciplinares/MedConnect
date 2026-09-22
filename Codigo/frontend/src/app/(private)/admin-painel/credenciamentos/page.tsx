@@ -20,6 +20,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"
+import { AuthManager } from "@/lib/AuthManager"
 
 interface Empresa {
   cd_pessoaj: number

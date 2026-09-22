@@ -1,4 +1,5 @@
 "use client"
+import { AuthManager } from "@/lib/AuthManager"
 
 export interface ServiceError {
 	isError: true

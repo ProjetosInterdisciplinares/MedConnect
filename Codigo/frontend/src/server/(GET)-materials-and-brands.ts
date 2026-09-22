@@ -1,6 +1,7 @@
 "use client"
 
 import { MatMed } from "@/types"
+import { AuthManager } from "@/lib/AuthManager"
 
 export default async function servicesGetMaterials() {
   const token = AuthManager.getInstance().getToken()

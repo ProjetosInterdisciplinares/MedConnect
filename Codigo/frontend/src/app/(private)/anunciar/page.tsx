@@ -28,6 +28,7 @@ import AnimatedBackground from "@/components/ui/animated-background"
 import { MeusAnuncios } from "@/components/anunciar/meus-anuncios"
 
 import InputField from "@/components/cadastro/InputField"
+import { AuthManager } from "@/lib/AuthManager"
   
 async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<string> {
   const image = await new Promise<HTMLImageElement>((resolve, reject) => {

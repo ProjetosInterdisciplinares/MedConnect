@@ -14,6 +14,7 @@ import servicesGetMeusAnuncios from "@/server/(GET)-meus-anuncios"
 import { Anuncio } from "@/types"
 import servicesGetMinhasCompras from "@/server/(GET)-minhas-compras"
 import { useRouter } from "next/navigation"
+import { AuthManager } from "@/lib/AuthManager"
 
 // Abas baseadas nos STATUS_CHOICES do model Django
 const TABS = [

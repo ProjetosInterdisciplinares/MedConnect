@@ -18,6 +18,7 @@ import servicesUpdateAnuncio from "@/server/(PUT)-anuncio"
 import servicesGetMaterials from "@/server/(GET)-materials-and-brands"
 import { Anuncio, MatMed } from "@/types"
 import AnimatedBackground from "@/components/ui/animated-background"
+import { AuthManager } from "@/lib/AuthManager"
 
 export default function AnuncioDetalhePage() {
   const { id } = useParams()
