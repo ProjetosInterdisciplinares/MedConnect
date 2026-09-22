@@ -39,6 +39,10 @@ export class AuthManager {
     return this.userId;
   }
 
+  public getToken(): string | null {
+    return this.token;
+  }
+
   public logout(): void {
     this.userId = null;
     this.token = null;

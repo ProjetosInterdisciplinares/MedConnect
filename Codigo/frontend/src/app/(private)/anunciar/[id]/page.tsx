@@ -64,7 +64,7 @@ export default function AnuncioDetalhePage() {
 
   async function handleCompraDireta() {
     if (!anuncio) return
-    const cdPessoa = Number(localStorage.getItem("userId"))
+    const cdPessoa = Number(AuthManager.getInstance().getUserId())
     if (!cdPessoa) { alert("Usuário não autenticado"); return }
 
     const res = await servicesUpdateAnuncio(Number(id), {
@@ -80,7 +80,7 @@ export default function AnuncioDetalhePage() {
 
   async function handleProposta() {
     if (!anuncio) return
-    const cdPessoa = Number(localStorage.getItem("userId"))
+    const cdPessoa = Number(AuthManager.getInstance().getUserId())
     if (!cdPessoa) { alert("Usuário não autenticado"); return }
     if (!valorProposta || Number(valorProposta) <= 0) { alert("Informe um valor de proposta válido"); return }
 
@@ -206,7 +206,7 @@ export default function AnuncioDetalhePage() {
         <div className="bg-rose-50 border border-rose-200 rounded-2xl p-6 shadow-sm text-center text-rose-600 font-semibold text-sm">
           Este anúncio não está mais disponível para negociação.
         </div>
-      ) : anuncio.cd_pessoa_anunciante === Number(localStorage.getItem("userId")) ? (
+      ) : anuncio.cd_pessoa_anunciante === Number(AuthManager.getInstance().getUserId()) ? (
         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 shadow-sm text-center text-blue-700 font-semibold text-sm flex flex-col items-center justify-center gap-2">
           <Info className="w-6 h-6 text-blue-500 mb-1" />
           Este é o seu próprio anúncio.

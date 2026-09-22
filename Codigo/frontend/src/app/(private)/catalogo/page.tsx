@@ -31,7 +31,7 @@ export default function Anuncios() {
   useEffect(() => {
     async function load() {
       try {
-        const storedUserId = localStorage.getItem("userId")
+        const storedUserId = String(AuthManager.getInstance().getUserId())
         if (storedUserId) setLoggedUserId(Number(storedUserId))
 
         const [anunciosResult, materiaisResult] = await Promise.all([

@@ -32,6 +32,7 @@ import {
   AlertCircle,
   CheckCircle2,
 } from "lucide-react"
+import { AuthManager } from "@/lib/AuthManager"
 import { registerSchema } from "../schema"
 import servicesRegister from "@/server/(POST)-register"
 import { toast } from "sonner"
@@ -138,9 +139,8 @@ export default function Form(): JSX.Element {
           return
         }
 
-        localStorage.setItem("token", response.access)
+        AuthManager.getInstance().setAuth(response.id, response.access)
         localStorage.setItem("cnpj", response.cnpj)
-        localStorage.setItem("userId", String(response.id))
         toast.success("Login realizado com sucesso!")
         router.push("/catalogo")
       } catch {

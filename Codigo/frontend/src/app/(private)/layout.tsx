@@ -19,6 +19,7 @@ import {
   Shield
 } from "lucide-react"
 import Footer from "@/components/ui/Footer"
+import { withAuth } from "@/lib/withAuth"
 
 import {
   DropdownMenu,
@@ -42,7 +43,7 @@ interface LayoutProps {
   children: ReactNode
 }
 
-export default function Layout({ children }: LayoutProps) {
+function Layout({ children }: LayoutProps) {
   const router = useRouter()
   const pathname = usePathname()
 
@@ -58,15 +59,8 @@ export default function Layout({ children }: LayoutProps) {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  // Verifica autenticação e carrega a empresa
+  // Carrega a empresa
   useEffect(() => {
-    const isAuthenticated = !!localStorage.getItem("token")
-
-    if (!isAuthenticated) {
-      router.push("/auth")
-      return
-    }
-
     async function carregarDados() {
       // 1. Carrega o usuário logado
       const result = await servicesGetMinhaPessoaJuridica()
@@ -213,9 +207,11 @@ export default function Layout({ children }: LayoutProps) {
               <DropdownMenuItem
                 className="flex items-center gap-2 px-4 py-2.5 mb-1 mx-1.5 text-sm font-bold text-red-600 text-left transition-colors cursor-pointer focus:text-red-700 focus:bg-red-50 rounded-lg"
                 onClick={() => {
-                  localStorage.removeItem("token")
-                  localStorage.removeItem("cnpj")
-                  router.push("/auth")
+                  import("@/lib/AuthManager").then(({ AuthManager }) => {
+                    AuthManager.getInstance().logout()
+                    localStorage.removeItem("cnpj")
+                    router.push("/auth")
+                  })
                 }}
               >
                 <LogOut size={16} className="text-red-500" />
@@ -284,3 +280,5 @@ export default function Layout({ children }: LayoutProps) {
     </div>
   )
 }
+
+export default withAuth(Layout)

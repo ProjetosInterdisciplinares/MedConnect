@@ -46,7 +46,7 @@ export default function FormInsumo() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
-    const userId = Number(localStorage.getItem("userId") || 0)
+    const userId = AuthManager.getInstance().getUserId() || 0
 
     setInsumoForm((prev) => ({
       ...prev,

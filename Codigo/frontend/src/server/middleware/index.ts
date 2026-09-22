@@ -19,7 +19,7 @@ export function buildUrl(path: string): string {
 }
 
 export function getAuthHeaders(): HeadersInit {
-	const token = localStorage.getItem("token")
+	const token = AuthManager.getInstance().getToken()
 
 	return {
 		"Content-Type": "application/json",

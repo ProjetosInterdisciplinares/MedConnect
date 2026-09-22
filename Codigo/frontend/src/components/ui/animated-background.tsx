@@ -63,100 +63,25 @@ export default function AnimatedBackground() {
         }}
       />
 
-      {/* Decorative rings (spinning) */}
-      <svg
-        className="absolute animate-ring-spin pointer-events-none"
-        style={{ top: "-5%", right: "5%", width: "300px", height: "300px" }}
-        viewBox="0 0 300 300"
-      >
-        <circle cx="150" cy="150" r="120" fill="none" stroke="rgba(59,130,246,0.15)" strokeWidth="1.5" strokeDasharray="8 12" className="animate-dash-orbit" />
-        <circle cx="150" cy="150" r="90" fill="none" stroke="rgba(59,130,246,0.1)" strokeWidth="1" strokeDasharray="4 16" />
-      </svg>
-      <svg
-        className="absolute animate-ring-spin pointer-events-none"
-        style={{ bottom: "0%", left: "3%", width: "250px", height: "250px", animationDirection: "reverse", animationDuration: "30s" }}
-        viewBox="0 0 250 250"
-      >
-        <circle cx="125" cy="125" r="100" fill="none" stroke="rgba(14,165,233,0.12)" strokeWidth="1.5" strokeDasharray="6 14" className="animate-dash-orbit" />
-        <circle cx="125" cy="125" r="70" fill="none" stroke="rgba(59,130,246,0.08)" strokeWidth="1" strokeDasharray="3 12" />
-      </svg>
 
-      {/* Prominent bordered circles */}
-      <div
-        className="absolute rounded-full animate-drift pointer-events-none"
-        style={{
-          width: "180px",
-          height: "180px",
-          top: "8%",
-          left: "8%",
-          border: "2px solid rgba(59,130,246,0.18)",
-          background: "rgba(59,130,246,0.04)",
-          animationDuration: "18s",
-        }}
-      />
-      <div
-        className="absolute rounded-full animate-drift pointer-events-none"
-        style={{
-          width: "120px",
-          height: "120px",
-          bottom: "12%",
-          right: "8%",
-          border: "2px solid rgba(191,219,254,0.25)",
-          background: "rgba(191,219,254,0.06)",
-          animationDuration: "22s",
-          animationDirection: "reverse",
-        }}
-      />
-      <div
-        className="absolute rounded-full pointer-events-none"
-        style={{
-          width: "60px",
-          height: "60px",
-          top: "55%",
-          right: "20%",
-          border: "1.5px solid rgba(59,130,246,0.15)",
-          background: "rgba(59,130,246,0.03)",
-        }}
-      />
-
-      {/* Floating teal particles */}
-      {[
-        { size: 18, left: "8%",  top: "18%", delay: "0s",   duration: "7s"  },
-        { size: 22, left: "88%", top: "22%", delay: "1s",   duration: "9s"  },
-        { size: 14, left: "18%", top: "72%", delay: "2.5s", duration: "8s"  },
-        { size: 26, left: "78%", top: "78%", delay: "0.5s", duration: "11s" },
-        { size: 12, left: "48%", top: "8%",  delay: "3s",   duration: "6s"  },
-        { size: 20, left: "92%", top: "55%", delay: "1.5s", duration: "10s" },
-        { size: 16, left: "32%", top: "88%", delay: "4s",   duration: "7.5s"},
-        { size: 14, left: "62%", top: "5%",  delay: "2s",   duration: "8.5s"},
-        { size: 10, left: "5%",  top: "50%", delay: "3.5s", duration: "9.5s"},
-        { size: 24, left: "55%", top: "92%", delay: "0.8s", duration: "10.5s"},
-      ].map((p, i) => (
-        <div
-          key={i}
-          className="absolute rounded-full animate-float pointer-events-none"
-          style={{
-            width: `${p.size}px`,
-            height: `${p.size}px`,
-            left: p.left,
-            top: p.top,
-            background: `radial-gradient(circle, rgba(59,130,246,${0.6 - i * 0.03}) 0%, rgba(59,130,246,0.1) 50%, transparent 70%)`,
-            boxShadow: `0 0 ${p.size * 2}px rgba(59,130,246,${0.15 - i * 0.01})`,
-            animationDelay: p.delay,
-            animationDuration: p.duration,
-          }}
-        />
-      ))}
 
       {/* Decorative plus/cross markers */}
       {[
-        { left: "6%",  top: "32%", size: 20, delay: "0s"   },
-        { left: "94%", top: "42%", size: 16, delay: "3s"   },
-        { left: "12%", top: "82%", size: 18, delay: "1.5s" },
-        { left: "82%", top: "10%", size: 22, delay: "4.5s" },
-        { left: "42%", top: "94%", size: 14, delay: "2s"   },
-        { left: "70%", top: "90%", size: 16, delay: "3.5s" },
-        { left: "25%", top: "5%",  size: 18, delay: "1s"   },
+        { left: "6%",   top: "32%", size: 20, delay: "0s"   },
+        { left: "94%",  top: "42%", size: 16, delay: "3s"   },
+        { left: "12%",  top: "82%", size: 18, delay: "1.5s" },
+        { left: "82%",  top: "10%", size: 22, delay: "4.5s" },
+        { left: "42%",  top: "94%", size: 14, delay: "2s"   },
+        { left: "70%",  top: "90%", size: 16, delay: "3.5s" },
+        { left: "25%",  top: "5%",  size: 18, delay: "1s"   },
+        { left: "50%",  top: "45%", size: 24, delay: "2.5s" },
+        { left: "85%",  top: "65%", size: 18, delay: "5s"   },
+        { left: "15%",  top: "20%", size: 16, delay: "0.5s" },
+        { left: "60%",  top: "25%", size: 20, delay: "4s"   },
+        { left: "35%",  top: "70%", size: 22, delay: "2s"   },
+        { left: "5%",   top: "60%", size: 14, delay: "1.2s" },
+        { left: "75%",  top: "40%", size: 20, delay: "3.8s" },
+        { left: "90%",  top: "85%", size: 16, delay: "2.2s" },
       ].map((m, i) => (
         <div
           key={`cross-${i}`}

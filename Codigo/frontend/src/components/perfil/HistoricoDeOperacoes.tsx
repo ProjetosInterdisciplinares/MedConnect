@@ -66,7 +66,7 @@ export default function HistoricoPage() {
   // Recupera o ID como string para a aba de compras
   const cdPessoa = useMemo(() => {
     if (typeof window === "undefined") return null
-    return localStorage.getItem("cd_pessoa")
+    return String(AuthManager.getInstance().getUserId())
   }, [])
 
   useEffect(() => {

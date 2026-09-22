@@ -58,7 +58,7 @@ async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<string>
   return canvas.toDataURL("image/jpeg", 0.9)
 }
 
-export default function PublicarAnuncioPage() {
+export default function AnunciarPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<"publicar" | "meus_anuncios">("publicar")
   const [materiais, setMateriais] = useState<MatMed[]>([])
@@ -88,7 +88,7 @@ export default function PublicarAnuncioPage() {
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
 
   useEffect(() => {
-    const userId = Number(localStorage.getItem("userId") || 0)
+    const userId = AuthManager.getInstance().getUserId() || 0
     setAnuncioForm((prev) => ({ ...prev, cd_pessoa_anunciante: userId }))
 
     async function fetchData() {

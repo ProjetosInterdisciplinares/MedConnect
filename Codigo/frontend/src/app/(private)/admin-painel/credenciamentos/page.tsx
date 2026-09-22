@@ -65,7 +65,7 @@ export default function AdminCredenciamentos() {
   const fetchEmpresas = async () => {
     try {
       setLoading(true)
-      const token = localStorage.getItem("token")
+      const token = AuthManager.getInstance().getToken()
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
       const res = await fetch(`${apiUrl}/api/medconnect/admin/pessoas/`, {
         headers: {
@@ -88,7 +88,7 @@ export default function AdminCredenciamentos() {
 
   useEffect(() => {
     fetchEmpresas()
-    const userId = localStorage.getItem("userId")
+    const userId = String(AuthManager.getInstance().getUserId())
     if (userId) setLoggedUserId(Number(userId))
   }, [])
 
@@ -101,7 +101,7 @@ export default function AdminCredenciamentos() {
     try {
       setActionLoading(id)
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-      const token = localStorage.getItem("token")
+      const token = AuthManager.getInstance().getToken()
       const res = await fetch(`${apiUrl}/api/medconnect/admin/pessoas/${id}`, {
         method: "PATCH",
         headers: {
