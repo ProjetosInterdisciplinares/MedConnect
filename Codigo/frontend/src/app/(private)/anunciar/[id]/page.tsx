@@ -166,10 +166,10 @@ export default function AnuncioDetalhePage() {
               </p>
             </div>
 
-            {anuncio.nr_lote && (
+            {anuncio.ds_lote && (
               <div>
                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Lote</p>
-                 <p className="font-bold text-slate-700">{anuncio.nr_lote}</p>
+                 <p className="font-bold text-slate-700">{anuncio.ds_lote}</p>
               </div>
             )}
 

@@ -203,8 +203,8 @@ export function NegociacaoTab() {
                     <h4 className="font-bold text-lg text-slate-800 mb-1">{materiaisMap.get(selectedAnuncio.cd_mat)?.ds_mat}</h4>
                     <div className="flex gap-6 text-sm text-slate-600">
                       <div><span className="text-slate-400 mr-1">Quantidade:</span><span className="font-semibold">{selectedAnuncio.qtd_mat}</span></div>
-                      {selectedAnuncio.nr_lote && (
-                        <div><span className="text-slate-400 mr-1">Lote:</span><span className="font-semibold">{selectedAnuncio.nr_lote}</span></div>
+                      {selectedAnuncio.ds_lote && (
+                        <div><span className="text-slate-400 mr-1">Lote:</span><span className="font-semibold">{selectedAnuncio.ds_lote}</span></div>
                       )}
                     </div>
                   </div>

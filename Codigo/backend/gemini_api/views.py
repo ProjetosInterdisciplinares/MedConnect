@@ -5,7 +5,6 @@ from rest_framework.response import Response
 from rest_framework import status
 from google import genai
 
-from lote.models import Lote
 from mat_med.models import MatMed
 from pessoa_juridica.models import PessoaJuridica   
 
@@ -15,34 +14,33 @@ class GerarDescricaoAnuncioView(APIView):
     def post(self, request):
         dados = request.data
         
-        nr_lote_id = dados.get('nr_lote')
         cd_mat_id = dados.get('cd_mat')
         cd_pessoa_anunciante  = dados.get('cd_pessoa_anunciante')
-        qtd_solicitada = dados.get('qtd_mat') 
+        qtd_solicitada = dados.get('qtd_mat')
+        
+        # Opcionais (vieram da tela de anuncio)
+        ds_lote = dados.get('ds_lote', 'N/A')
+        dt_validade = dados.get('dt_validade', 'N/A')
 
-        if not all([nr_lote_id, cd_mat_id, cd_pessoa_anunciante, qtd_solicitada]):
+        if not all([cd_mat_id, cd_pessoa_anunciante, qtd_solicitada]):
             return Response(
-                {"erro": "Faltam parâmetros obrigatórios (nr_lote, cd_mat, cd_pessoa_anunciante, qtd_mat)."}, 
+                {"erro": "Faltam parâmetros obrigatórios (cd_mat, cd_pessoa_anunciante, qtd_mat)."}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         try:
-            lote = Lote.objects.get(nr_lote=nr_lote_id)
             material = MatMed.objects.get(cd_mat=cd_mat_id)
             hospital_anunciante = PessoaJuridica.objects.get(cd_pessoaj=cd_pessoa_anunciante)
             
-            marca_nome = material.ds_marca.ds_marca  
-            tipo_nome = material.ds_tipo.ds_tipo    
-            fabricante_nome = lote.fabricante.ds_fabricante 
+            marca_nome = material.ds_marca if material.ds_marca else 'Não informada'
+            tipo_nome = material.ds_tipo if material.ds_tipo else 'Não informada'
+            unidade = material.unidade_med if material.unidade_med else 'unidade(s)'
             
-        except (Lote.DoesNotExist, MatMed.DoesNotExist, PessoaJuridica.DoesNotExist) as e:
+        except (MatMed.DoesNotExist, PessoaJuridica.DoesNotExist) as e:
             return Response(
                 {"erro": f"Registro não encontrado no banco de dados: {str(e)}"}, 
                 status=status.HTTP_404_NOT_FOUND
             )
-
-        # Formatar a data de validade 
-        validade_formatada = lote.dt_validade.strftime('%d/%m/%Y') if hasattr(lote.dt_validade, 'strftime') else lote.dt_validade
 
         # Prompt 
         prompt = f"""
@@ -51,14 +49,13 @@ class GerarDescricaoAnuncioView(APIView):
 
         Dados Técnicos:
         - Categoria: {tipo_nome}
-        - Nome do Item: {material.ds_mat}
+        - Nome do Item: {material.ds_mat if material.ds_mat else material.cd_tuss}
         - Marca: {marca_nome}
-        - Fabricante: {fabricante_nome}
-        - Número do Lote: {lote.nr_lote}
-        - Data de Validade: {validade_formatada}
+        - Número do Lote: {ds_lote}
+        - Data de Validade: {dt_validade}
         
         Logística:
-        - Quantidade Disponível: {qtd_solicitada} {lote.unidade_med}
+        - Quantidade Disponível: {qtd_solicitada} {unidade}
         - Hospital Ofertante: {hospital_anunciante.nm_pessoaj}
 
         Diretrizes da resposta:

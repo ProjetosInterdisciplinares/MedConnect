@@ -7,13 +7,9 @@ from statistics_api.views import ApiStatsView
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('gemini_api.urls')),
-    path('api/medconnect/', include('fabricante.urls')),
-    path('api/medconnect/', include('lote.urls')),
-    path('api/medconnect/', include('marcas.urls')),
     path('api/medconnect/', include('mat_med.urls')),
     path('api/medconnect/', include('pessoa_juridica.urls')),
     path('api/medconnect/', include('anuncio.urls')),
-    path('api/medconnect/', include('tipo_matmed.urls')),
     path('api/medconnect/', include('gemini_api.urls')),
     path('authentication/', include('authentication.urls')),
 

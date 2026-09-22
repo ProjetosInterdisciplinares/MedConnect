@@ -1,7 +1,6 @@
 from django.db import models
 from mat_med.models import MatMed
 from pessoa_juridica.models import PessoaJuridica
-from lote.models import Lote
 
 class Anuncio(models.Model):
     STATUS_CHOICES = [
@@ -12,7 +11,11 @@ class Anuncio(models.Model):
     ]
 
     nr_anuncio           = models.AutoField(primary_key=True)
-    nr_lote              = models.ForeignKey(Lote, on_delete=models.RESTRICT, related_name='anuncios', null=True, blank=True)
+    
+    ds_lote              = models.CharField(max_length=50, blank=True, null=True, verbose_name="Lote")
+    dt_fabricacao        = models.DateField(blank=True, null=True, verbose_name="Data de Fabricação")
+    dt_validade          = models.DateField(blank=True, null=True, verbose_name="Data de Validade")
+    
     cd_mat               = models.ForeignKey(MatMed, on_delete=models.RESTRICT, related_name='anuncios')
     qtd_mat              = models.IntegerField()
     val_base             = models.DecimalField(max_digits=10, decimal_places=2)

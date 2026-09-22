@@ -50,10 +50,6 @@ INSTALLED_APPS = [
     'corsheaders',
     
     'mat_med',
-    'fabricante',
-    'lote',
-    'marcas',
-    'tipo_matmed',
     'pessoa_juridica',
     'anuncio',
     

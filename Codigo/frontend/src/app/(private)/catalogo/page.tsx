@@ -3,11 +3,10 @@
 import React, { useEffect, useState, useMemo } from "react"
 import servicesGetAnuncios from "@/server/(GET)-anuncios"
 import servicesGetMaterials from "@/server/(GET)-materials-and-brands" 
-import servicesGetLotes from "@/server/(GET)-lotes"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, PackageX, SlidersHorizontal, MapPin } from "lucide-react"
-import { Anuncio, MatMed, Lote } from "@/types"
+import { Anuncio, MatMed } from "@/types"
 import { useRouter } from "next/navigation"
 import { Pagination } from "@/components/ui/pagination"
 import AnimatedBackground from "@/components/ui/animated-background"
@@ -17,7 +16,6 @@ const ITEMS_PER_PAGE = 6;
 export default function Anuncios() {
   const [anuncios, setAnuncios] = useState<Anuncio[]>([])
   const [materiais, setMateriais] = useState<MatMed[]>([])
-  const [lotes, setLotes] = useState<Lote[]>([])
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
   const [loggedUserId, setLoggedUserId] = useState<number | null>(null)
@@ -36,15 +34,13 @@ export default function Anuncios() {
         const storedUserId = localStorage.getItem("userId")
         if (storedUserId) setLoggedUserId(Number(storedUserId))
 
-        const [anunciosResult, materiaisResult, lotesResult] = await Promise.all([
+        const [anunciosResult, materiaisResult] = await Promise.all([
           servicesGetAnuncios(0),
           servicesGetMaterials(),
-          servicesGetLotes(),
         ])
 
         if (Array.isArray(anunciosResult)) setAnuncios(anunciosResult)
         if (Array.isArray(materiaisResult)) setMateriais(materiaisResult)
-        if (Array.isArray(lotesResult)) setLotes(lotesResult)
       } catch (error) {
         console.error("Erro ao buscar dados do catálogo:", error)
       } finally {
@@ -59,16 +55,12 @@ export default function Anuncios() {
     return new Map(materiais.map((m) => [m.cd_mat, m]))
   }, [materiais])
 
-  const lotesMap = useMemo(() => {
-    return new Map(lotes.map((l) => [l.nr_lote, l]))
-  }, [lotes])
-
   const fabricantesUnicos = useMemo(() => {
     const fabs = new Set<string>()
     anuncios.forEach(a => {
       if (loggedUserId !== null && a.cd_pessoa_anunciante === loggedUserId) return;
       const materialObj = materiaisMap.get(a.cd_mat)
-      const fab = String(materialObj?.marca_nome || (a as any).nm_fabricante || (a as any).ds_marca_mat || "Outros").trim()
+      const fab = String(materialObj?.ds_marca || (a as any).nm_fabricante || (a as any).ds_marca_mat || "Outros").trim()
       if (fab && fab !== "undefined") fabs.add(fab)
     })
     return Array.from(fabs).sort()
@@ -91,11 +83,11 @@ export default function Anuncios() {
       if (loggedUserId !== null && a.cd_pessoa_anunciante === loggedUserId) return false;
 
       const materialObj = materiaisMap.get(a.cd_mat)
-      const nomeProduct = materialObj?.ds_mat.toLowerCase() ?? ""
+      const nomeProduct = materialObj?.ds_mat?.toLowerCase() ?? ""
       const tipoProduct = materialObj?.ds_tipo ?? ""
       const vendedor = String((a as any).nm_vendedor || (a as any).ds_empresa || (a as any).anunciante_razao || "").toLowerCase()
       const nrAnuncio = a.nr_anuncio?.toString() || ""
-      const fabricante = String(materialObj?.marca_nome || (a as any).nm_fabricante || (a as any).ds_marca_mat || "Outros").toLowerCase()
+      const fabricante = String(materialObj?.ds_marca || (a as any).nm_fabricante || (a as any).ds_marca_mat || "Outros").toLowerCase()
       const cidade = String(a.anunciante_razao || (a as any).ds_cidade || (a as any).nm_cidade || "Desconhecida").toLowerCase()
       
       const matchesSearch = (
@@ -280,13 +272,12 @@ export default function Anuncios() {
                 paginatedAnuncios.map((anuncio) => {
                   const materialObj = materiaisMap.get(anuncio.cd_mat)
                   const nomeMaterial = materialObj?.ds_mat ?? "Material não identificado"
-                  const fabricante = materialObj?.marca_nome || (anuncio as any).nm_fabricante || (anuncio as any).ds_marca_mat || "Fabricante não informado"
+                  const fabricante = materialObj?.ds_marca || (anuncio as any).nm_fabricante || (anuncio as any).ds_marca_mat || "Fabricante não informado"
                   const anunciante = (anuncio as any).anunciante_razao || (anuncio as any).nm_vendedor || (anuncio as any).ds_empresa || "Usuário"
-                  const lote = (anuncio as any).nr_lote || "Não informado"
+                  const lote = anuncio.ds_lote || "Não informado"
                   
                   let dataValidade = "Não informada"
-                  const loteObj = anuncio.nr_lote ? lotesMap.get(anuncio.nr_lote) : null
-                  const rawValidade = loteObj?.dt_validade || (anuncio as any).dt_validade
+                  const rawValidade = anuncio.dt_validade
                   
                   if (rawValidade) {
                      const dateObj = new Date(rawValidade)

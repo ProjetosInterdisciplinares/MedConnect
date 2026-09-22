@@ -102,7 +102,7 @@ export default function MeusMateriais() {
                       <div className="min-w-0">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Marca</p>
                         <p className="font-bold text-slate-700 text-sm truncate">
-                          {material.marca_nome || "Não informada"}
+                          {material.ds_marca || "Não informada"}
                         </p>
                       </div>
                     </div>

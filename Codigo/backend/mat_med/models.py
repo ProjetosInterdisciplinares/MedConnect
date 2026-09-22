@@ -1,6 +1,4 @@
 from django.db import models
-from marcas.models import Marcas
-from tipo_matmed.models import TipoMatMed
 from pessoa_juridica.models import PessoaJuridica
 
 class MatMed(models.Model):
@@ -8,19 +6,37 @@ class MatMed(models.Model):
     cd_mat = models.AutoField(primary_key=True)
 
     ds_mat = models.CharField(
-        max_length=255
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="Nome Insumo"
     )
 
-    ds_marca = models.ForeignKey(
-        Marcas,
-        on_delete=models.RESTRICT,
-        related_name='materiais'
+    ds_marca = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="Marca"
     )
 
-    ds_tipo = models.ForeignKey(
-        TipoMatMed,
-        on_delete=models.RESTRICT,
-        related_name='materiais'
+    CATEGORIA_CHOICES = (
+        ("Material Hospitalar", "Material Hospitalar"),
+        ("Medicamento", "Medicamento"),
+    )
+
+    ds_tipo = models.CharField(
+        max_length=50,
+        choices=CATEGORIA_CHOICES,
+        blank=True,
+        null=True,
+        verbose_name="Categoria"
+    )
+
+    unidade_med = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name="Unidade de Medida"
     )
 
     ds_pessoaj = models.ForeignKey(
@@ -44,8 +60,8 @@ class MatMed(models.Model):
 
     cd_tuss = models.CharField(
         max_length=8,
-        blank=True,
-        null=True,
+        blank=False,
+        null=False,
         verbose_name="Código TUSS"
     )
 
@@ -64,4 +80,4 @@ class MatMed(models.Model):
     )
 
     def __str__(self):
-        return self.ds_mat
+        return str(self.ds_mat) if self.ds_mat else str(self.cd_tuss)

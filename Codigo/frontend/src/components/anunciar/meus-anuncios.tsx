@@ -5,20 +5,11 @@ import { PackageX, Pencil, Trash2 } from "lucide-react"
 import servicesGetMeusAnuncios from "@/server/(GET)-meus-anuncios"
 import { Anuncio, MatMed } from "@/types"
 
-interface Lote {
-  nr_lote: number
-  ds_lote: string
-  dt_validade: string
-  cd_material: number
-  ie_status: string
-}
-
 interface MeusAnunciosProps {
   materiais: MatMed[]
-  lotes: Lote[]
 }
 
-export function MeusAnuncios({ materiais, lotes }: MeusAnunciosProps) {
+export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
   const [anuncios, setAnuncios] = useState<Anuncio[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -80,14 +71,13 @@ export function MeusAnuncios({ materiais, lotes }: MeusAnunciosProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {anuncios.map((anuncio) => {
           const materialObj = materiais.find(m => String(m.cd_mat) === String(anuncio.cd_mat))
-          const loteObj = lotes.find(l => String(l.nr_lote) === String(anuncio.nr_lote))
           
           const nomeMaterial = materialObj?.ds_mat || "Insumo não identificado"
-          const loteTexto = loteObj?.ds_lote || anuncio.ds_lote || "Sem lote"
+          const loteTexto = anuncio.ds_lote || "Sem lote"
           
           let dataValidade = "Não informada"
-          if (loteObj?.dt_validade) {
-            dataValidade = new Date(loteObj.dt_validade).toLocaleDateString("pt-BR")
+          if (anuncio.dt_validade) {
+            dataValidade = new Date(anuncio.dt_validade).toLocaleDateString("pt-BR")
           }
 
           const getStatusBadge = (status: string) => {

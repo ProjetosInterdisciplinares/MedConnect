@@ -1,7 +1,8 @@
 export interface Anuncio {
   nr_anuncio: number
   ds_lote: string | null
-  nr_lote: number | null
+  dt_fabricacao: string | null
+  dt_validade: string | null
   cd_mat: number
   material_nome?: string
   qtd_mat: number
@@ -20,20 +21,21 @@ export interface Anuncio {
 }
 
 export interface CreateAnuncioForm {
-  nr_lote: number | null
-  ds_lote: string | null
+  ds_lote?: string | null
+  dt_fabricacao?: string | null
+  dt_validade?: string | null
   cd_mat: number
   qtd_mat: number
   val_base: string
   cd_pessoa_anunciante: number
   ds_obs?: string
   imagem_anuncio?: string
-  // 1. Removido o status do Create. Quando cria, o Django assume o default='A'
 }
 
-// 2. O Update PRECISA aceitar os novos campos de negociação
 export interface UpdateAnuncioForm {
-  nr_lote?: number | null
+  ds_lote?: string | null
+  dt_fabricacao?: string | null
+  dt_validade?: string | null
   cd_mat?: number
   qtd_mat?: number
   val_base?: string

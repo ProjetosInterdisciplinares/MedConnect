@@ -1,5 +1,4 @@
 from django.db import models
-from fabricante.models import Fabricante
 
 class PessoaJuridica(models.Model):
 

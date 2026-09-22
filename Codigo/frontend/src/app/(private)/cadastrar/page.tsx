@@ -1,85 +1,64 @@
 "use client"
 
-import { useState } from "react"
-import { Package, Layers, Factory } from "lucide-react"
+import { Package, PlusCircle } from "lucide-react"
 
 import FormInsumo from "@/components/cadastro/FormInsumo"
-import FormLote from "@/components/cadastro/FormLote"
-import FormFabricante from "@/components/cadastro/FormFabricante"
 import AnimatedBackground from "@/components/ui/animated-background"
 
-
-type Tab = "insumo" | "lote" | "fabricante"
-
 export default function CadastroPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("insumo")
-
   return (
-    <div className="relative min-h-screen w-full antialiased selection:bg-blue-500/20">
+    <div className="relative min-h-screen w-full antialiased bg-slate-50/50 selection:bg-blue-500/20">
       <AnimatedBackground />
-      <div className="max-w-4xl mx-auto py-8 px-4 relative z-10">
-        <div className="mb-8">
-        <h1 className="text-2xl font-bold text-blue-800 dark:text-blue-400">
-          Cadastro de Insumos | Lotes | Fabricantes
-        </h1>
+      <div className="max-w-[1200px] mx-auto py-8 md:py-12 px-4 sm:px-6 lg:px-8 font-sans relative z-10">
+        
+        {/* Header da Página */}
+        <div className="mb-8 md:mb-12">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-xl bg-blue-900 flex items-center justify-center text-white shadow-lg shadow-blue-900/20">
+              <PlusCircle size={20} />
+            </div>
+            <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">
+              Cadastro de Insumos
+            </h1>
+          </div>
+          <p className="text-slate-500 text-sm md:text-base max-w-2xl ml-[52px]">
+            Cadastre novos insumos e medicamentos no sistema. Uma vez cadastrados, eles estarão disponíveis para serem anunciados no catálogo do marketplace.
+          </p>
+        </div>
 
-        <p className="text-zinc-500 text-sm mt-1">
-          Cadastre novos insumos ou fabricantes e registre a entrada de novos
-          lotes.
-        </p>
-      </div>
+        {/* Layout Master-Detail / Sidebar */}
+        <div className="flex flex-col md:flex-row gap-8 items-start">
+          
+          {/* Navegação Lateral */}
+          <aside className="w-full md:w-72 shrink-0 flex flex-col gap-2">
+            <button
+              type="button"
+              className="relative w-full text-left flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group bg-white shadow-sm ring-1 ring-slate-200/50 cursor-default"
+            >
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-900 rounded-r-full" />
+              <div className="shrink-0 rounded-xl p-2 transition-colors bg-blue-50 text-blue-900">
+                <Package size={20} />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-slate-800">
+                  Insumos
+                </h3>
+                <p className="text-xs text-slate-400 mt-1 leading-snug">
+                  Adicionar um novo material ou medicamento
+                </p>
+              </div>
+            </button>
+          </aside>
 
-      <div className="flex items-center gap-2 p-1.5 bg-white/60 backdrop-blur-md border border-blue-100/50 rounded-2xl w-fit mb-8 shadow-sm">
-        <button
-          type="button"
-          onClick={() => setActiveTab("insumo")}
-          className={`hover:cursor-pointer flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
-            activeTab === "insumo"
-              ? "bg-blue-700 text-white shadow-md hover:bg-blue-800"
-              : "text-blue-900 hover:bg-blue-50"
-          }`}
-        >
-          <Package size={16} />
-          Insumo
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("lote")}
-          className={`hover:cursor-pointer flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
-            activeTab === "lote"
-              ? "bg-blue-700 text-white shadow-md hover:bg-blue-800"
-              : "text-blue-900 hover:bg-blue-50"
-          }`}
-        >
-          <Layers size={16} />
-          Lote
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("fabricante")}
-          className={`hover:cursor-pointer flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
-            activeTab === "fabricante"
-              ? "bg-blue-700 text-white shadow-md hover:bg-blue-800"
-              : "text-blue-900 hover:bg-blue-50"
-          }`}
-        >
-          <Factory size={16} />
-          Fabricante
-        </button>
-      </div>
-
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-600 to-blue-400" />
-        {activeTab === "insumo" && <FormInsumo />}
-
-        {activeTab === "lote" && <FormLote />}
-
-        {activeTab === "fabricante" && <FormFabricante />}
+          {/* Área de Conteúdo */}
+          <div className="flex-1 w-full min-w-0">
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden min-h-[500px] p-6 md:p-8">
+              <FormInsumo />
+            </div>
+          </div>
+          
+        </div>
       </div>
     </div>
-    </div>
-    
   )
 }

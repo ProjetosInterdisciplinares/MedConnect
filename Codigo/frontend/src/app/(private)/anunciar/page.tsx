@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Megaphone, Package, Layers, Hash, DollarSign, FileText, Sparkles, CheckCircle, ImagePlus, X, Crop, ZoomIn } from "lucide-react"
+import { Megaphone, Package, Hash, DollarSign, FileText, Sparkles, CheckCircle, ImagePlus, X, Crop, ZoomIn, Calendar, Layers } from "lucide-react"
 import Cropper, { Area } from "react-easy-crop"
 import {
   Dialog,
@@ -22,55 +22,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import servicesGetMatMed from "@/server/(GET)-mat-med"
-import servicesGetLotes from "@/server/(GET)-lotes"
 import servicesCreateAnuncio from "@/server/(POST)-anuncio"
 import { CreateAnuncioForm, MatMed } from "@/types"
 import AnimatedBackground from "@/components/ui/animated-background"
 import { MeusAnuncios } from "@/components/anunciar/meus-anuncios"
 
-
-// CORREÇÃO 1: Adicionado ds_lote na interface
-interface Lote {
-  nr_lote: number
-  ds_lote: string
-  dt_validade: string
-  cd_material: number
-  ie_status: string
-}
-
-const InputField = ({
-    label,
-    icon: Icon,
-    rightElement,
-    ...props
-  }: {
-    label: string
-    icon: React.ElementType
-    rightElement?: React.ReactNode
-  } & React.InputHTMLAttributes<HTMLInputElement | HTMLTextAreaElement>) => (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex justify-between items-center">
-        <label className="text-sm font-semibold text-slate-700">{label}</label>
-        {rightElement}
-      </div>
-      <div className="relative">
-        <div className="absolute left-3 top-3 text-slate-400">
-          <Icon size={16} />
-        </div>
-        {props.type === "textarea" ? (
-          <textarea
-            {...(props as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 outline-none transition-all text-sm min-h-30 resize-y"
-          />
-        ) : (
-          <input
-            {...(props as React.InputHTMLAttributes<HTMLInputElement>)}
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 outline-none transition-all text-sm"
-          />
-        )}
-      </div>
-    </div>
-  )
+import InputField from "@/components/cadastro/InputField"
   
 async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<string> {
   const image = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -105,13 +62,13 @@ export default function PublicarAnuncioPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<"publicar" | "meus_anuncios">("publicar")
   const [materiais, setMateriais] = useState<MatMed[]>([])
-  const [lotes, setLotes] = useState<Lote[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
 
-  const [anuncioForm, setAnuncioForm] = useState({
+  const [anuncioForm, setAnuncioForm] = useState<CreateAnuncioForm>({
     cd_mat: 0,
-    nr_lote: 0,
     ds_lote: "",
+    dt_fabricacao: "",
+    dt_validade: "",
     qtd_mat: 0,
     val_base: "",
     ds_obs: "",
@@ -119,6 +76,7 @@ export default function PublicarAnuncioPage() {
     imagem_anuncio: "",
   })
 
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [isSuccessOpen, setIsSuccessOpen] = useState(false)
   const [lastSaved, setLastSaved] = useState<CreateAnuncioForm | null>(null)
 
@@ -143,42 +101,18 @@ export default function PublicarAnuncioPage() {
     fetchData()
   }, [])
 
-  // CORREÇÃO 2: Fetch dos lotes filtrado pelo insumo selecionado
   function handleMatChange(value: string | null) {
     if (!value) {
-      setAnuncioForm((prev) => ({ ...prev, cd_mat: 0, nr_lote: 0 }))
-      setLotes([])
+      setAnuncioForm((prev) => ({ ...prev, cd_mat: 0 }))
       return
     }
-
     const cdMat = Number(value)
-    setAnuncioForm((prev) => ({ ...prev, cd_mat: cdMat, nr_lote: 0 }))
-    setLotes([])
-
-    fetchLotes(cdMat)
+    setAnuncioForm((prev) => ({ ...prev, cd_mat: cdMat }))
   }
-
-  async function fetchLotes(cdMat: number) {
-  const responseLotes = await servicesGetLotes()
-
-  if (responseLotes && !("isError" in responseLotes)) {
-
-    const hoje = new Date()
-
-    const lotesFiltrados = responseLotes.filter(
-      (lote) =>
-        lote.cd_material === cdMat &&
-        lote.ie_status === "A" &&
-        new Date(lote.dt_validade) >= hoje
-    )
-
-    setLotes(lotesFiltrados)
-  }
-}
 
   async function handleGenerateAIDescription() {
-    if (!anuncioForm.cd_mat || !anuncioForm.nr_lote || !anuncioForm.qtd_mat) {
-      alert("Por favor, selecione o Insumo, o Lote e defina a quantidade antes de gerar a descrição por IA.")
+    if (!anuncioForm.cd_mat || !anuncioForm.qtd_mat) {
+      alert("Por favor, selecione o Insumo e defina a quantidade antes de gerar a descrição por IA.")
       return
     }
 
@@ -191,8 +125,8 @@ export default function PublicarAnuncioPage() {
         },
         body: JSON.stringify({
           cd_mat: anuncioForm.cd_mat,
-          nr_lote: anuncioForm.nr_lote,
-          ds_lote: lotes.find((l) => l.nr_lote === anuncioForm.nr_lote)?.ds_lote || "",
+          ds_lote: anuncioForm.ds_lote,
+          dt_validade: anuncioForm.dt_validade,
           cd_pessoa_anunciante: anuncioForm.cd_pessoa_anunciante,
           qtd_mat: anuncioForm.qtd_mat,
         }),
@@ -219,7 +153,6 @@ export default function PublicarAnuncioPage() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Limita tamanho para 5MB aproximadamente (5 * 1024 * 1024)
     if (file.size > 5242880) {
       alert("A imagem selecionada é muito grande. O limite máximo é de 5MB.")
       return
@@ -255,14 +188,27 @@ export default function PublicarAnuncioPage() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    const valorTratadoString = anuncioForm.val_base.replace(",", ".").trim()
+    const errors: Record<string, string> = {}
+    if (!anuncioForm.cd_mat) errors.cd_mat = "Selecione um insumo."
+    if (!anuncioForm.ds_lote) errors.ds_lote = "Lote é obrigatório."
+    if (!anuncioForm.dt_fabricacao) errors.dt_fabricacao = "Data de fabricação é obrigatória."
+    if (!anuncioForm.dt_validade) errors.dt_validade = "Data de validade é obrigatória."
+    if (!anuncioForm.qtd_mat || anuncioForm.qtd_mat <= 0) errors.qtd_mat = "Quantidade inválida."
+    if (!anuncioForm.val_base) errors.val_base = "Valor é obrigatório."
+    if (!anuncioForm.ds_obs) errors.ds_obs = "Observações são obrigatórias."
 
-    const selectedLote = lotes.find((l) => l.nr_lote === anuncioForm.nr_lote) || null
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      return
+    }
+
+    const valorTratadoString = anuncioForm.val_base.replace(",", ".").trim()
 
     const dataToSend: CreateAnuncioForm = {
       cd_mat: anuncioForm.cd_mat,
-      nr_lote: anuncioForm.nr_lote === 0 ? null : anuncioForm.nr_lote,
-      ds_lote: selectedLote ? selectedLote.ds_lote : null,
+      ds_lote: anuncioForm.ds_lote || null,
+      dt_fabricacao: anuncioForm.dt_fabricacao || null,
+      dt_validade: anuncioForm.dt_validade || null,
       qtd_mat: anuncioForm.qtd_mat,
       val_base: valorTratadoString || "0.00",
       ds_obs: anuncioForm.ds_obs,
@@ -274,7 +220,7 @@ export default function PublicarAnuncioPage() {
 
     if (response && "isError" in response) {
       console.error("Erro ao criar anúncio:", response.message)
-      alert("Falha ao publicar o anúncio. Tente novamente.")
+      setFieldErrors({ global: response.message || "Falha ao publicar o anúncio. Tente novamente." })
       return
     }
 
@@ -286,11 +232,6 @@ export default function PublicarAnuncioPage() {
     setIsSuccessOpen(false)
     router.push("/catalogo")
   }
-
-  const lotesFiltrados = lotes.filter(
-  (lote) =>
-    lote.cd_material === anuncioForm.cd_mat
-  )
 
   return (
     <div className="relative min-h-screen w-full antialiased bg-slate-50/50 selection:bg-blue-900/20">
@@ -318,10 +259,15 @@ export default function PublicarAnuncioPage() {
             <nav className="flex flex-col gap-2">
               <button
                 type="button"
-                className="relative w-full text-left flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group bg-white shadow-sm ring-1 ring-slate-200/50"
+                onClick={() => setActiveTab("publicar")}
+                className={`relative w-full text-left flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group ${
+                  activeTab === "publicar" ? "bg-white shadow-sm ring-1 ring-slate-200/50" : "hover:bg-white/50"
+                }`}
               >
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-900 rounded-r-full" />
-                <div className="shrink-0 rounded-xl p-2 transition-colors bg-blue-50 text-blue-900">
+                {activeTab === "publicar" && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-900 rounded-r-full" />}
+                <div className={`shrink-0 rounded-xl p-2 transition-colors ${
+                  activeTab === "publicar" ? "bg-blue-50 text-blue-900" : "bg-slate-100 text-slate-500 group-hover:text-blue-900 group-hover:bg-blue-50/50"
+                }`}>
                   <Megaphone size={20} />
                 </div>
                 <div className="flex-1">
@@ -332,14 +278,21 @@ export default function PublicarAnuncioPage() {
 
               <button
                 type="button"
-                onClick={() => router.push("/catalogo")}
-                className="relative w-full text-left flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group hover:bg-white/50"
+                onClick={() => setActiveTab("meus_anuncios")}
+                className={`relative w-full text-left flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group ${
+                  activeTab === "meus_anuncios" ? "bg-white shadow-sm ring-1 ring-slate-200/50" : "hover:bg-white/50"
+                }`}
               >
-                <div className="shrink-0 rounded-xl p-2 transition-colors bg-slate-100 text-slate-500 group-hover:text-blue-900 group-hover:bg-blue-50/50">
+                {activeTab === "meus_anuncios" && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-900 rounded-r-full" />}
+                <div className={`shrink-0 rounded-xl p-2 transition-colors ${
+                  activeTab === "meus_anuncios" ? "bg-blue-50 text-blue-900" : "bg-slate-100 text-slate-500 group-hover:text-blue-900 group-hover:bg-blue-50/50"
+                }`}>
                   <Package size={20} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-bold text-slate-600 group-hover:text-slate-800 text-sm transition-colors">Meus Anúncios</h3>
+                  <h3 className={`font-bold text-sm transition-colors ${
+                    activeTab === "meus_anuncios" ? "text-slate-800" : "text-slate-600 group-hover:text-slate-800"
+                  }`}>Meus Anúncios</h3>
                   <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">Ver suas publicações no catálogo</p>
                 </div>
               </button>
@@ -347,145 +300,188 @@ export default function PublicarAnuncioPage() {
           </aside>
 
           {/* Área de Conteúdo principal */}
-          <main className="flex-1 min-w-0">
+          <main className="flex-1 min-w-0 w-full">
+            {activeTab === "meus_anuncios" ? (
+              <MeusAnuncios materiais={materiais} />
+            ) : (
             <div className="bg-white border border-slate-100 rounded-3xl p-6 md:p-8 shadow-sm">
               
-              <div className="mb-8">
+              <div className="mb-6">
                 <h2 className="text-xl font-bold text-slate-800">Formulário de Publicação</h2>
                 <p className="text-sm text-slate-500 mt-1">Preencha os detalhes do produto que deseja vender.</p>
               </div>
+
+              {fieldErrors.global && (
+                <div className="mb-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+                  {fieldErrors.global}
+                </div>
+              )}
 
               <form className="space-y-6" onSubmit={handleSubmit}>
 
                 {/* BLOCO 1: SELEÇÃO DE INSUMO E LOTE */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-sm font-semibold text-slate-700">Insumo (Obrigatório)</label>
+                  <div className="flex flex-col gap-1.5 md:col-span-2">
+                    <label className="text-sm font-semibold text-slate-700 flex items-center gap-1">Insumo <span className="text-red-500 text-xs mt-0.5">*</span></label>
                     <Select
                       value={anuncioForm.cd_mat ? String(anuncioForm.cd_mat) : ""}
-                      onValueChange={handleMatChange}
+                      onValueChange={(val) => {
+                        setFieldErrors(prev => ({ ...prev, cd_mat: "" }))
+                        handleMatChange(val)
+                      }}
                       disabled={materiais.length === 0}
                       required
                     >
-                      <SelectTrigger className="w-full bg-slate-50 border-slate-200 rounded-xl text-sm h-[42px] focus:ring-blue-900/20 focus:border-blue-900">
-                  <div className="flex items-center gap-2 text-zinc-500">
-                    <Package size={16} />
-                    <SelectValue placeholder="Selecione o insumo cadastrado">
-                      {anuncioForm.cd_mat
-                        ? materiais.find(m => String(m.cd_mat) === String(anuncioForm.cd_mat))?.ds_mat
-                        : undefined}
-                    </SelectValue>
+                      <SelectTrigger className={`w-full bg-slate-50 border rounded-xl text-sm h-[42px] ${
+                        fieldErrors.cd_mat ? "border-red-300 focus:ring-2 focus:ring-red-400" : "border-slate-200 focus:ring-blue-900/20 focus:border-blue-900"
+                      }`}>
+                        <div className="flex items-center gap-2 text-zinc-500 truncate">
+                          <Package size={16} className="shrink-0" />
+                          <SelectValue placeholder="Selecione o insumo cadastrado">
+                            {anuncioForm.cd_mat
+                              ? (() => {
+                                  const mat = materiais.find(m => String(m.cd_mat) === String(anuncioForm.cd_mat));
+                                  return mat ? `${mat.ds_mat || mat.cd_tuss} ${mat.unidade_med ? `(${mat.unidade_med})` : ""}` : undefined;
+                                })()
+                              : undefined}
+                          </SelectValue>
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectLabel>Insumos Disponíveis</SelectLabel>
+                          {materiais.map((mat) => (
+                            <SelectItem key={mat.cd_mat} value={String(mat.cd_mat)}>
+                              {mat.ds_mat || mat.cd_tuss} {mat.unidade_med ? `(${mat.unidade_med})` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                    {fieldErrors.cd_mat && (
+                      <p className="text-xs text-red-500 flex items-center gap-1 mt-0.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                        <CheckCircle className="w-3 h-3 shrink-0 hidden" />
+                        {fieldErrors.cd_mat}
+                      </p>
+                    )}
                   </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel>Insumos Disponíveis</SelectLabel>
-                    {materiais.map((mat) => (
-                      <SelectItem key={mat.cd_mat} value={String(mat.cd_mat)}>{mat.ds_mat}</SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
+                </div>
 
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-sm font-semibold text-slate-700">Lote (Obrigatório p/ IA)</label>
-                    <Select
-                      value={anuncioForm.nr_lote ? String(anuncioForm.nr_lote) : ""}
-                      onValueChange={(value) => setAnuncioForm((prev) => ({ ...prev, nr_lote: value === "SEM_LOTE" ? 0 : Number(value) }))}
-                      disabled={!anuncioForm.cd_mat}
-                      required
-                    >
-                      <SelectTrigger className="w-full bg-slate-50 border-slate-200 rounded-xl text-sm h-[42px] focus:ring-blue-900/20 focus:border-blue-900">
-                        <div className="flex items-center gap-2 text-slate-500">
-                          <Layers size={16} />
-                    <SelectValue placeholder={anuncioForm.cd_mat ? "Selecione um lote" : "Selecione um insumo primeiro"}>
-                      {anuncioForm.nr_lote
-                        ? anuncioForm.nr_lote === 0 
-                          ? "Nenhum lote específico" 
-                          : (() => {
-                              const found = lotesFiltrados.find(l => String(l.nr_lote) === String(anuncioForm.nr_lote))
-                              return found ? `${found.ds_lote} — vence ${new Date(found.dt_validade).toLocaleDateString("pt-BR")}` : undefined
-                            })()
-                        : undefined}
-                    </SelectValue>
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value="SEM_LOTE">Nenhum lote específico</SelectItem>
-                    {/* CORREÇÃO 3: Exibindo ds_lote e dt_validade */}
-                    {lotesFiltrados.map((lote) => (
-                      <SelectItem key={lote.nr_lote} value={String(lote.nr_lote)}>
-                        {lote.ds_lote} — vence {new Date(lote.dt_validade).toLocaleDateString("pt-BR")}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <InputField
+                    label="Lote"
+                    icon={Layers}
+                    type="text"
+                    required
+                    placeholder="Ex: L123456"
+                    value={anuncioForm.ds_lote || ""}
+                    error={fieldErrors.ds_lote}
+                    onChange={(e) => {
+                      setFieldErrors((prev) => ({ ...prev, ds_lote: "" }))
+                      setAnuncioForm((prev) => ({ ...prev, ds_lote: e.target.value }))
+                    }}
+                  />
 
-          {/* BLOCO 2: VALORES E QUANTIDADES */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <InputField
-              label="Quantidade Disponível"
-              icon={Hash}
-              type="number"
-              required
-              min="1"
-              placeholder="Ex: 500"
-              value={anuncioForm.qtd_mat || ""}
-              onChange={(e) => setAnuncioForm((prev) => ({ ...prev, qtd_mat: Number(e.target.value) }))}
-            />
+                  <InputField
+                    label="Data de Fabricação"
+                    icon={Calendar}
+                    type="date"
+                    required
+                    value={anuncioForm.dt_fabricacao || ""}
+                    error={fieldErrors.dt_fabricacao}
+                    onChange={(e) => {
+                      setFieldErrors((prev) => ({ ...prev, dt_fabricacao: "" }))
+                      setAnuncioForm((prev) => ({ ...prev, dt_fabricacao: e.target.value }))
+                    }}
+                  />
 
-            <InputField
-              label="Valor Base (R$)"
-              icon={DollarSign}
-              type="text"
-              required
-              placeholder="Ex: 15,90"
-              value={anuncioForm.val_base}
-              onChange={(e) => setAnuncioForm((prev) => ({ ...prev, val_base: e.target.value }))}
-            />
-          </div>
+                  <InputField
+                    label="Data de Validade"
+                    icon={Calendar}
+                    type="date"
+                    required
+                    value={anuncioForm.dt_validade || ""}
+                    error={fieldErrors.dt_validade}
+                    onChange={(e) => {
+                      setFieldErrors((prev) => ({ ...prev, dt_validade: "" }))
+                      setAnuncioForm((prev) => ({ ...prev, dt_validade: e.target.value }))
+                    }}
+                  />
+                </div>
 
-          {/* BLOCO 3: OBSERVAÇÕES COM BOTÃO DE IA EMBUTIDO */}
-          <div className="w-full">
-            <InputField
-              label="Observações do Anúncio (Opcional)"
-              icon={FileText}
-              type="textarea"
-              placeholder="Ex: Caixas levemente amassadas, mas produto intacto..."
-              value={anuncioForm.ds_obs}
-              onChange={(e) => setAnuncioForm((prev) => ({ ...prev, ds_obs: e.target.value }))}
-              rightElement={
-                <button
-                  type="button"
-                  onClick={handleGenerateAIDescription}
-                  disabled={isGenerating}
-                  className="text-xs flex items-center gap-1.5 text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-100 font-bold px-3 py-1.5 rounded-lg shadow-sm transition-all duration-200 disabled:opacity-60 cursor-pointer"
-                >
-                  {isGenerating ? (
-                    <>
-                      <span className="w-3 h-3 border-2 border-blue-900 border-t-transparent rounded-full animate-spin"></span>
-                      Gerando...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles size={13} className="animate-pulse" />
-                      Gerar Descrição com IA
-                    </>
-                  )}
-                </button>
-              }
-            />
-          </div>
+                {/* BLOCO 2: VALORES E QUANTIDADES */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <InputField
+                    label="Quantidade Disponível"
+                    icon={Hash}
+                    type="number"
+                    required
+                    min="1"
+                    placeholder="Ex: 500"
+                    value={anuncioForm.qtd_mat || ""}
+                    error={fieldErrors.qtd_mat}
+                    onChange={(e) => {
+                      setFieldErrors((prev) => ({ ...prev, qtd_mat: "" }))
+                      setAnuncioForm((prev) => ({ ...prev, qtd_mat: Number(e.target.value) }))
+                    }}
+                  />
+
+                  <InputField
+                    label="Valor Base (R$)"
+                    icon={DollarSign}
+                    type="text"
+                    required
+                    placeholder="Ex: 15,90"
+                    value={anuncioForm.val_base}
+                    error={fieldErrors.val_base}
+                    onChange={(e) => {
+                      setFieldErrors((prev) => ({ ...prev, val_base: "" }))
+                      setAnuncioForm((prev) => ({ ...prev, val_base: e.target.value }))
+                    }}
+                  />
+                </div>
+
+                {/* BLOCO 3: OBSERVAÇÕES COM BOTÃO DE IA EMBUTIDO */}
+                <div className="w-full">
+                  <InputField
+                    label="Observações do Anúncio"
+                    icon={FileText}
+                    type="textarea"
+                    required
+                    placeholder="Ex: Caixas levemente amassadas, mas produto intacto..."
+                    value={anuncioForm.ds_obs}
+                    error={fieldErrors.ds_obs}
+                    onChange={(e) => {
+                      setFieldErrors((prev) => ({ ...prev, ds_obs: "" }))
+                      setAnuncioForm((prev) => ({ ...prev, ds_obs: e.target.value }))
+                    }}
+                    rightElement={
+                      <button
+                        type="button"
+                        onClick={handleGenerateAIDescription}
+                        disabled={isGenerating}
+                        className="text-xs flex items-center gap-1.5 text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-100 font-bold px-3 py-1.5 rounded-lg shadow-sm transition-all duration-200 disabled:opacity-60 cursor-pointer"
+                      >
+                        {isGenerating ? (
+                          <>
+                            <span className="w-3 h-3 border-2 border-blue-900 border-t-transparent rounded-full animate-spin"></span>
+                            Gerando...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles size={13} className="animate-pulse" />
+                            Gerar Descrição com IA
+                          </>
+                        )}
+                      </button>
+                    }
+                  />
+                </div>
 
                 {/* BLOCO 4: IMAGEM DO ANÚNCIO */}
                 <div className="w-full flex flex-col gap-1.5">
                   <label className="text-sm font-semibold text-slate-700">
-                    Foto do Lote/Produto (Opcional)
+                    Foto do Lote/Produto
                   </label>
                   
                   {!anuncioForm.imagem_anuncio ? (
@@ -536,6 +532,7 @@ export default function PublicarAnuncioPage() {
                 </button>
               </form>
             </div>
+            )}
           </main>
         </div>
 
@@ -556,7 +553,7 @@ export default function PublicarAnuncioPage() {
           <div className="p-6">
             {lastSaved && (
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3 text-sm">
-                <p className="flex justify-between border-b border-slate-100 pb-2"><span className="font-semibold text-slate-500">Insumo</span> <span className="font-bold text-slate-800 text-right">{materiais.find(m => String(m.cd_mat) === String(lastSaved.cd_mat))?.ds_mat}</span></p>
+                <p className="flex justify-between border-b border-slate-100 pb-2"><span className="font-semibold text-slate-500">Insumo</span> <span className="font-bold text-slate-800 text-right">{materiais.find(m => String(m.cd_mat) === String(lastSaved.cd_mat))?.ds_mat || "Insumo"}</span></p>
                 <p className="flex justify-between border-b border-slate-100 pb-2"><span className="font-semibold text-slate-500">Quantidade</span> <span className="font-bold text-slate-800 text-right">{lastSaved.qtd_mat} unid.</span></p>
                 <p className="flex justify-between border-b border-slate-100 pb-2"><span className="font-semibold text-slate-500">Valor Base</span> <span className="font-bold text-blue-900 text-right">R$ {lastSaved.val_base}</span></p>
                 {lastSaved.ds_lote && <p className="flex justify-between"><span className="font-semibold text-slate-500">Lote</span> <span className="font-bold text-slate-800 text-right">{lastSaved.ds_lote}</span></p>}
@@ -600,7 +597,7 @@ export default function PublicarAnuncioPage() {
                   image={imageToCrop}
                   crop={crop}
                   zoom={zoom}
-                  aspect={16 / 9} // Ou o aspect ratio desejado para o card (ex: 4/3 ou 16/9)
+                  aspect={16 / 9}
                   onCropChange={setCrop}
                   onCropComplete={(_, croppedPixels) => setCroppedAreaPixels(croppedPixels)}
                   onZoomChange={setZoom}
