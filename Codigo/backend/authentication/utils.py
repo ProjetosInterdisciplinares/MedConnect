@@ -45,7 +45,8 @@ def password_reset(request):
             status=status.HTTP_404_NOT_FOUND
         )
 
-    empresa.senha_pj = new_password
+    from django.contrib.auth.hashers import make_password
+    empresa.senha_pj = make_password(new_password)
     empresa.save()
 
     return Response(

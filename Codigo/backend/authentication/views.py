@@ -2,6 +2,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth.hashers import make_password, check_password
 
 from pessoa_juridica.models import PessoaJuridica
 
@@ -21,16 +22,26 @@ def login(request):
     cnpj = cnpj.replace(".", "").replace("/", "").replace("-", "")
 
     # busca no banco
-    user = PessoaJuridica.objects.filter(
-        nr_cnpj=cnpj,
-        senha_pj=password
-    ).first()
+    user = PessoaJuridica.objects.filter(nr_cnpj=cnpj).first()
 
     if not user:
         return Response(
             {"error": "Credenciais inválidas"},
             status=status.HTTP_401_UNAUTHORIZED
         )
+        
+    # Verifica a senha criptografada. Se for a senha antiga em texto puro, também permite e já atualiza?
+    # Melhor exigir criptografia e criar um script para encriptar as antigas.
+    if not check_password(password, user.senha_pj):
+        # Fallback para senhas antigas em texto puro (migração automática)
+        if user.senha_pj == password:
+            user.senha_pj = make_password(password)
+            user.save()
+        else:
+            return Response(
+                {"error": "Credenciais inválidas"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
     if user.status == "PENDENTE":
         return Response(
             {
@@ -105,10 +116,13 @@ def register(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
+    # Criptografa a senha antes de salvar
+    senha_criptografada = make_password(senha_pj)
+
     empresa = PessoaJuridica.objects.create(
         nm_pessoaj=nm_pessoaj,
         email_pj=email_pj,
-        senha_pj=senha_pj,
+        senha_pj=senha_criptografada,
         resp_tec=resp_tec,
         nr_cnpj=nr_cnpj,
         razao_social=razao_social,
