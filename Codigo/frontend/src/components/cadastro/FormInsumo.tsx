@@ -218,7 +218,7 @@ export default function FormInsumo() {
           error={fieldErrors.cd_tuss}
           onChange={(event) => {
             setFieldErrors((prev) => ({ ...prev, cd_tuss: "" }))
-            setInsumoForm((prev) => ({ ...prev, cd_tuss: event.target.value }))
+            setInsumoForm((prev) => ({ ...prev, cd_tuss: event.target.value.substring(0, 8) }))
           }}
         />
       </div>
