@@ -31,4 +31,36 @@ class MatMedCreateListView(generics.ListCreateAPIView):
 class MatMedRetrieveUpateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAuthenticated,)
     queryset = MatMed.objects.all()
-    serializer_class = MatMedSerializer
+    serializer_class = MatMedSerializer
+
+from django.db import connection
+from django.core.management import call_command
+from rest_framework.decorators import api_view, permission_classes
+
+@api_view(["GET"])
+def fix_db_schema_view(request):
+    """ View temporária para recriar as tabelas mat_med e anuncio com o schema correto """
+    mensagens = []
+    with connection.cursor() as cursor:
+        try:
+            cursor.execute("DROP TABLE IF EXISTS anuncio_anuncio CASCADE;")
+            cursor.execute("DROP TABLE IF EXISTS mat_med_matmed CASCADE;")
+            mensagens.append("Tabelas antigas dropadas.")
+        except Exception as e:
+            mensagens.append(f"Erro ao dropar tabelas: {str(e)}")
+
+        try:
+            cursor.execute("DELETE FROM django_migrations WHERE app IN ('mat_med', 'anuncio');")
+            mensagens.append("Histórico de migrações limpo.")
+        except Exception as e:
+            mensagens.append(f"Erro ao limpar histórico: {str(e)}")
+
+    try:
+        call_command('migrate', 'mat_med')
+        call_command('migrate', 'anuncio')
+        mensagens.append("Migrações reaplicadas com sucesso! Schema corrigido.")
+    except Exception as e:
+        mensagens.append(f"Erro ao reaplicar migrações: {str(e)}")
+
+    return Response({"status": "Finalizado", "detalhes": mensagens})
+
