@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Megaphone, Package, Hash, DollarSign, FileText, Sparkles, CheckCircle, ImagePlus, X, Crop, ZoomIn, Calendar, Layers } from "lucide-react"
+import { Megaphone, Package, Hash, DollarSign, FileText, Sparkles, CheckCircle, ImagePlus, X, Crop, ZoomIn, Calendar, Layers, FileSpreadsheet } from "lucide-react"
 import Cropper, { Area } from "react-easy-crop"
 import {
   Dialog,
@@ -26,6 +26,7 @@ import servicesCreateAnuncio from "@/server/(POST)-anuncio"
 import { CreateAnuncioForm, MatMed } from "@/types"
 import AnimatedBackground from "@/components/ui/animated-background"
 import { MeusAnuncios } from "@/components/anunciar/meus-anuncios"
+import CadastroMassa from "@/components/anunciar/cadastro-massa"
 
 import InputField from "@/components/cadastro/InputField"
 import { AuthManager } from "@/lib/AuthManager"
@@ -61,7 +62,7 @@ async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<string>
 
 export default function AnunciarPage() {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<"publicar" | "meus_anuncios">("publicar")
+  const [activeTab, setActiveTab] = useState<"publicar" | "meus_anuncios" | "cadastro_massa">("publicar")
   const [materiais, setMateriais] = useState<MatMed[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
 
@@ -297,6 +298,26 @@ export default function AnunciarPage() {
                   <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">Ver suas publicações no catálogo</p>
                 </div>
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("cadastro_massa")}
+                className={`relative w-full text-left flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group ${
+                  activeTab === "cadastro_massa" ? "bg-white shadow-sm ring-1 ring-slate-200/50" : "hover:bg-white/50"
+                }`}
+              >
+                {activeTab === "cadastro_massa" && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-900 rounded-r-full" />}
+                <div className={`shrink-0 rounded-xl p-2 transition-colors ${
+                  activeTab === "cadastro_massa" ? "bg-blue-50 text-blue-900" : "bg-slate-100 text-slate-500 group-hover:text-blue-900 group-hover:bg-blue-50/50"
+                }`}>
+                  <FileSpreadsheet size={20} />
+                </div>
+                <div className="flex-1">
+                  <h3 className={`font-bold text-sm transition-colors ${
+                    activeTab === "cadastro_massa" ? "text-slate-800" : "text-slate-600 group-hover:text-slate-800"
+                  }`}>Cadastro em Massa</h3>
+                  <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">Importar anúncios via Excel</p>
+                </div>
+              </button>
             </nav>
           </aside>
 
@@ -304,6 +325,8 @@ export default function AnunciarPage() {
           <main className="flex-1 min-w-0 w-full">
             {activeTab === "meus_anuncios" ? (
               <MeusAnuncios materiais={materiais} />
+            ) : activeTab === "cadastro_massa" ? (
+              <CadastroMassa />
             ) : (
             <div className="bg-white border border-slate-100 rounded-3xl p-6 md:p-8 shadow-sm">
               

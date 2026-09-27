@@ -23,9 +23,9 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
   const [selectedAnuncio, setSelectedAnuncio] = useState<Anuncio | null>(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   async function handleDeleteAnuncio(nrAnuncio: number) {
-    if (!confirm("Tem certeza que deseja excluir este anúncio?")) return;
     setIsDeleting(true);
     try {
       const response = await servicesDeleteAnuncio(nrAnuncio);
@@ -127,6 +127,7 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
               onClick={() => {
                 setSelectedAnuncio(anuncio)
                 setIsDetailsOpen(true)
+                setShowDeleteConfirm(false)
               }}
               className="bg-white rounded-[1.25rem] p-5 shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 group flex flex-col cursor-pointer"
             >
@@ -190,87 +191,119 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
               </DialogHeader>
 
               <div className="p-6 overflow-y-auto max-h-[70vh]">
-                <div className="flex flex-col gap-6">
-                  {/* Foto e Titulo */}
-                  <div className="flex flex-col md:flex-row gap-4 items-center md:items-start">
-                    <div className="w-32 h-32 shrink-0 bg-white rounded-xl border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden">
-                      {selectedAnuncio.imagem_anuncio ? (
-                        <img src={selectedAnuncio.imagem_anuncio} alt="Imagem" className="w-full h-full object-cover" />
-                      ) : (
-                        <PackageX className="w-8 h-8 text-slate-300" />
-                      )}
+                {showDeleteConfirm ? (
+                  <div className="flex flex-col items-center justify-center py-6 text-center">
+                    <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+                      <Trash2 size={32} />
                     </div>
-                    <div className="flex-1 space-y-2 text-center md:text-left w-full">
-                      <h3 className="font-bold text-slate-800 text-lg">
-                        {materiais.find(m => String(m.cd_mat) === String(selectedAnuncio.cd_mat))?.ds_mat || "Insumo não identificado"}
-                      </h3>
-                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-900 rounded-lg">
-                        <span className="text-sm font-bold">R$</span>
-                        <span className="text-2xl font-black">{Number(selectedAnuncio.val_base || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                      <div className="flex gap-2 justify-center md:justify-start">
-                        <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded text-xs font-bold">Lote: {selectedAnuncio.ds_lote || "Não informado"}</span>
-                        <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded text-xs font-bold">Qtd: {selectedAnuncio.qtd_mat}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Detalhes Secundários */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1">
-                      <div className="flex items-center gap-1.5 text-slate-500">
-                        <Calendar size={14} />
-                        <span className="text-xs font-semibold">Fabricação</span>
-                      </div>
-                      <span className="text-sm font-bold text-slate-800">
-                        {selectedAnuncio.dt_fabricacao ? new Date(selectedAnuncio.dt_fabricacao).toLocaleDateString("pt-BR") : "-"}
-                      </span>
-                    </div>
-                    <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1">
-                      <div className="flex items-center gap-1.5 text-slate-500">
-                        <AlertCircle size={14} />
-                        <span className="text-xs font-semibold">Validade</span>
-                      </div>
-                      <span className="text-sm font-bold text-slate-800">
-                        {selectedAnuncio.dt_validade ? new Date(selectedAnuncio.dt_validade).toLocaleDateString("pt-BR") : "-"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-2">
-                    <div className="flex items-center gap-1.5 text-slate-500 mb-1">
-                      <FileText size={16} />
-                      <span className="text-sm font-semibold">Observações</span>
-                    </div>
-                    <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
-                      {selectedAnuncio.ds_obs || "Nenhuma observação informada."}
+                    <h3 className="text-xl font-bold text-slate-800 mb-2">Excluir Anúncio?</h3>
+                    <p className="text-slate-500 mb-8 max-w-sm">
+                      Esta ação é irreversível. O anúncio será permanentemente removido do catálogo e não poderá ser recuperado.
                     </p>
+                    
+                    <div className="flex gap-3 w-full">
+                      <button
+                        type="button"
+                        onClick={() => setShowDeleteConfirm(false)}
+                        disabled={isDeleting}
+                        className="flex-1 px-4 py-3 bg-white text-slate-600 border border-slate-200 rounded-xl font-bold hover:bg-slate-50 transition-colors cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isDeleting}
+                        onClick={() => handleDeleteAnuncio(selectedAnuncio.nr_anuncio)}
+                        className="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                      >
+                        {isDeleting ? (
+                          <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                        ) : (
+                          "Sim, Excluir"
+                        )}
+                      </button>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    <div className="flex flex-col gap-6">
+                    {/* Foto e Titulo */}
+                    <div className="flex flex-col md:flex-row gap-4 items-center md:items-start">
+                      <div className="w-32 h-32 shrink-0 bg-white rounded-xl border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden">
+                        {selectedAnuncio.imagem_anuncio ? (
+                          <img src={selectedAnuncio.imagem_anuncio} alt="Imagem" className="w-full h-full object-cover" />
+                        ) : (
+                          <PackageX className="w-8 h-8 text-slate-300" />
+                        )}
+                      </div>
+                      <div className="flex-1 space-y-2 text-center md:text-left w-full">
+                        <h3 className="font-bold text-slate-800 text-lg">
+                          {materiais.find(m => String(m.cd_mat) === String(selectedAnuncio.cd_mat))?.ds_mat || "Insumo não identificado"}
+                        </h3>
+                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-900 rounded-lg">
+                          <span className="text-sm font-bold">R$</span>
+                          <span className="text-2xl font-black">{Number(selectedAnuncio.val_base || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex gap-2 justify-center md:justify-start">
+                          <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded text-xs font-bold">Lote: {selectedAnuncio.ds_lote || "Não informado"}</span>
+                          <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded text-xs font-bold">Qtd: {selectedAnuncio.qtd_mat}</span>
+                        </div>
+                      </div>
+                    </div>
 
-                <div className="mt-8 flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsDetailsOpen(false)}
-                    className="flex-1 px-4 py-2.5 bg-white text-slate-600 border border-slate-200 rounded-xl font-bold hover:bg-slate-50 transition-colors cursor-pointer"
-                  >
-                    Fechar
-                  </button>
-                  <button
-                    type="button"
-                    disabled={isDeleting}
-                    onClick={() => handleDeleteAnuncio(selectedAnuncio.nr_anuncio)}
-                    className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
-                  >
-                    {isDeleting ? (
-                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                    ) : (
+                    {/* Detalhes Secundários */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1">
+                        <div className="flex items-center gap-1.5 text-slate-500">
+                          <Calendar size={14} />
+                          <span className="text-xs font-semibold">Fabricação</span>
+                        </div>
+                        <span className="text-sm font-bold text-slate-800">
+                          {selectedAnuncio.dt_fabricacao ? new Date(selectedAnuncio.dt_fabricacao).toLocaleDateString("pt-BR") : "-"}
+                        </span>
+                      </div>
+                      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1">
+                        <div className="flex items-center gap-1.5 text-slate-500">
+                          <AlertCircle size={14} />
+                          <span className="text-xs font-semibold">Validade</span>
+                        </div>
+                        <span className="text-sm font-bold text-slate-800">
+                          {selectedAnuncio.dt_validade ? new Date(selectedAnuncio.dt_validade).toLocaleDateString("pt-BR") : "-"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-2">
+                      <div className="flex items-center gap-1.5 text-slate-500 mb-1">
+                        <FileText size={16} />
+                        <span className="text-sm font-semibold">Observações</span>
+                      </div>
+                      <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                        {selectedAnuncio.ds_obs || "Nenhuma observação informada."}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-8 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsDetailsOpen(false)}
+                      className="flex-1 px-4 py-2.5 bg-white text-slate-600 border border-slate-200 rounded-xl font-bold hover:bg-slate-50 transition-colors cursor-pointer"
+                    >
+                      Fechar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="flex-1 px-4 py-2.5 bg-red-50 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                    >
                       <Trash2 size={16} />
-                    )}
-                    {isDeleting ? "Excluindo..." : "Excluir Anúncio"}
-                  </button>
-                </div>
-              </div>
+                      Excluir Anúncio
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
             </>
           )}
         </DialogContent>
