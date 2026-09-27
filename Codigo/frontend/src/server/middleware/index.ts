@@ -54,6 +54,10 @@ export async function handleResponse<T>(
 	fallbackMessage: string
 ): Promise<ServiceResult<T>> {
 	if (!response.ok) {
+		if (response.status === 401 && typeof window !== "undefined") {
+			AuthManager.getInstance().logout();
+			window.location.href = "/login";
+		}
 		return {
 			isError: true,
 			status: response.status,
