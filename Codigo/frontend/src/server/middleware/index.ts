@@ -56,7 +56,7 @@ export async function handleResponse<T>(
 	if (!response.ok) {
 		if (response.status === 401 && typeof window !== "undefined") {
 			AuthManager.getInstance().logout();
-			window.location.href = "/login";
+			window.location.href = "/auth";
 		}
 		return {
 			isError: true,
