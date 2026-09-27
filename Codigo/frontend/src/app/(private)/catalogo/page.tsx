@@ -6,7 +6,7 @@ import servicesGetMaterials from "@/server/(GET)-materials-and-brands"
 import servicesGetMinhaPessoaJuridica from "@/server/(GET)-minha-pessoa-juridica"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, PackageX, SlidersHorizontal, MapPin, Map as MapIcon } from "lucide-react"
+import { Search, PackageX, SlidersHorizontal, MapPin, Map as MapIcon, Store } from "lucide-react"
 import { Anuncio, MatMed, PessoaJuridica } from "@/types"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Pagination } from "@/components/ui/pagination"
@@ -25,10 +25,10 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371; // km
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
 
@@ -200,9 +200,16 @@ export default function Anuncios() {
       <div className="w-full max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 relative z-10">
 
         {/* Título da página */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-blue-950 tracking-tight">Catálogo de Insumos</h1>
-          <p className="text-sm font-medium text-slate-500 mt-1">
+        <div className="mb-8 md:mb-12">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-12 h-12 rounded-2xl bg-blue-900 text-white flex items-center justify-center shadow-lg shadow-blue-900/20 shrink-0">
+              <Store size={20} />
+            </div>
+            <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">
+              Marketplace
+            </h1>
+          </div>
+          <p className="text-slate-500 text-sm md:text-base font-medium max-w-2xl ml-[60px]">
             {filteredAnuncios.length} anúncios disponíveis
           </p>
         </div>
@@ -424,21 +431,21 @@ export default function Anuncios() {
                         <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
                         <span className="truncate" title={anunciante}>{anunciante}</span>
                         {meuPerfil?.latitude && anuncio.anunciante_lat && (
-                           <div className="flex items-center gap-1.5 ml-auto">
-                              <span className="text-blue-600 font-bold whitespace-nowrap">
-                                | {getDistance(Number(meuPerfil.latitude), Number(meuPerfil.longitude), Number(anuncio.anunciante_lat), Number(anuncio.anunciante_lon)).toFixed(1)} km
-                              </span>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedMapAnuncio(anuncio);
-                                }}
-                                className="p-1.5 rounded-full hover:bg-blue-50 text-blue-600 transition-colors"
-                                title="Ver no Mapa"
-                              >
-                                <MapIcon className="w-4 h-4" />
-                              </button>
-                           </div>
+                          <div className="flex items-center gap-1.5 ml-auto">
+                            <span className="text-blue-600 font-bold whitespace-nowrap">
+                              | {getDistance(Number(meuPerfil.latitude), Number(meuPerfil.longitude), Number(anuncio.anunciante_lat), Number(anuncio.anunciante_lon)).toFixed(1)} km
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedMapAnuncio(anuncio);
+                              }}
+                              className="p-1.5 rounded-full hover:bg-blue-50 text-blue-600 transition-colors"
+                              title="Ver no Mapa"
+                            >
+                              <MapIcon className="w-4 h-4" />
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>

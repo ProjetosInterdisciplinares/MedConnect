@@ -1,9 +1,11 @@
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework import generics
+from rest_framework import generics, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from anuncio.models import Anuncio
-from anuncio.serializers import AnuncioSerializer
+from django.db.models import Q
+from django.utils import timezone
+from anuncio.models import Anuncio, Negociacao
+from anuncio.serializers import AnuncioSerializer, NegociacaoSerializer
 
 # View que retorna somente os anúncios onde o usuário é o anunciante
 @api_view(["GET"])
@@ -115,5 +117,60 @@ class AnuncioRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
         ):
             anuncio.val_proposta = None
             anuncio.val_aceito = None
+            anuncio.cd_pessoa_compradora = None
+            anuncio.save()
+
+class NegociacaoViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = NegociacaoSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        return Negociacao.objects.filter(Q(comprador=user) | Q(vendedor=user)).order_by('-data_proposta')
+
+    def perform_create(self, serializer):
+        negociacao = serializer.save(comprador=self.request.user)
+        
+        anuncio = negociacao.anuncio
+        
+        # Compra direta (valor igual ao base): aprova na hora
+        if negociacao.val_proposta == anuncio.val_base:
+            negociacao.status = 'A'
+            negociacao.data_resposta = timezone.now()
+            negociacao.save()
+            
+            anuncio.ie_status = 'F'
+            anuncio.val_aceito = negociacao.val_proposta
+            anuncio.cd_pessoa_compradora = self.request.user
+            anuncio.save()
+        else:
+            # Proposta com valor diferente: anúncio sai do catálogo
+            anuncio.ie_status = 'N'
+            anuncio.cd_pessoa_compradora = self.request.user
+            anuncio.val_proposta = negociacao.val_proposta
+            anuncio.save()
+
+    def perform_update(self, serializer):
+        negociacao = serializer.save()
+        if negociacao.status == 'A':
+            negociacao.data_resposta = timezone.now()
+            negociacao.save()
+            
+            anuncio = negociacao.anuncio
+            anuncio.ie_status = 'F'
+            anuncio.val_aceito = negociacao.val_proposta
+            anuncio.cd_pessoa_compradora = negociacao.comprador
+            anuncio.save()
+
+            Negociacao.objects.filter(anuncio=anuncio, status='P').exclude(id=negociacao.id).update(status='C', data_resposta=timezone.now())
+            
+        elif negociacao.status == 'R' or negociacao.status == 'C':
+            negociacao.data_resposta = timezone.now()
+            negociacao.save()
+            
+            # Volta o anúncio pro catálogo
+            anuncio = negociacao.anuncio
+            anuncio.ie_status = 'A'
+            anuncio.val_proposta = None
             anuncio.cd_pessoa_compradora = None
             anuncio.save()

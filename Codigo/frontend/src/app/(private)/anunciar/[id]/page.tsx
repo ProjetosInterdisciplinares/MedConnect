@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog"
 
 import servicesGetAnuncioDetails from "@/server/(GET)-anuncio-details"
-import servicesUpdateAnuncio from "@/server/(PUT)-anuncio"
+import servicesPostNegociacao from "@/server/(POST)-negociacao"
 import servicesGetMaterials from "@/server/(GET)-materials-and-brands"
 import servicesGetMinhaPessoaJuridica from "@/server/(GET)-minha-pessoa-juridica"
 import { Anuncio, MatMed, PessoaJuridica } from "@/types"
@@ -87,12 +87,15 @@ export default function AnuncioDetalhePage() {
     const cdPessoa = Number(AuthManager.getInstance().getUserId())
     if (!cdPessoa) { alert("Usuário não autenticado"); return }
 
-    const res = await servicesUpdateAnuncio(Number(id), {
-      cd_pessoa_compradora: cdPessoa,
+    const res = await servicesPostNegociacao({
+      anuncio: Number(id),
+      vendedor: anuncio.cd_pessoa_anunciante,
       val_proposta: anuncio.val_base,
+      qtd_proposta: anuncio.qtd_mat,
+      ds_obs: "Compra Direta via Plataforma"
     })
 
-    if ("isError" in res) { alert("Erro ao realizar compra: " + res.message); return }
+    if ("isError" in res) { alert("Erro ao realizar compra: " + (res as any).message); return }
 
     setSuccessMessage("Compra realizada com sucesso!")
     setIsSuccessOpen(true)
@@ -104,12 +107,15 @@ export default function AnuncioDetalhePage() {
     if (!cdPessoa) { alert("Usuário não autenticado"); return }
     if (!valorProposta || Number(valorProposta) <= 0) { alert("Informe um valor de proposta válido"); return }
 
-    const res = await servicesUpdateAnuncio(Number(id), {
-      cd_pessoa_compradora: cdPessoa,
+    const res = await servicesPostNegociacao({
+      anuncio: Number(id),
+      vendedor: anuncio.cd_pessoa_anunciante,
       val_proposta: valorProposta,
+      qtd_proposta: anuncio.qtd_mat,
+      ds_obs: "Proposta enviada pelo comprador"
     })
 
-    if ("isError" in res) { alert("Erro ao enviar proposta: " + res.message); return }
+    if ("isError" in res) { alert("Erro ao enviar proposta: " + (res as any).message); return }
 
     setSuccessMessage("Proposta enviada com sucesso!")
     setIsSuccessOpen(true)
@@ -117,7 +123,7 @@ export default function AnuncioDetalhePage() {
 
   function handleCloseSuccess() {
     setIsSuccessOpen(false)
-    router.push("/caixa-de-propostas?tab=compras")
+    router.push("/minhas-negociacoes")
   }
 
   if (loading) return (
@@ -388,7 +394,7 @@ export default function AnuncioDetalhePage() {
             </DialogDescription>
           </DialogHeader>
           <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 space-y-2 mt-2 text-sm text-center">
-            Você pode acompanhar o andamento da negociação na sua <strong>Caixa de Propostas</strong>.
+            Você pode acompanhar o andamento da negociação em <strong>Minhas Negociações</strong>.
           </div>
           <DialogFooter className="mt-4">
             <button
@@ -396,7 +402,7 @@ export default function AnuncioDetalhePage() {
               onClick={handleCloseSuccess}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors w-full sm:w-auto cursor-pointer"
             >
-              Ir para Caixa de Propostas
+              Ir para Minhas Negociações
             </button>
           </DialogFooter>
         </DialogContent>

@@ -21,6 +21,8 @@ export interface Anuncio {
   anunciante_numero?: string
   anunciante_bairro?: string
   anunciante_cep?: string
+  anunciante_email?: string
+  anunciante_telefone?: string
 
   // Novos campos vindos da unificação da negociação
   val_proposta: string | null
@@ -52,4 +54,41 @@ export interface UpdateAnuncioForm {
   val_proposta?: string | null
   val_aceito?: string | null
   cd_pessoa_compradora?: number | null
+}
+
+export interface Negociacao {
+  id: number
+  anuncio: number
+  comprador: number
+  vendedor: number
+  val_proposta: string
+  qtd_proposta: number | null
+  status: 'P' | 'A' | 'R' | 'C'
+  data_proposta: string
+  data_resposta: string | null
+  ds_obs: string
+
+  // Campos extras (read_only no backend via serializer)
+  anuncio_nome?: string
+  vendedor_nome?: string
+  vendedor_email?: string
+  vendedor_telefone?: string
+  comprador_nome?: string
+  comprador_email?: string
+  comprador_telefone?: string
+  anuncio_val_base?: string
+  anuncio_qtd?: number
+  anuncio_lote?: string
+}
+
+export interface CreateNegociacaoForm {
+  anuncio: number
+  vendedor: number
+  val_proposta: string
+  qtd_proposta?: number
+  ds_obs?: string
+}
+
+export interface UpdateNegociacaoForm {
+  status: 'A' | 'R' | 'C'
 }

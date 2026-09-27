@@ -42,3 +42,29 @@ class Anuncio(models.Model):
 
     def __str__(self):
         return f'Anúncio {self.nr_anuncio}'
+
+class Negociacao(models.Model):
+    STATUS_CHOICES = [
+        ('P', 'Pendente'),
+        ('A', 'Aprovada'),
+        ('R', 'Recusada'),
+        ('C', 'Cancelada'),
+    ]
+
+    id = models.AutoField(primary_key=True)
+    anuncio = models.ForeignKey(Anuncio, on_delete=models.CASCADE, related_name='negociacoes')
+    comprador = models.ForeignKey(PessoaJuridica, on_delete=models.RESTRICT, related_name='negociacoes_enviadas')
+    vendedor = models.ForeignKey(PessoaJuridica, on_delete=models.RESTRICT, related_name='negociacoes_recebidas')
+    val_proposta = models.DecimalField(max_digits=10, decimal_places=2)
+    qtd_proposta = models.IntegerField(null=True, blank=True)
+    status = models.CharField(max_length=1, choices=STATUS_CHOICES, default='P')
+    data_proposta = models.DateTimeField(auto_now_add=True)
+    data_resposta = models.DateTimeField(null=True, blank=True)
+    ds_obs = models.TextField(blank=True, default='')
+
+    class Meta:
+        verbose_name = 'Negociação'
+        verbose_name_plural = 'Negociações'
+
+    def __str__(self):
+        return f'Negociação {self.id} - Anúncio {self.anuncio.nr_anuncio}'

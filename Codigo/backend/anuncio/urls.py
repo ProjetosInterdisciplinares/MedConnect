@@ -1,8 +1,13 @@
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from . import views
 from . import bulk_views
 
+router = DefaultRouter()
+router.register(r'negociacoes', views.NegociacaoViewSet, basename='negociacao')
+
 urlpatterns = [
+    path('', include(router.urls)),
     path("anuncio/meus-anuncios/", views.meus_anuncios, name="meus-anuncios"),
     path("anuncio/minhas-compras/", views.minhas_compras, name="minhas-compras"),
     path("anuncio/minhas-propostas/", views.minhas_propostas, name="minhas-propostas"),  # ← subiu

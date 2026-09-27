@@ -10,7 +10,7 @@ export default function CadastroPage() {
     <div className="relative min-h-screen w-full antialiased bg-slate-50/50 selection:bg-blue-500/20">
       <AnimatedBackground />
       <div className="max-w-[1200px] mx-auto py-8 md:py-12 px-4 sm:px-6 lg:px-8 font-sans relative z-10">
-        
+
         {/* Header da Página */}
         <div className="mb-8 md:mb-12">
           <div className="flex items-center gap-3 mb-2">
@@ -18,17 +18,17 @@ export default function CadastroPage() {
               <PlusCircle size={20} />
             </div>
             <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">
-              Cadastro de Insumos
+              Cadastro de Materiais
             </h1>
           </div>
           <p className="text-slate-500 text-sm md:text-base max-w-2xl ml-[52px]">
-            Cadastre novos insumos e medicamentos no sistema. Uma vez cadastrados, eles estarão disponíveis para serem anunciados no catálogo do marketplace.
+            Cadastre novos materiais e medicamentos no sistema. Uma vez cadastrados, eles estarão disponíveis para serem anunciados no catálogo do marketplace.
           </p>
         </div>
 
         {/* Layout Master-Detail / Sidebar */}
         <div className="flex flex-col md:flex-row gap-8 items-start">
-          
+
           {/* Navegação Lateral */}
           <aside className="w-full md:w-72 shrink-0 flex flex-col gap-2">
             <button
@@ -56,7 +56,7 @@ export default function CadastroPage() {
               <FormInsumo />
             </div>
           </div>
-          
+
         </div>
       </div>
     </div>
