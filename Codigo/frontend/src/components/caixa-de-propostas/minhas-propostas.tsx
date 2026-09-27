@@ -12,6 +12,8 @@ export function PropostasTab() {
   const [materiais, setMateriais] = useState<MatMed[]>([])
   const [loading, setLoading] = useState(true)
   const [filtroStatus, setFiltroStatus] = useState("Todas")
+  const [currentPage, setCurrentPage] = useState(1)
+  const ITEMS_PER_PAGE = 3
 
   useEffect(() => {
     async function load() {
@@ -43,6 +45,12 @@ export function PropostasTab() {
       return false;
     });
   }, [propostas, filtroStatus])
+
+  const totalPages = Math.ceil(propostasFiltradas.length / ITEMS_PER_PAGE)
+  const paginatedPropostas = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE
+    return propostasFiltradas.slice(start, start + ITEMS_PER_PAGE)
+  }, [propostasFiltradas, currentPage, ITEMS_PER_PAGE])
 
   async function cancelarProposta(anuncio: Anuncio) {
     const result = await servicesUpdateAnuncio(anuncio.nr_anuncio, { ie_status: "A" })
@@ -83,7 +91,10 @@ export function PropostasTab() {
               return (
                 <button
                   key={f.label}
-                  onClick={() => setFiltroStatus(f.label)}
+                  onClick={() => {
+                    setFiltroStatus(f.label)
+                    setCurrentPage(1)
+                  }}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                     isActive 
                       ? "bg-white text-slate-800 shadow-sm" 
@@ -117,7 +128,10 @@ export function PropostasTab() {
           </p>
           {filtroStatus !== "Todas" && (
             <button 
-              onClick={() => setFiltroStatus("Todas")}
+              onClick={() => {
+                setFiltroStatus("Todas")
+                setCurrentPage(1)
+              }}
               className="mt-6 px-5 py-2 bg-blue-50 text-blue-900 font-semibold rounded-xl hover:bg-blue-100 transition-colors"
             >
               Ver todas as propostas
@@ -127,7 +141,7 @@ export function PropostasTab() {
       ) : (
         <div className="flex-1 overflow-y-auto">
           <ul className="divide-y divide-slate-100">
-            {propostasFiltradas.map((anuncio) => {
+            {paginatedPropostas.map((anuncio) => {
               const nomeMaterial = anuncio.material_nome ?? "Material não identificado"
               const valorExibido = anuncio.val_proposta || anuncio.val_base
 
@@ -215,6 +229,31 @@ export function PropostasTab() {
               )
             })}
           </ul>
+
+          {/* Paginação */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+              <span className="text-sm text-slate-500">
+                Página <span className="font-semibold text-slate-700">{currentPage}</span> de <span className="font-semibold text-slate-700">{totalPages}</span>
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 text-sm font-medium rounded-lg text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                >
+                  Anterior
+                </button>
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 text-sm font-medium rounded-lg text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                >
+                  Próxima
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

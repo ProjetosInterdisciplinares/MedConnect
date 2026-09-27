@@ -6,13 +6,21 @@ export interface Anuncio {
   cd_mat: number
   material_nome?: string
   qtd_mat: number
-  val_base: string 
+  val_base: string
   cd_pessoa_anunciante: number
   ds_obs: string
   data_anuncio: string
   ie_status: 'A' | 'N' | 'F' | 'I'
   imagem_anuncio?: string
   anunciante_razao?: string
+  anunciante_lat?: number
+  anunciante_lon?: number
+  anunciante_cidade?: string
+  anunciante_estado?: string
+  anunciante_logradouro?: string
+  anunciante_numero?: string
+  anunciante_bairro?: string
+  anunciante_cep?: string
 
   // Novos campos vindos da unificação da negociação
   val_proposta: string | null

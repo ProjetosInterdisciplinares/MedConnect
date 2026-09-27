@@ -86,6 +86,7 @@ export default function Form(): JSX.Element {
   const [showResetConfirmPassword, setShowResetConfirmPassword] = useState(false)
   const [loginError, setLoginError] = useState<string | null>(null)
   const [resetError, setResetError] = useState<string | null>(null)
+  const [addressFetched, setAddressFetched] = useState(false)
 
   const form = useForm<z.infer<typeof authSchema>>({
     resolver: zodResolver(authSchema),
@@ -104,7 +105,16 @@ export default function Form(): JSX.Element {
       nr_cnpj: "",
       email_pj: "",
       resp_tec: "",
-      senha_pj: ""
+      senha_pj: "",
+      cep: "",
+      logradouro: "",
+      numero: "",
+      bairro: "",
+      cidade: "",
+      estado: "",
+      telefone: "",
+      latitude: null,
+      longitude: null,
     },
   })
 
@@ -121,6 +131,48 @@ export default function Form(): JSX.Element {
 
   const watchPassword = registerForm.watch("senha_pj")
   const passwordStrength = getPasswordStrength(watchPassword || "")
+
+  const fetchAddressByCep = async (cep: string) => {
+    const numericCep = cep.replace(/\D/g, "");
+    if (numericCep.length !== 8) return;
+
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${numericCep}/json/`);
+      const data = await response.json();
+
+      if (data.erro) {
+        toast.error("CEP não encontrado.");
+        setAddressFetched(false);
+        return;
+      }
+
+      setAddressFetched(true);
+      registerForm.setValue("logradouro", data.logradouro || "");
+      registerForm.setValue("bairro", data.bairro || "");
+      registerForm.setValue("cidade", data.localidade || "");
+      registerForm.setValue("estado", data.uf || "");
+
+      // Geocode via Nominatim
+      const query = encodeURIComponent(`${data.logradouro}, ${data.localidade}, ${data.uf}, Brasil`);
+      const nominatimRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`);
+      const nomData = await nominatimRes.json();
+
+      if (nomData && nomData.length > 0) {
+        registerForm.setValue("latitude", parseFloat(nomData[0].lat));
+        registerForm.setValue("longitude", parseFloat(nomData[0].lon));
+      } else {
+        const cityQuery = encodeURIComponent(`${data.localidade}, ${data.uf}, Brasil`);
+        const nomCityRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${cityQuery}`);
+        const nomCityData = await nomCityRes.json();
+        if (nomCityData && nomCityData.length > 0) {
+          registerForm.setValue("latitude", parseFloat(nomCityData[0].lat));
+          registerForm.setValue("longitude", parseFloat(nomCityData[0].lon));
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao buscar CEP", error);
+    }
+  };
 
   const onSubmit = (data: z.infer<typeof authSchema>): void => {
     setLoginError(null)
@@ -364,6 +416,118 @@ export default function Form(): JSX.Element {
                         <AlertCircle className="w-3 h-3 shrink-0" />
                         {registerForm.formState.errors.resp_tec.message}
                       </p>
+                    )}
+                  </div>
+
+                  {/* Endereço e Telefone */}
+                  <div className="grid grid-cols-2 gap-3 text-left">
+                    {/* Telefone */}
+                    <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
+                      <RequiredLabel htmlFor="reg-telefone">Telefone</RequiredLabel>
+                      <Input
+                        id="reg-telefone"
+                        placeholder="(00) 00000-0000"
+                        className={`h-10 bg-gray-50 border rounded-xl transition-all duration-200
+                          ${registerForm.formState.errors.telefone
+                            ? "border-red-300 focus-visible:ring-red-400"
+                            : "border-gray-200 focus-visible:ring-blue-500"}`}
+                        {...registerForm.register("telefone")}
+                      />
+                    </div>
+                    {/* CEP */}
+                    <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
+                      <RequiredLabel htmlFor="reg-cep">CEP</RequiredLabel>
+                      <Input
+                        id="reg-cep"
+                        placeholder="00000-000"
+                        maxLength={9}
+                        className={`h-10 bg-gray-50 border rounded-xl transition-all duration-200
+                          ${registerForm.formState.errors.cep
+                            ? "border-red-300 focus-visible:ring-red-400"
+                            : "border-gray-200 focus-visible:ring-blue-500"}`}
+                        {...registerForm.register("cep", {
+                          onChange: (e) => {
+                            let val = e.target.value.replace(/\D/g, "")
+                            if (val.length > 5) val = val.substring(0, 5) + "-" + val.substring(5, 8)
+                            e.target.value = val
+                            if (val.length === 9) fetchAddressByCep(val)
+                          }
+                        })}
+                      />
+                    </div>
+                    {addressFetched && (
+                      <>
+                        {/* Logradouro */}
+                        <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
+                          <RequiredLabel htmlFor="reg-logradouro">Logradouro</RequiredLabel>
+                          <Input
+                            id="reg-logradouro"
+                            placeholder="Rua / Avenida"
+                            readOnly
+                            className={`h-10 bg-gray-100 border rounded-xl transition-all duration-200
+                              ${registerForm.formState.errors.logradouro
+                                ? "border-red-300 focus-visible:ring-red-400"
+                                : "border-gray-200 focus-visible:ring-blue-500"}`}
+                            {...registerForm.register("logradouro")}
+                          />
+                        </div>
+                        {/* Número */}
+                        <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
+                          <RequiredLabel htmlFor="reg-numero">Número</RequiredLabel>
+                          <Input
+                            id="reg-numero"
+                            placeholder="Nº"
+                            className={`h-10 bg-gray-50 border rounded-xl transition-all duration-200
+                              ${registerForm.formState.errors.numero
+                                ? "border-red-300 focus-visible:ring-red-400"
+                                : "border-gray-200 focus-visible:ring-blue-500"}`}
+                            {...registerForm.register("numero")}
+                          />
+                        </div>
+                        {/* Bairro */}
+                        <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
+                          <RequiredLabel htmlFor="reg-bairro">Bairro</RequiredLabel>
+                          <Input
+                            id="reg-bairro"
+                            placeholder="Bairro"
+                            readOnly
+                            className={`h-10 bg-gray-100 border rounded-xl transition-all duration-200
+                              ${registerForm.formState.errors.bairro
+                                ? "border-red-300 focus-visible:ring-red-400"
+                                : "border-gray-200 focus-visible:ring-blue-500"}`}
+                            {...registerForm.register("bairro")}
+                          />
+                        </div>
+                        {/* Cidade */}
+                        <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
+                          <RequiredLabel htmlFor="reg-cidade">Cidade</RequiredLabel>
+                          <Input
+                            id="reg-cidade"
+                            placeholder="Cidade"
+                            readOnly
+                            className={`h-10 bg-gray-100 border rounded-xl transition-all duration-200
+                              ${registerForm.formState.errors.cidade
+                                ? "border-red-300 focus-visible:ring-red-400"
+                                : "border-gray-200 focus-visible:ring-blue-500"}`}
+                            {...registerForm.register("cidade")}
+                          />
+                        </div>
+                        {/* Estado */}
+                        <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
+                          <RequiredLabel htmlFor="reg-estado">UF</RequiredLabel>
+                          <Input
+                            id="reg-estado"
+                            placeholder="SP"
+                            maxLength={2}
+                            readOnly
+                            className={`h-10 bg-gray-100 border rounded-xl transition-all duration-200 uppercase
+                              ${registerForm.formState.errors.estado
+                                ? "border-red-300 focus-visible:ring-red-400"
+                                : "border-gray-200 focus-visible:ring-blue-500"}`}
+                            {...registerForm.register("estado")}
+                          />
+                        </div>
+                      </>
                     )}
                   </div>
 

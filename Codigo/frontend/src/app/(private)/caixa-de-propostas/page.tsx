@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { Handshake, History, Inbox, SendHorizontal, LayoutDashboard } from "lucide-react"
+import { Handshake, History, Inbox, SendHorizontal, LayoutDashboard, CheckCircle2 } from "lucide-react"
 import { NegociacaoTab } from "@/components/caixa-de-propostas/em-negociacao"
-import { PropostasTab } from "@/components/caixa-de-propostas/minhas-propostas"
+import { HistoricoFinalizadosTab } from "@/components/caixa-de-propostas/historico-finalizados"
 import AnimatedBackground from "@/components/ui/animated-background"
 
 const TABS = [
@@ -15,10 +15,10 @@ const TABS = [
     icon: Inbox,
   },
   {
-    id: "compras",
-    label: "Enviadas",
-    description: "Histórico das propostas que você enviou",
-    icon: SendHorizontal,
+    id: "finalizados",
+    label: "Anúncios Finalizados",
+    description: "Histórico de anúncios e vendas concluídas",
+    icon: CheckCircle2,
   },
 ]
 
@@ -54,11 +54,11 @@ function CaixaDePropostasContent() {
               <LayoutDashboard size={20} />
             </div>
             <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">
-              Caixa de Propostas
+              Propostas Recebidas
             </h1>
           </div>
           <p className="text-slate-500 text-sm md:text-base max-w-2xl ml-[52px]">
-            Gerencie todas as suas negociações em um só lugar. Acompanhe as propostas recebidas nos seus anúncios e o status das propostas que você enviou.
+            Acompanhe e responda às ofertas feitas nos seus anúncios ativos, e acesse o histórico completo das suas vendas concluídas.
           </p>
         </div>
 
@@ -104,9 +104,9 @@ function CaixaDePropostasContent() {
 
           {/* Área de Conteúdo */}
           <div className="flex-1 w-full min-w-0">
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden min-h-[500px]">
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden">
               {activeTab === "negociacao" && <NegociacaoTab />}
-              {activeTab === "compras" && <PropostasTab />}
+              {activeTab === "finalizados" && <HistoricoFinalizadosTab />}
             </div>
           </div>
           

@@ -3,6 +3,7 @@
 import React, { ReactNode, useEffect, useState } from "react"
 import servicesGetMinhaPessoaJuridica from "@/server/(GET)-minha-pessoa-juridica"
 import servicesGetMeusAnuncios from "@/server/(GET)-meus-anuncios"
+import servicesGetMinhasCompras from "@/server/(GET)-minhas-compras"
 import { PessoaJuridica, Anuncio } from "@/types"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
@@ -16,7 +17,8 @@ import {
   Menu,
   X,
   ArrowRight,
-  Shield
+  Shield,
+  Handshake
 } from "lucide-react"
 import Footer from "@/components/ui/Footer"
 import { withAuth } from "@/lib/withAuth"
@@ -33,9 +35,10 @@ import {
 // Array de links para manter o código limpo (DRY)
 const NAV_LINKS = [
   { name: "Catálogo", href: "/catalogo", icon: Store },
-  { name: "Cadastro", href: "/cadastrar", icon: FileText },
-  { name: "Publicar Anúncio", href: "/anunciar", icon: SquarePlus },
-  { name: "Caixa de propostas", href: "/caixa-de-propostas", icon: Inbox },
+  { name: "Cadastrar materiais", href: "/cadastrar", icon: FileText },
+  { name: "Anunciar", href: "/anunciar", icon: SquarePlus },
+  { name: "Minhas Negociações", href: "/minhas-negociacoes", icon: Handshake },
+  { name: "Propostas Recebidas", href: "/caixa-de-propostas", icon: Inbox },
   { name: "Painel Administrativo", href: "/admin-painel/credenciamentos", icon: Shield, isAdminOnly: true },
 ]
 
@@ -49,6 +52,7 @@ function Layout({ children }: LayoutProps) {
 
   const [empresa, setEmpresa] = useState<PessoaJuridica | null>(null)
   const [hasPendingProposals, setHasPendingProposals] = useState(false)
+  const [hasAcceptedNegotiations, setHasAcceptedNegotiations] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
 
@@ -68,9 +72,14 @@ function Layout({ children }: LayoutProps) {
         setEmpresa(result as PessoaJuridica)
       }
 
-      // 2. Carrega anúncios para verificar se há propostas recebidas (ie_status === "N")
+      // 2. Carrega anúncios e compras para verificar notificações
       try {
-        const anunciosResult = await servicesGetMeusAnuncios()
+        const [anunciosResult, comprasResult] = await Promise.all([
+           servicesGetMeusAnuncios(),
+           servicesGetMinhasCompras()
+        ])
+        
+        // Verifica propostas pendentes (anúncios recebidos)
         let pending = false
         if (Array.isArray(anunciosResult)) {
           pending = anunciosResult.some(a => a.ie_status === "N")
@@ -78,8 +87,17 @@ function Layout({ children }: LayoutProps) {
           pending = ((anunciosResult as any).data as Anuncio[]).some(a => a.ie_status === "N")
         }
         setHasPendingProposals(pending)
+
+        // Verifica compras finalizadas (negociações aceitas)
+        let accepted = false
+        if (Array.isArray(comprasResult)) {
+          accepted = comprasResult.some(a => a.ie_status === "F")
+        } else if ((comprasResult as any)?.data) {
+          accepted = ((comprasResult as any).data as Anuncio[]).some(a => a.ie_status === "F")
+        }
+        setHasAcceptedNegotiations(accepted)
       } catch (e) {
-        console.error("Erro ao verificar propostas", e)
+        console.error("Erro ao verificar propostas e compras", e)
       }
     }
 
@@ -158,12 +176,12 @@ function Layout({ children }: LayoutProps) {
                 <Icon size={15} className="relative z-10 group-hover:scale-110 group-hover:text-blue-300 transition-all duration-300" />
                 <span className="relative z-10 group-hover:text-white transition-colors duration-300 flex items-center gap-2">
                   {link.name}
-                  {link.name === "Caixa de propostas" && hasPendingProposals && (
+                  {(link.name === "Propostas Recebidas" && hasPendingProposals) || (link.name === "Minhas Negociações" && hasAcceptedNegotiations) ? (
                     <span className="relative flex h-2.5 w-2.5">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
                     </span>
-                  )}
+                  ) : null}
                 </span>
               </Link>
             )
@@ -256,12 +274,12 @@ function Layout({ children }: LayoutProps) {
                 >
                   <Icon size={20} className={isActive ? "text-blue-400" : "text-blue-400/60"} />
                   {link.name}
-                  {link.name === "Caixa de propostas" && hasPendingProposals && (
+                  {(link.name === "Propostas Recebidas" && hasPendingProposals) || (link.name === "Minhas Negociações" && hasAcceptedNegotiations) ? (
                     <span className="relative flex h-2.5 w-2.5">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
                     </span>
-                  )}
+                  ) : null}
                   {isActive && <ArrowRight size={16} className="ml-auto text-blue-400" />}
                 </Link>
               )

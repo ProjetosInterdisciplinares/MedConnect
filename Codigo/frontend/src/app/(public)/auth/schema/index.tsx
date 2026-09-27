@@ -51,7 +51,17 @@ export const registerSchema = z.object({
     .regex(/[A-Z]/, "A senha deve conter pelo menos 1 letra maiúscula")
     .regex(/[a-z]/, "A senha deve conter pelo menos 1 letra minúscula")
     .regex(/[0-9]/, "A senha deve conter pelo menos 1 número")
-    .regex(/[^A-Za-z0-9]/, "A senha deve conter pelo menos 1 caractere especial (!@#$%...)")
+    .regex(/[^A-Za-z0-9]/, "A senha deve conter pelo menos 1 caractere especial (!@#$%...)"),
+
+  cep: z.string().min(8, "CEP é obrigatório"),
+  logradouro: z.string().min(1, "Logradouro é obrigatório"),
+  numero: z.string().min(1, "Número é obrigatório"),
+  bairro: z.string().min(1, "Bairro é obrigatório"),
+  cidade: z.string().min(1, "Cidade é obrigatória"),
+  estado: z.string().min(2, "UF é obrigatória").max(2, "UF inválida"),
+  telefone: z.string().min(10, "Telefone inválido"),
+  latitude: z.number().optional().nullable(),
+  longitude: z.number().optional().nullable(),
 })
 
 export const resetPasswordSchema = z.object({

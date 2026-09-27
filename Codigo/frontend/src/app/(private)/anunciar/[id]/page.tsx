@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ShoppingCart, Handshake, CheckCircle, Package, Info, Building2 } from "lucide-react"
+import { ShoppingCart, Handshake, CheckCircle, Package, Info, Building2, MapPin, Map as MapIcon } from "lucide-react"
 
 import {
   Dialog,
@@ -16,9 +16,21 @@ import {
 import servicesGetAnuncioDetails from "@/server/(GET)-anuncio-details"
 import servicesUpdateAnuncio from "@/server/(PUT)-anuncio"
 import servicesGetMaterials from "@/server/(GET)-materials-and-brands"
-import { Anuncio, MatMed } from "@/types"
+import servicesGetMinhaPessoaJuridica from "@/server/(GET)-minha-pessoa-juridica"
+import { Anuncio, MatMed, PessoaJuridica } from "@/types"
 import AnimatedBackground from "@/components/ui/animated-background"
 import { AuthManager } from "@/lib/AuthManager"
+
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371; // km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
 
 export default function AnuncioDetalhePage() {
   const { id } = useParams()
@@ -26,28 +38,35 @@ export default function AnuncioDetalhePage() {
 
   const [anuncio, setAnuncio] = useState<Anuncio | null>(null)
   const [material, setMaterial] = useState<MatMed | null>(null)
+  const [meuPerfil, setMeuPerfil] = useState<PessoaJuridica | null>(null)
   const [loading, setLoading] = useState(true)
   const [valorProposta, setValorProposta] = useState("")
   const [modo, setModo] = useState<"COMPRA" | "PROPOSTA">("COMPRA")
-  
+  const [isMapOpen, setIsMapOpen] = useState(false)
+
   const [isSuccessOpen, setIsSuccessOpen] = useState(false)
   const [successMessage, setSuccessMessage] = useState("")
 
   useEffect(() => {
     async function load() {
       try {
-        const [res, matRes] = await Promise.all([
+        const [res, matRes, perfilRes] = await Promise.all([
           servicesGetAnuncioDetails(Number(id)),
-          servicesGetMaterials()
+          servicesGetMaterials(),
+          servicesGetMinhaPessoaJuridica()
         ])
 
         if (!("isError" in res)) {
-           setAnuncio(res)
-           
-           if (Array.isArray(matRes)) {
-              const foundMat = matRes.find(m => m.cd_mat === res.cd_mat)
-              if (foundMat) setMaterial(foundMat)
-           }
+          setAnuncio(res)
+
+          if (Array.isArray(matRes)) {
+            const foundMat = matRes.find(m => m.cd_mat === res.cd_mat)
+            if (foundMat) setMaterial(foundMat)
+          }
+        }
+        
+        if (perfilRes && !("isError" in perfilRes)) {
+          setMeuPerfil(perfilRes as PessoaJuridica)
         }
       } catch (err) {
         console.error(err)
@@ -74,7 +93,7 @@ export default function AnuncioDetalhePage() {
     })
 
     if ("isError" in res) { alert("Erro ao realizar compra: " + res.message); return }
-    
+
     setSuccessMessage("Compra realizada com sucesso!")
     setIsSuccessOpen(true)
   }
@@ -91,7 +110,7 @@ export default function AnuncioDetalhePage() {
     })
 
     if ("isError" in res) { alert("Erro ao enviar proposta: " + res.message); return }
-    
+
     setSuccessMessage("Proposta enviada com sucesso!")
     setIsSuccessOpen(true)
   }
@@ -116,180 +135,244 @@ export default function AnuncioDetalhePage() {
       <div className="max-w-4xl mx-auto py-8 px-4 relative z-10">
 
         <div className="mb-6 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
-            Anúncio <span className="text-blue-600">#{anuncio.nr_anuncio}</span>
-          </h1>
-          <p className="text-slate-500 text-sm mt-1 font-medium">
-            Veja os detalhes do insumo e escolha sua forma de negociação.
-          </p>
-        </div>
-      </div>
-
-      {/* informações do anúncio */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm mb-6 relative overflow-hidden flex flex-col md:flex-row">
-        <div className="absolute top-0 left-0 w-full md:w-1.5 md:h-full h-1.5 bg-gradient-to-b from-blue-600 to-blue-400" />
-        
-        {/* Lado Esquerdo: Imagem */}
-        <div className="w-full md:w-1/3 bg-slate-50/50 border-r border-slate-100 flex items-center justify-center p-6 min-h-[250px]">
-          {anuncio.imagem_anuncio ? (
-            <img src={anuncio.imagem_anuncio} alt="Imagem do Anúncio" className="w-full h-full object-contain mix-blend-multiply drop-shadow-sm" />
-          ) : (
-            <div className="flex flex-col items-center justify-center text-slate-300 opacity-60">
-              <Package className="w-16 h-16 mb-2" />
-              <span className="text-xs font-bold uppercase tracking-widest">Sem foto</span>
-            </div>
-          )}
-        </div>
-
-        {/* Lado Direito: Detalhes */}
-        <div className="w-full md:w-2/3 p-6 md:p-8">
-          <h2 className="text-2xl font-bold text-slate-800 mb-1 leading-tight">
-             {material?.ds_mat ?? "Material não identificado"}
-          </h2>
-          <p className="text-slate-500 text-sm mb-6 font-medium">
-             Fabricante: {material?.ds_marca || material?.ds_pessoaj || (anuncio as any).nm_fabricante || "Não informado"}
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-8 text-sm">
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Quantidade disponível</p>
-              <p className="text-base font-bold text-slate-700 mt-0.5 flex items-center gap-1.5">
-                <Package className="w-4 h-4 text-slate-400" />
-                {anuncio.qtd_mat} <span className="text-xs font-normal text-slate-500">unidades</span>
-              </p>
-            </div>
-
-            <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-blue-500">Valor Base</p>
-              <p className="text-base font-bold text-blue-700 mt-0.5">
-                R$ {Number(anuncio.val_base).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
-            </div>
-
-            {anuncio.ds_lote && (
-              <div>
-                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Lote</p>
-                 <p className="font-bold text-slate-700">{anuncio.ds_lote}</p>
-              </div>
-            )}
-
-            {(anuncio as any).dt_validade && (
-              <div>
-                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Validade</p>
-                 <p className="font-bold text-slate-700">{new Date((anuncio as any).dt_validade).toLocaleDateString('pt-BR')}</p>
-              </div>
-            )}
-
-            <div className="sm:col-span-2 flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0 border border-slate-200">
-                  <Building2 className="w-4 h-4 text-slate-400" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Anunciante</p>
-                  <p className="font-bold text-slate-700 text-xs truncate">
-                     {anuncio.anunciante_razao || (anuncio as any).nm_vendedor || (anuncio as any).ds_empresa || `Usuário ID: ${anuncio.cd_pessoa_anunciante}`}
-                  </p>
-                </div>
-            </div>
-
-            {anuncio.ds_obs && (
-              <div className="sm:col-span-2 bg-slate-50 p-4 rounded-xl border border-slate-100 mt-2">
-                <span className="font-bold text-slate-700 text-[10px] uppercase tracking-wider block mb-1">Observações:</span>
-                <span className="text-slate-600 text-sm leading-relaxed">{anuncio.ds_obs}</span>
-              </div>
-            )}
+          <div>
+            <h1 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+              Anúncio <span className="text-blue-600">#{anuncio.nr_anuncio}</span>
+            </h1>
+            <p className="text-slate-500 text-sm mt-1 font-medium">
+              Veja os detalhes do insumo e escolha sua forma de negociação.
+            </p>
           </div>
         </div>
-      </div>
 
-      {bloqueado ? (
-        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-6 shadow-sm text-center text-rose-600 font-semibold text-sm">
-          Este anúncio não está mais disponível para negociação.
-        </div>
-      ) : anuncio.cd_pessoa_anunciante === Number(AuthManager.getInstance().getUserId()) ? (
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 shadow-sm text-center text-blue-700 font-semibold text-sm flex flex-col items-center justify-center gap-2">
-          <Info className="w-6 h-6 text-blue-500 mb-1" />
-          Este é o seu próprio anúncio.
-          <span className="font-normal text-blue-600/80 text-xs">Você não pode enviar propostas ou realizar compras em seus próprios produtos.</span>
-        </div>
-      ) : (
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 md:p-8 shadow-sm">
-          <p className="text-lg font-bold text-slate-800 mb-5">Opções de Negociação</p>
+        {/* informações do anúncio */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm mb-6 relative overflow-hidden flex flex-col md:flex-row">
+          <div className="absolute top-0 left-0 w-full md:w-1.5 md:h-full h-1.5 bg-gradient-to-b from-blue-600 to-blue-400" />
 
-          {/* toggle modo */}
-          <div className="flex gap-2 mb-6">
-            {(["COMPRA", "PROPOSTA"] as const).map((m) => (
-              <button
-                key={m}
-                onClick={() => setModo(m)}
-                className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                  modo === m
-                    ? "bg-blue-600 text-white shadow-md"
-                    : "bg-slate-50 text-slate-500 border border-slate-200 hover:border-slate-300 hover:text-slate-700"
-                }`}
-              >
-                {m === "COMPRA" ? "Compra Direta" : "Enviar Nova Proposta"}
-              </button>
-            ))}
-          </div>
-
-          <div className="space-y-5">
-            {/* valor sugerido — só aparece no modo PROPOSTA */}
-            {modo === "PROPOSTA" && (
-              <div className="flex flex-col gap-1.5 animate-in slide-in-from-top-2 duration-300">
-                <label className="text-sm font-semibold text-slate-700">Qual o seu valor sugerido? (R$)</label>
-                <input
-                  type="number"
-                  value={valorProposta}
-                  onChange={(e) => setValorProposta(e.target.value)}
-                  placeholder="Ex: 12.50"
-                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm shadow-inner"
-                />
-              </div>
-            )}
-
-            {/* resumo valor */}
-            <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-5 py-4 text-sm">
-              <span className="text-slate-500 font-medium tracking-wide uppercase text-xs">
-                {modo === "COMPRA" ? "Valor total base" : "Sua Proposta Final"}
-              </span>
-              <span className="font-black text-blue-700 text-lg">
-                R$ {valorUnitario.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-            </div>
-
-            {/* botão */}
-            {modo === "COMPRA" ? (
-              <button
-                onClick={handleCompraDireta}
-                className="w-full flex items-center justify-center gap-2 text-white font-bold py-3.5 rounded-xl transition-all shadow-md hover:shadow-lg hover:-translate-y-px cursor-pointer"
-                style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)" }}
-              >
-                <ShoppingCart className="w-5 h-5" />
-                Comprar pelo Valor Base
-              </button>
+          {/* Lado Esquerdo: Imagem */}
+          <div className="w-full md:w-1/3 bg-slate-50/50 border-r border-slate-100 flex items-center justify-center p-6 min-h-[250px]">
+            {anuncio.imagem_anuncio ? (
+              <img src={anuncio.imagem_anuncio} alt="Imagem do Anúncio" className="w-full h-full object-contain mix-blend-multiply drop-shadow-sm" />
             ) : (
-              <button
-                onClick={handleProposta}
-                className="w-full flex items-center justify-center gap-2 text-white font-bold py-3.5 rounded-xl transition-all shadow-md hover:shadow-lg hover:-translate-y-px cursor-pointer"
-                style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)" }}
-              >
-                <Handshake className="w-5 h-5" />
-                Enviar Proposta ao Vendedor
-              </button>
+              <div className="flex flex-col items-center justify-center text-slate-300 opacity-60">
+                <Package className="w-16 h-16 mb-2" />
+                <span className="text-xs font-bold uppercase tracking-widest">Sem foto</span>
+              </div>
             )}
+          </div>
 
+          {/* Lado Direito: Detalhes */}
+          <div className="w-full md:w-2/3 p-6 md:p-8">
+            <h2 className="text-2xl font-bold text-slate-800 mb-1 leading-tight">
+              {material?.ds_mat ?? "Material não identificado"}
+            </h2>
+            <p className="text-slate-500 text-sm mb-6 font-medium">
+              Fabricante: {material?.ds_marca || material?.ds_pessoaj || (anuncio as any).nm_fabricante || "Não informado"}
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-8 text-sm">
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Quantidade disponível</p>
+                <p className="text-base font-bold text-slate-700 mt-0.5 flex items-center gap-1.5">
+                  <Package className="w-4 h-4 text-slate-400" />
+                  {anuncio.qtd_mat} <span className="text-xs font-normal text-slate-500">unidades</span>
+                </p>
+              </div>
+
+              <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-blue-500">Valor Base</p>
+                <p className="text-base font-bold text-blue-700 mt-0.5">
+                  R$ {Number(anuncio.val_base).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+
+              {anuncio.ds_lote && (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Lote</p>
+                  <p className="font-bold text-slate-700">{anuncio.ds_lote}</p>
+                </div>
+              )}
+
+              {(anuncio as any).dt_validade && (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Validade</p>
+                  <p className="font-bold text-slate-700">{new Date((anuncio as any).dt_validade).toLocaleDateString('pt-BR')}</p>
+                </div>
+              )}
+
+              <div className="sm:col-span-2 flex flex-col gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0 border border-slate-200">
+                      <Building2 className="w-4 h-4 text-slate-400" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Anunciante</p>
+                      <p className="font-bold text-slate-700 text-xs truncate">
+                        {anuncio.anunciante_razao || (anuncio as any).nm_vendedor || (anuncio as any).ds_empresa || `Usuário ID: ${anuncio.cd_pessoa_anunciante}`}
+                      </p>
+                    </div>
+                  </div>
+                  {meuPerfil?.latitude && anuncio.anunciante_lat && (
+                    <div className="flex items-center gap-2 ml-auto">
+                      <span className="text-xs text-blue-600 font-bold whitespace-nowrap">
+                        | {getDistance(Number(meuPerfil.latitude), Number(meuPerfil.longitude), Number(anuncio.anunciante_lat), Number(anuncio.anunciante_lon)).toFixed(1)} km de você
+                      </span>
+                      <button 
+                        onClick={() => setIsMapOpen(true)}
+                        className="p-1.5 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors"
+                        title="Ver no Mapa"
+                      >
+                        <MapIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {anuncio.anunciante_cidade && (
+                  <div className="text-xs text-slate-500 pt-2 border-t border-slate-200/60 flex flex-col gap-1">
+                    <div className="flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5" />
+                      <span className="font-medium text-slate-600">Endereço:</span>
+                    </div>
+                    <div className="pl-4.5">
+                      {anuncio.anunciante_logradouro && `${anuncio.anunciante_logradouro}, `}
+                      {anuncio.anunciante_numero && `${anuncio.anunciante_numero} - `}
+                      {anuncio.anunciante_bairro && `${anuncio.anunciante_bairro}, `}
+                      {anuncio.anunciante_cidade} / {anuncio.anunciante_estado}
+                      {anuncio.anunciante_cep && ` - CEP: ${anuncio.anunciante_cep}`}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {anuncio.ds_obs && (
+                <div className="sm:col-span-2 bg-slate-50 p-4 rounded-xl border border-slate-100 mt-2">
+                  <span className="font-bold text-slate-700 text-[10px] uppercase tracking-wider block mb-1">Observações:</span>
+                  <span className="text-slate-600 text-sm leading-relaxed">{anuncio.ds_obs}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      )}
 
-      <button
-        onClick={() => router.back()}
-        className="mt-6 text-sm font-bold text-slate-500 hover:text-blue-700 transition-colors flex items-center gap-1.5"
-      >
-        ‹ Voltar para o catálogo
-      </button>
+        {bloqueado ? (
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-6 shadow-sm text-center text-rose-600 font-semibold text-sm">
+            Este anúncio não está mais disponível para negociação.
+          </div>
+        ) : anuncio.cd_pessoa_anunciante === Number(AuthManager.getInstance().getUserId()) ? (
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 shadow-sm text-center text-blue-700 font-semibold text-sm flex flex-col items-center justify-center gap-2">
+            <Info className="w-6 h-6 text-blue-500 mb-1" />
+            Este é o seu próprio anúncio.
+            <span className="font-normal text-blue-600/80 text-xs">Você não pode enviar propostas ou realizar compras em seus próprios produtos.</span>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-6 mt-6">
+            <div className="bg-white border-2 border-blue-600/10 rounded-2xl shadow-xl overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-4">
+                <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                  <ShoppingCart className="w-5 h-5 text-blue-200" />
+                  Fechamento de Negócio
+                </h3>
+              </div>
+              
+              <div className="p-6 md:p-8">
+                {/* toggle modo */}
+                <div className="flex bg-slate-100 p-1 rounded-xl mb-8">
+                  {(["COMPRA", "PROPOSTA"] as const).map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => setModo(m)}
+                      className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all duration-300 ${modo === m
+                          ? "bg-white text-blue-700 shadow-sm ring-1 ring-black/5"
+                          : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
+                        }`}
+                    >
+                      {m === "COMPRA" ? "Compra Imediata" : "Fazer Oferta"}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="space-y-6">
+                  {/* valor sugerido — só aparece no modo PROPOSTA */}
+                  {modo === "PROPOSTA" && (
+                    <div className="flex flex-col gap-2 animate-in slide-in-from-top-2 duration-300">
+                      <label className="text-sm font-bold text-slate-700">Sua Oferta (R$)</label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">R$</span>
+                        <input
+                          type="number"
+                          value={valorProposta}
+                          onChange={(e) => setValorProposta(e.target.value)}
+                          placeholder="Ex: 15.00"
+                          className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white outline-none transition-all text-base font-bold text-slate-800 placeholder:text-slate-300 placeholder:font-medium"
+                        />
+                      </div>
+                      <p className="text-xs text-slate-500 font-medium">O vendedor analisará sua proposta e poderá aceitar ou recusar.</p>
+                    </div>
+                  )}
+
+                  {/* resumo valor */}
+                  <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-xl px-6 py-5">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-blue-600/70 font-black tracking-wider uppercase text-[10px]">
+                        {modo === "COMPRA" ? "Total a Pagar" : "Sua Proposta"}
+                      </span>
+                      <span className="text-slate-600 text-xs font-medium">Valor Unitário Base</span>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-blue-700 font-bold text-lg">R$</span>
+                      <span className="font-black text-blue-700 text-3xl tracking-tight">
+                        {valorUnitario.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* botão */}
+                  {modo === "COMPRA" ? (
+                    <button
+                      onClick={handleCompraDireta}
+                      className="w-full flex items-center justify-center gap-2 text-white font-black text-base py-4 rounded-xl transition-all shadow-[0_8px_20px_-6px_rgba(37,99,235,0.4)] hover:shadow-[0_12px_25px_-6px_rgba(37,99,235,0.5)] hover:-translate-y-0.5 active:translate-y-0"
+                      style={{ background: "linear-gradient(135deg, #2563eb, #1e40af)" }}
+                    >
+                      <ShoppingCart className="w-5 h-5" />
+                      Finalizar Compra
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleProposta}
+                      className="w-full flex items-center justify-center gap-2 text-white font-black text-base py-4 rounded-xl transition-all shadow-[0_8px_20px_-6px_rgba(37,99,235,0.4)] hover:shadow-[0_12px_25px_-6px_rgba(37,99,235,0.5)] hover:-translate-y-0.5 active:translate-y-0"
+                      style={{ background: "linear-gradient(135deg, #2563eb, #1e40af)" }}
+                    >
+                      <Handshake className="w-5 h-5" />
+                      Enviar Oferta ao Vendedor
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <button
+              onClick={() => {
+                const anuncianteNome = anuncio.anunciante_razao || (anuncio as any).nm_vendedor || (anuncio as any).ds_empresa || "";
+                if(anuncianteNome) {
+                   router.push(`/catalogo?anunciante=${encodeURIComponent(anuncianteNome)}`);
+                }
+              }}
+              className="mx-auto w-fit text-sm font-bold text-slate-500 hover:text-blue-600 transition-colors flex items-center gap-1.5 px-4 py-2 hover:bg-blue-50 rounded-lg"
+            >
+              Ver mais anúncios deste vendedor ↗
+            </button>
+          </div>
+        )}
+
+        <div className="mt-8 pt-6 border-t border-slate-200">
+          <button
+            onClick={() => router.back()}
+            className="text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-1.5"
+          >
+            ‹ Voltar para o catálogo
+          </button>
+        </div>
 
       </div>
 
@@ -316,6 +399,32 @@ export default function AnuncioDetalhePage() {
               Ir para Caixa de Propostas
             </button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-blue-600" />
+              Localização do Anunciante
+            </DialogTitle>
+          </DialogHeader>
+          {anuncio && anuncio.anunciante_lat && anuncio.anunciante_lon && (
+            <div className="mt-4 flex flex-col gap-4">
+              <div className="w-full h-64 rounded-xl overflow-hidden border border-slate-200">
+                <iframe
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade"
+                  src={`https://maps.google.com/maps?q=${anuncio.anunciante_lat},${anuncio.anunciante_lon}&hl=pt-BR&z=15&output=embed`}
+                ></iframe>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

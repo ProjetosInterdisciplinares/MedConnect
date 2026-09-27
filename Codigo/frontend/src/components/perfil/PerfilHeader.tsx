@@ -25,6 +25,15 @@ export default function PerfilHeader({ empresa }: Props) {
     email_pj: "",
     resp_tec: "",
     imagem_perfil: "" as string | null,
+    telefone: "",
+    cep: "",
+    logradouro: "",
+    numero: "",
+    bairro: "",
+    cidade: "",
+    estado: "",
+    latitude: null as number | null,
+    longitude: null as number | null,
   })
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -35,8 +44,50 @@ export default function PerfilHeader({ empresa }: Props) {
       email_pj: empresa.email_pj,
       resp_tec: empresa.resp_tec,
       imagem_perfil: empresa.imagem_perfil || null,
+      telefone: empresa.telefone || "",
+      cep: empresa.cep || "",
+      logradouro: empresa.logradouro || "",
+      numero: empresa.numero || "",
+      bairro: empresa.bairro || "",
+      cidade: empresa.cidade || "",
+      estado: empresa.estado || "",
+      latitude: empresa.latitude || null,
+      longitude: empresa.longitude || null,
     })
     setIsEditing(true)
+  }
+
+  async function fetchAddressByCep(cep: string) {
+    if (cep.length !== 9) return;
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cep.replace("-", "")}/json/`);
+      const data = await res.json();
+      if (data.erro) return;
+
+      setFormData(prev => ({
+        ...prev,
+        logradouro: data.logradouro || "",
+        bairro: data.bairro || "",
+        cidade: data.localidade || "",
+        estado: data.uf || "",
+      }));
+
+      // Buscar coordenadas
+      const addressString = `${data.logradouro || ""}, ${data.localidade || ""}, ${data.uf || ""}, Brazil`;
+      const coordRes = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressString)}`
+      );
+      const coordData = await coordRes.json();
+      if (coordData && coordData.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          latitude: parseFloat(coordData[0].lat),
+          longitude: parseFloat(coordData[0].lon),
+        }));
+      }
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -75,7 +126,7 @@ export default function PerfilHeader({ empresa }: Props) {
       <div className="bg-white border border-slate-200 p-8 rounded-3xl shadow-sm mb-8 relative overflow-hidden">
         {/* Decorative gradient top bar */}
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-600 to-blue-400" />
-        
+
         <div className="flex flex-col md:flex-row items-start justify-between gap-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 w-full text-center sm:text-left">
             {/* Foto de Perfil */}
@@ -115,11 +166,26 @@ export default function PerfilHeader({ empresa }: Props) {
                   <MapPin className="w-4 h-4 text-blue-600 shrink-0" />
                   CNPJ: <span className="font-bold text-slate-800">{empresa?.nr_cnpj}</span>
                 </p>
+
+                <p className="flex items-center justify-center sm:justify-start gap-2.5">
+                  <Phone className="w-4 h-4 text-blue-600 shrink-0" />
+                  Telefone: <span className="font-bold text-slate-800">{empresa?.telefone || "Não informado"}</span>
+                </p>
+
+                <p className="flex items-center justify-center sm:justify-start gap-2.5">
+                  <MapPin className="w-4 h-4 text-blue-600 shrink-0" />
+                  Endereço: <span className="font-bold text-slate-800">
+                    {empresa?.cep
+                      ? `${empresa.logradouro || ""}, ${empresa.numero || ""} - ${empresa.bairro || ""}, ${empresa.cidade || ""}/${empresa.estado || ""} (CEP: ${empresa.cep})`
+                      : "Não informado"
+                    }
+                  </span>
+                </p>
               </div>
             </div>
           </div>
 
-          <button 
+          <button
             onClick={handleOpenEdit}
             className="w-full md:w-auto flex items-center justify-center gap-2 text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-5 py-2.5 rounded-xl transition-all cursor-pointer shadow-sm hover:shadow"
           >
@@ -158,10 +224,10 @@ export default function PerfilHeader({ empresa }: Props) {
                   </div>
                 </div>
                 <p className="text-xs text-slate-500 font-medium">Clique para selecionar uma nova foto</p>
-                <input 
-                  type="file" 
-                  accept="image/png, image/jpeg, image/jpg" 
-                  className="hidden" 
+                <input
+                  type="file"
+                  accept="image/png, image/jpeg, image/jpg"
+                  className="hidden"
                   ref={fileInputRef}
                   onChange={handleImageChange}
                 />
@@ -199,6 +265,85 @@ export default function PerfilHeader({ empresa }: Props) {
                     onChange={(e) => setFormData({ ...formData, resp_tec: e.target.value })}
                     className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm shadow-inner"
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5 col-span-2 sm:col-span-1">
+                    <label className="text-sm font-bold text-slate-700">Telefone</label>
+                    <input
+                      required
+                      type="text"
+                      value={formData.telefone}
+                      onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                      className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm shadow-inner"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5 col-span-2 sm:col-span-1">
+                    <label className="text-sm font-bold text-slate-700">CEP</label>
+                    <input
+                      required
+                      type="text"
+                      maxLength={9}
+                      value={formData.cep}
+                      onChange={(e) => {
+                        let val = e.target.value.replace(/\D/g, "");
+                        if (val.length > 5) val = val.substring(0, 5) + "-" + val.substring(5, 8);
+                        setFormData({ ...formData, cep: val });
+                        if (val.length === 9) fetchAddressByCep(val);
+                      }}
+                      className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm shadow-inner"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5 col-span-2 sm:col-span-1">
+                    <label className="text-sm font-bold text-slate-700">Logradouro</label>
+                    <input
+                      required
+                      type="text"
+                      readOnly
+                      value={formData.logradouro}
+                      className="w-full px-4 py-2.5 bg-gray-100 border border-slate-200 rounded-xl outline-none text-sm shadow-inner"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5 col-span-2 sm:col-span-1">
+                    <label className="text-sm font-bold text-slate-700">Número</label>
+                    <input
+                      required
+                      type="text"
+                      value={formData.numero}
+                      onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
+                      className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm shadow-inner"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5 col-span-2 sm:col-span-1">
+                    <label className="text-sm font-bold text-slate-700">Bairro</label>
+                    <input
+                      required
+                      type="text"
+                      readOnly
+                      value={formData.bairro}
+                      className="w-full px-4 py-2.5 bg-gray-100 border border-slate-200 rounded-xl outline-none text-sm shadow-inner"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5 col-span-2 sm:col-span-1">
+                    <label className="text-sm font-bold text-slate-700">Cidade</label>
+                    <input
+                      required
+                      type="text"
+                      readOnly
+                      value={formData.cidade}
+                      className="w-full px-4 py-2.5 bg-gray-100 border border-slate-200 rounded-xl outline-none text-sm shadow-inner"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5 col-span-2 sm:col-span-1">
+                    <label className="text-sm font-bold text-slate-700">UF</label>
+                    <input
+                      required
+                      type="text"
+                      readOnly
+                      value={formData.estado}
+                      className="w-full px-4 py-2.5 bg-gray-100 border border-slate-200 rounded-xl outline-none text-sm shadow-inner uppercase"
+                    />
+                  </div>
                 </div>
               </div>
             </div>

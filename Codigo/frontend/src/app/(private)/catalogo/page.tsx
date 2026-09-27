@@ -2,17 +2,35 @@
 
 import React, { useEffect, useState, useMemo } from "react"
 import servicesGetAnuncios from "@/server/(GET)-anuncios"
-import servicesGetMaterials from "@/server/(GET)-materials-and-brands" 
+import servicesGetMaterials from "@/server/(GET)-materials-and-brands"
+import servicesGetMinhaPessoaJuridica from "@/server/(GET)-minha-pessoa-juridica"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, PackageX, SlidersHorizontal, MapPin } from "lucide-react"
-import { Anuncio, MatMed } from "@/types"
-import { useRouter } from "next/navigation"
+import { Search, PackageX, SlidersHorizontal, MapPin, Map as MapIcon } from "lucide-react"
+import { Anuncio, MatMed, PessoaJuridica } from "@/types"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Pagination } from "@/components/ui/pagination"
 import AnimatedBackground from "@/components/ui/animated-background"
 import { AuthManager } from "@/lib/AuthManager"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 const ITEMS_PER_PAGE = 6;
+
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371; // km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
 
 export default function Anuncios() {
   const [anuncios, setAnuncios] = useState<Anuncio[]>([])
@@ -20,10 +38,15 @@ export default function Anuncios() {
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(true)
   const [loggedUserId, setLoggedUserId] = useState<number | null>(null)
-  
+  const [meuPerfil, setMeuPerfil] = useState<PessoaJuridica | null>(null)
+
   const [categoria, setCategoria] = useState("Todas")
   const [fabricanteFiltro, setFabricanteFiltro] = useState("")
-  const [localizacaoFiltro, setLocalizacaoFiltro] = useState("")
+  const searchParams = useSearchParams()
+  const initialAnunciante = searchParams.get("anunciante") || ""
+  const [anuncianteFiltro, setAnuncianteFiltro] = useState(initialAnunciante)
+  const [distanciaMax, setDistanciaMax] = useState<string>("Todas")
+  const [selectedMapAnuncio, setSelectedMapAnuncio] = useState<Anuncio | null>(null)
   const [ordenacao, setOrdenacao] = useState("recentes")
   const [precoMin, setPrecoMin] = useState("")
   const [precoMax, setPrecoMax] = useState("")
@@ -37,13 +60,17 @@ export default function Anuncios() {
         const storedUserId = String(AuthManager.getInstance().getUserId())
         if (storedUserId) setLoggedUserId(Number(storedUserId))
 
-        const [anunciosResult, materiaisResult] = await Promise.all([
+        const [anunciosResult, materiaisResult, perfilResult] = await Promise.all([
           servicesGetAnuncios(0),
           servicesGetMaterials(),
+          servicesGetMinhaPessoaJuridica(),
         ])
 
         if (Array.isArray(anunciosResult)) setAnuncios(anunciosResult)
         if (Array.isArray(materiaisResult)) setMateriais(materiaisResult)
+        if (perfilResult && !("isError" in perfilResult)) {
+          setMeuPerfil(perfilResult as PessoaJuridica)
+        }
       } catch (error) {
         console.error("Erro ao buscar dados do catálogo:", error)
       } finally {
@@ -91,8 +118,8 @@ export default function Anuncios() {
       const vendedor = String((a as any).nm_vendedor || (a as any).ds_empresa || (a as any).anunciante_razao || "").toLowerCase()
       const nrAnuncio = a.nr_anuncio?.toString() || ""
       const fabricante = String(materialObj?.ds_marca || (a as any).nm_fabricante || (a as any).ds_marca_mat || "Outros").toLowerCase()
-      const cidade = String(a.anunciante_razao || (a as any).ds_cidade || (a as any).nm_cidade || "Desconhecida").toLowerCase()
-      
+      const anuncianteStr = String(a.anunciante_razao || (a as any).nm_vendedor || (a as any).ds_empresa || "").toLowerCase()
+
       const matchesSearch = (
         nrAnuncio.includes(term) ||
         nomeProduct.includes(term) ||
@@ -101,10 +128,10 @@ export default function Anuncios() {
       )
 
       const matchesFabricante = !fabricanteFiltro || fabricante.includes(fabricanteFiltro.toLowerCase())
-      const matchesLocalizacao = !localizacaoFiltro || cidade.includes(localizacaoFiltro.toLowerCase())
-      
-      const matchesCategoria = 
-        categoria === "Todas" || 
+      const matchesAnunciante = !anuncianteFiltro || anuncianteStr.includes(anuncianteFiltro.toLowerCase())
+
+      const matchesCategoria =
+        categoria === "Todas" ||
         (categoria === "Medicamentos" && (tipoProduct === "MD01" || tipoProduct.toLowerCase() === "medicamento")) ||
         (categoria === "Materiais Hospitalares" && (tipoProduct === "MT01" || tipoProduct.toLowerCase() === "material hospitalar"));
 
@@ -112,9 +139,17 @@ export default function Anuncios() {
       const matchesPrecoMin = precoMin === "" || valBase >= Number(precoMin)
       const matchesPrecoMax = precoMax === "" || valBase <= Number(precoMax)
 
-      return matchesSearch && matchesFabricante && matchesLocalizacao && matchesCategoria && matchesPrecoMin && matchesPrecoMax
+      let matchesDistancia = true;
+      if (distanciaMax !== "Todas" && meuPerfil?.latitude && meuPerfil?.longitude && a.anunciante_lat && a.anunciante_lon) {
+        const d = getDistance(Number(meuPerfil.latitude), Number(meuPerfil.longitude), Number(a.anunciante_lat), Number(a.anunciante_lon));
+        matchesDistancia = d <= Number(distanciaMax);
+      } else if (distanciaMax !== "Todas") {
+        matchesDistancia = false; // Se tiver filtro de dist mas n temos lat/long
+      }
+
+      return matchesSearch && matchesFabricante && matchesAnunciante && matchesCategoria && matchesPrecoMin && matchesPrecoMax && matchesDistancia
     })
-    
+
     // Ordenação básica se a API retornou campos úteis
     if (ordenacao === "recentes") {
       filtered = filtered.sort((a, b) => b.nr_anuncio - a.nr_anuncio)
@@ -127,7 +162,7 @@ export default function Anuncios() {
     }
 
     return filtered;
-  }, [anuncios, materiaisMap, search, fabricanteFiltro, localizacaoFiltro, loggedUserId, categoria, ordenacao, precoMin, precoMax])
+  }, [anuncios, materiaisMap, search, fabricanteFiltro, anuncianteFiltro, distanciaMax, meuPerfil, loggedUserId, categoria, ordenacao, precoMin, precoMax])
 
   const totalPages = useMemo(() => {
     return Math.ceil(filteredAnuncios.length / ITEMS_PER_PAGE) || 1
@@ -218,15 +253,33 @@ export default function Anuncios() {
               />
             </div>
 
-            {/* Localização */}
+            {/* Anunciante */}
             <div className="space-y-3 pt-4 border-t border-slate-100">
-              <label className="text-sm font-bold text-slate-700 block">Localização</label>
+              <label className="text-sm font-bold text-slate-700 block">Anunciante</label>
               <Input
-                placeholder="Digite a localização..."
-                value={localizacaoFiltro}
-                onChange={(e) => { setLocalizacaoFiltro(e.target.value); setCurrentPage(1); }}
+                placeholder="Digite o anunciante..."
+                value={anuncianteFiltro}
+                onChange={(e) => { setAnuncianteFiltro(e.target.value); setCurrentPage(1); }}
                 className="w-full bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-xl h-10 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500/30"
               />
+            </div>
+
+            {/* Distância */}
+            <div className="space-y-3 pt-4 border-t border-slate-100">
+              <label className="text-sm font-bold text-slate-700 block">Distância Máxima</label>
+              <Select value={distanciaMax} onValueChange={(val) => { setDistanciaMax(val || "Todas"); setCurrentPage(1); }}>
+                <SelectTrigger className="w-full bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-xl h-10 shadow-sm">
+                  <SelectValue placeholder="Selecione a distância" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Todas">Qualquer distância</SelectItem>
+                  <SelectItem value="5">Até 5 km</SelectItem>
+                  <SelectItem value="10">Até 10 km</SelectItem>
+                  <SelectItem value="50">Até 50 km</SelectItem>
+                  <SelectItem value="100">Até 100 km</SelectItem>
+                  <SelectItem value="500">Até 500 km</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Preço */}
@@ -273,7 +326,7 @@ export default function Anuncios() {
 
           {/* Main Content Area */}
           <div className="flex-1 w-full flex flex-col min-w-0">
-            
+
             {/* Search bar */}
             <div className="flex flex-col gap-4 mb-6">
               <div className="relative w-full">
@@ -296,15 +349,15 @@ export default function Anuncios() {
                   const fabricante = materialObj?.ds_marca || (anuncio as any).nm_fabricante || (anuncio as any).ds_marca_mat || "Fabricante não informado"
                   const anunciante = (anuncio as any).anunciante_razao || (anuncio as any).nm_vendedor || (anuncio as any).ds_empresa || "Usuário"
                   const lote = anuncio.ds_lote || "Não informado"
-                  
+
                   let dataValidade = "Não informada"
                   const rawValidade = anuncio.dt_validade
-                  
+
                   if (rawValidade) {
-                     const dateObj = new Date(rawValidade)
-                     if (!isNaN(dateObj.getTime())) {
-                        dataValidade = dateObj.toLocaleDateString('pt-BR')
-                     }
+                    const dateObj = new Date(rawValidade)
+                    if (!isNaN(dateObj.getTime())) {
+                      dataValidade = dateObj.toLocaleDateString('pt-BR')
+                    }
                   }
 
                   return (
@@ -319,9 +372,9 @@ export default function Anuncios() {
                       {/* Image Area */}
                       <div className="w-full aspect-square bg-slate-50/50 rounded-xl mb-4 flex items-center justify-center border border-slate-100 overflow-hidden relative">
                         {anuncio.imagem_anuncio ? (
-                          <img 
-                            src={anuncio.imagem_anuncio} 
-                            alt={nomeMaterial} 
+                          <img
+                            src={anuncio.imagem_anuncio}
+                            alt={nomeMaterial}
                             className="w-full h-full object-contain mix-blend-multiply p-2 group-hover:scale-105 transition-transform duration-500"
                           />
                         ) : (
@@ -331,7 +384,7 @@ export default function Anuncios() {
                           </div>
                         )}
                       </div>
-                      
+
                       {/* Title & Subtitle */}
                       <div className="mb-3">
                         <h3 className="font-bold text-slate-800 group-hover:text-blue-700 transition-colors text-[17px] leading-tight mb-1 line-clamp-2" title={nomeMaterial}>
@@ -370,6 +423,23 @@ export default function Anuncios() {
                       <div className="pt-4 border-t border-slate-100 flex items-center gap-2 text-xs font-bold text-slate-700 bg-white">
                         <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
                         <span className="truncate" title={anunciante}>{anunciante}</span>
+                        {meuPerfil?.latitude && anuncio.anunciante_lat && (
+                           <div className="flex items-center gap-1.5 ml-auto">
+                              <span className="text-blue-600 font-bold whitespace-nowrap">
+                                | {getDistance(Number(meuPerfil.latitude), Number(meuPerfil.longitude), Number(anuncio.anunciante_lat), Number(anuncio.anunciante_lon)).toFixed(1)} km
+                              </span>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedMapAnuncio(anuncio);
+                                }}
+                                className="p-1.5 rounded-full hover:bg-blue-50 text-blue-600 transition-colors"
+                                title="Ver no Mapa"
+                              >
+                                <MapIcon className="w-4 h-4" />
+                              </button>
+                           </div>
+                        )}
                       </div>
                     </div>
                   )
@@ -390,7 +460,7 @@ export default function Anuncios() {
             {/* paginacao no rodape da pagina */}
             {totalPages > 1 && (
               <div className="mt-8 flex justify-center">
-                <Pagination 
+                <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
                   totalItems={filteredAnuncios.length}
@@ -399,11 +469,44 @@ export default function Anuncios() {
                 />
               </div>
             )}
-            
+
           </div>
         </div>
 
       </div>
+
+      <Dialog open={!!selectedMapAnuncio} onOpenChange={(open) => !open && setSelectedMapAnuncio(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-blue-600" />
+              Localização do Anunciante
+            </DialogTitle>
+          </DialogHeader>
+          {selectedMapAnuncio && selectedMapAnuncio.anunciante_lat && selectedMapAnuncio.anunciante_lon && (
+            <div className="mt-4 flex flex-col gap-4">
+              <div className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                <span className="font-semibold block mb-1">{selectedMapAnuncio.anunciante_razao || "Anunciante"}</span>
+                {selectedMapAnuncio.anunciante_logradouro && `${selectedMapAnuncio.anunciante_logradouro}, `}
+                {selectedMapAnuncio.anunciante_numero && `${selectedMapAnuncio.anunciante_numero} - `}
+                {selectedMapAnuncio.anunciante_bairro && `${selectedMapAnuncio.anunciante_bairro}, `}
+                {selectedMapAnuncio.anunciante_cidade} / {selectedMapAnuncio.anunciante_estado}
+              </div>
+              <div className="w-full h-64 rounded-xl overflow-hidden border border-slate-200">
+                <iframe
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade"
+                  src={`https://maps.google.com/maps?q=${selectedMapAnuncio.anunciante_lat},${selectedMapAnuncio.anunciante_lon}&hl=pt-BR&z=15&output=embed`}
+                ></iframe>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

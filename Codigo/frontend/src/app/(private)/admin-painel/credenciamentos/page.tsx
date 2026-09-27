@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState, useMemo } from "react"
-import { Building2, CheckCircle2, XCircle, AlertCircle, RefreshCw, Eye, FileText, Inbox, Clock, Ban, ArrowRight, Mail, User, Search, Filter } from "lucide-react"
+import { Building2, CheckCircle2, XCircle, AlertCircle, RefreshCw, Eye, FileText, Inbox, Clock, Ban, ArrowRight, Mail, User, Search, Filter, Phone, MapPin } from "lucide-react"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
 import AnimatedBackground from "@/components/ui/animated-background"
@@ -30,6 +30,14 @@ interface Empresa {
   email_pj: string
   resp_tec: string
   status: string
+  cep?: string
+  logradouro?: string
+  numero?: string
+  complemento?: string
+  bairro?: string
+  cidade?: string
+  estado?: string
+  telefone?: string
 }
 
 const TABS = [
@@ -116,6 +124,14 @@ export default function AdminCredenciamentos() {
       
       toast.success(`Empresa ${novoStatus === "ATIVA" ? "aprovada" : "rejeitada"} com sucesso!`)
       fetchEmpresas() // recarrega a lista
+      
+      // Atualiza o state do modal se ele estiver aberto
+      setSelectedEmpresa(prev => {
+        if (prev && prev.cd_pessoaj === id) {
+          return { ...prev, status: novoStatus }
+        }
+        return prev
+      })
     } catch (error) {
       toast.error("Erro ao atualizar o status")
     } finally {
@@ -462,6 +478,25 @@ export default function AdminCredenciamentos() {
                   <p className="font-semibold text-slate-700 flex items-center gap-2">
                     <User size={16} className="text-slate-400" />
                     {selectedEmpresa.resp_tec}
+                  </p>
+                </div>
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm md:col-span-1">
+                  <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Telefone</p>
+                  <p className="font-semibold text-slate-700 flex items-center gap-2">
+                    <Phone size={16} className="text-slate-400" />
+                    {selectedEmpresa.telefone || "Não informado"}
+                  </p>
+                </div>
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm md:col-span-2">
+                  <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Endereço</p>
+                  <p className="font-semibold text-slate-700 flex items-center gap-2">
+                    <MapPin size={16} className="text-slate-400 shrink-0" />
+                    <span>
+                      {selectedEmpresa.cep 
+                        ? `${selectedEmpresa.logradouro || ""}, ${selectedEmpresa.numero || ""} - ${selectedEmpresa.bairro || ""}, ${selectedEmpresa.cidade || ""}/${selectedEmpresa.estado || ""} (CEP: ${selectedEmpresa.cep})`
+                        : "Não informado"
+                      }
+                    </span>
                   </p>
                 </div>
               </div>

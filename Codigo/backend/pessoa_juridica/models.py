@@ -40,6 +40,19 @@ class PessoaJuridica(models.Model):
 
     is_admin = models.BooleanField(default=False)
 
+    cep = models.CharField(max_length=9, blank=True, null=True)
+    logradouro = models.CharField(max_length=255, blank=True, null=True)
+    numero = models.CharField(max_length=20, blank=True, null=True)
+    complemento = models.CharField(max_length=255, blank=True, null=True)
+    bairro = models.CharField(max_length=100, blank=True, null=True)
+    cidade = models.CharField(max_length=100, blank=True, null=True)
+    estado = models.CharField(max_length=2, blank=True, null=True)
+    
+    latitude = models.DecimalField(max_digits=10, decimal_places=7, blank=True, null=True)
+    longitude = models.DecimalField(max_digits=10, decimal_places=7, blank=True, null=True)
+    
+    telefone = models.CharField(max_length=20, blank=True, null=True)
+
     @property
     def is_authenticated(self):
         return True
