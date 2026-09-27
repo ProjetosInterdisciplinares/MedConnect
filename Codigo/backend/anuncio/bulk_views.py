@@ -142,36 +142,8 @@ def download_template(request):
 
     ws_data.row_dimensions[1].height = 35
 
-    # Add example row
-    example = [
-        "Seringa Descartável 5ml",
-        "Material Hospitalar",
-        "BD",
-        "Caixa",
-        "70908788",
-        "20",
-        "",
-        "",
-        "L2025001",
-        "01/01/2025",
-        "01/01/2027",
-        100,
-        "12,50",
-        "Produto lacrado, caixas em perfeito estado.",
-    ]
-
-    example_font = Font(name="Calibri", size=11, italic=True, color="888888")
-    for col_idx, val in enumerate(example, start=1):
-        cell = ws_data.cell(row=2, column=col_idx, value=val)
-        cell.font = example_font
-        cell.alignment = Alignment(vertical="center")
-        cell.border = thin_border
-        
-        if col_idx not in (10, 11):
-            cell.number_format = '@'
-
     # Pre-format empty rows with fill to show required vs optional
-    for row_idx in range(3, 103):  # Pre-format 100 rows
+    for row_idx in range(2, 102):  # Pre-format 100 rows
         for col_idx in range(1, len(columns) + 1):
             cell = ws_data.cell(row=row_idx, column=col_idx)
             cell.border = thin_border
