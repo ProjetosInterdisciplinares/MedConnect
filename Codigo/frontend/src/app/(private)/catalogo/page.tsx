@@ -25,6 +25,8 @@ export default function Anuncios() {
   const [fabricanteFiltro, setFabricanteFiltro] = useState("")
   const [localizacaoFiltro, setLocalizacaoFiltro] = useState("")
   const [ordenacao, setOrdenacao] = useState("recentes")
+  const [precoMin, setPrecoMin] = useState("")
+  const [precoMax, setPrecoMax] = useState("")
 
   const [currentPage, setCurrentPage] = useState(1)
   const router = useRouter()
@@ -103,10 +105,14 @@ export default function Anuncios() {
       
       const matchesCategoria = 
         categoria === "Todas" || 
-        (categoria === "Medicamentos" && tipoProduct === "MD01") ||
-        (categoria === "Materiais Hospitalares" && tipoProduct === "MT01");
+        (categoria === "Medicamentos" && (tipoProduct === "MD01" || tipoProduct.toLowerCase() === "medicamento")) ||
+        (categoria === "Materiais Hospitalares" && (tipoProduct === "MT01" || tipoProduct.toLowerCase() === "material hospitalar"));
 
-      return matchesSearch && matchesFabricante && matchesLocalizacao && matchesCategoria
+      const valBase = Number((a as any).val_base || 0)
+      const matchesPrecoMin = precoMin === "" || valBase >= Number(precoMin)
+      const matchesPrecoMax = precoMax === "" || valBase <= Number(precoMax)
+
+      return matchesSearch && matchesFabricante && matchesLocalizacao && matchesCategoria && matchesPrecoMin && matchesPrecoMax
     })
     
     // Ordenação básica se a API retornou campos úteis
@@ -117,7 +123,7 @@ export default function Anuncios() {
     }
 
     return filtered;
-  }, [anuncios, materiaisMap, search, fabricanteFiltro, localizacaoFiltro, loggedUserId, categoria, ordenacao])
+  }, [anuncios, materiaisMap, search, fabricanteFiltro, localizacaoFiltro, loggedUserId, categoria, ordenacao, precoMin, precoMax])
 
   const totalPages = useMemo(() => {
     return Math.ceil(filteredAnuncios.length / ITEMS_PER_PAGE) || 1
@@ -200,40 +206,59 @@ export default function Anuncios() {
             {/* Fabricante */}
             <div className="space-y-3 pt-4 border-t border-slate-100">
               <label className="text-sm font-bold text-slate-700 block">Fabricante</label>
-              <div className="relative">
-                <Select
-                  value={fabricanteFiltro || "todos"}
-                  onValueChange={(val) => { setFabricanteFiltro((val === "todos" || !val) ? "" : val); setCurrentPage(1); }}
-                >
-                  <SelectTrigger className="w-full bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-xl h-10 shadow-sm">
-                    <SelectValue placeholder="Todos os fabricantes" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos os fabricantes</SelectItem>
-                    {fabricantesUnicos.map(f => (
-                      <SelectItem key={f} value={f}>{f}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Input
+                placeholder="Digite o fabricante..."
+                value={fabricanteFiltro}
+                onChange={(e) => { setFabricanteFiltro(e.target.value); setCurrentPage(1); }}
+                className="w-full bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-xl h-10 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500/30"
+              />
             </div>
 
             {/* Localização */}
             <div className="space-y-3 pt-4 border-t border-slate-100">
               <label className="text-sm font-bold text-slate-700 block">Localização</label>
+              <Input
+                placeholder="Digite a localização..."
+                value={localizacaoFiltro}
+                onChange={(e) => { setLocalizacaoFiltro(e.target.value); setCurrentPage(1); }}
+                className="w-full bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-xl h-10 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500/30"
+              />
+            </div>
+
+            {/* Preço */}
+            <div className="space-y-3 pt-4 border-t border-slate-100">
+              <label className="text-sm font-bold text-slate-700 block">Faixa de Preço (R$)</label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  placeholder="Mínimo"
+                  value={precoMin}
+                  onChange={(e) => { setPrecoMin(e.target.value); setCurrentPage(1); }}
+                  className="w-full bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-xl h-10 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                  min={0}
+                />
+                <Input
+                  type="number"
+                  placeholder="Máximo"
+                  value={precoMax}
+                  onChange={(e) => { setPrecoMax(e.target.value); setCurrentPage(1); }}
+                  className="w-full bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-xl h-10 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                  min={0}
+                />
+              </div>
+            </div>
+
+            {/* Ordenação */}
+            <div className="space-y-3 pt-4 border-t border-slate-100">
+              <label className="text-sm font-bold text-slate-700 block">Ordenar por</label>
               <div className="relative">
-                <Select
-                  value={localizacaoFiltro || "todas"}
-                  onValueChange={(val) => { setLocalizacaoFiltro((val === "todas" || !val) ? "" : val); setCurrentPage(1); }}
-                >
-                  <SelectTrigger className="w-full bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-xl h-10 shadow-sm">
-                    <SelectValue placeholder="Todas as localizações..." />
+                <Select value={ordenacao} onValueChange={(val) => setOrdenacao(val || "recentes")}>
+                  <SelectTrigger className="w-full bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-xl h-10 shadow-sm focus:ring-blue-500/30">
+                    <SelectValue placeholder="Mais recentes" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="todas">Todas as localizações...</SelectItem>
-                    {localizacoesUnicas.map(l => (
-                      <SelectItem key={l} value={l}>{l}</SelectItem>
-                    ))}
+                    <SelectItem value="recentes">Mais recentes</SelectItem>
+                    <SelectItem value="antigos">Mais antigos</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -243,9 +268,9 @@ export default function Anuncios() {
           {/* Main Content Area */}
           <div className="flex-1 w-full flex flex-col min-w-0">
             
-            {/* Search bar and Sort */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <div className="relative flex-1">
+            {/* Search bar */}
+            <div className="flex flex-col gap-4 mb-6">
+              <div className="relative w-full">
                 <Search className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
                 <Input
                   placeholder="Buscar insumos, fabricantes..."
@@ -253,17 +278,6 @@ export default function Anuncios() {
                   value={search}
                   onChange={handleSearchChange}
                 />
-              </div>
-              <div className="w-full sm:w-48">
-                <Select value={ordenacao} onValueChange={(val) => setOrdenacao(val || "recentes")}>
-                  <SelectTrigger className="h-11 bg-white border-0 shadow-sm text-slate-700 font-medium rounded-2xl text-sm focus:ring-blue-500/30">
-                    <SelectValue placeholder="Mais recentes" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="recentes">Mais recentes</SelectItem>
-                    <SelectItem value="antigos">Mais antigos</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             </div>
 

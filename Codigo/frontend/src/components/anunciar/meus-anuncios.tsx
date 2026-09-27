@@ -12,6 +12,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"
+import { Pagination } from "@/components/ui/pagination"
 
 interface MeusAnunciosProps {
   materiais: MatMed[]
@@ -24,6 +25,12 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  
+  const [currentPage, setCurrentPage] = useState(1)
+  const ITEMS_PER_PAGE = 6
+  
+  const totalPages = Math.ceil(anuncios.length / ITEMS_PER_PAGE) || 1
+  const paginatedAnuncios = anuncios.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
 
   async function handleDeleteAnuncio(nrAnuncio: number) {
     setIsDeleting(true);
@@ -100,7 +107,7 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {anuncios.map((anuncio) => {
+        {paginatedAnuncios.map((anuncio) => {
           const materialObj = materiais.find(m => String(m.cd_mat) === String(anuncio.cd_mat))
           
           const nomeMaterial = materialObj?.ds_mat || "Insumo não identificado"
@@ -176,6 +183,21 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
           )
         })}
       </div>
+
+      {totalPages > 1 && (
+        <div className="mt-8 mb-4">
+          <Pagination 
+            totalPages={totalPages} 
+            currentPage={currentPage} 
+            totalItems={anuncios.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={(page) => {
+              setCurrentPage(page);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }} 
+          />
+        </div>
+      )}
 
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent className="sm:max-w-xl p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
