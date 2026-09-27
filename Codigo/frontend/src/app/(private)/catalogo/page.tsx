@@ -120,6 +120,10 @@ export default function Anuncios() {
       filtered = filtered.sort((a, b) => b.nr_anuncio - a.nr_anuncio)
     } else if (ordenacao === "antigos") {
       filtered = filtered.sort((a, b) => a.nr_anuncio - b.nr_anuncio)
+    } else if (ordenacao === "preco_menor") {
+      filtered = filtered.sort((a, b) => Number((a as any).val_base || 0) - Number((b as any).val_base || 0))
+    } else if (ordenacao === "preco_maior") {
+      filtered = filtered.sort((a, b) => Number((b as any).val_base || 0) - Number((a as any).val_base || 0))
     }
 
     return filtered;
@@ -259,6 +263,8 @@ export default function Anuncios() {
                   <SelectContent>
                     <SelectItem value="recentes">Mais recentes</SelectItem>
                     <SelectItem value="antigos">Mais antigos</SelectItem>
+                    <SelectItem value="preco_menor">Menor preço</SelectItem>
+                    <SelectItem value="preco_maior">Maior preço</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
