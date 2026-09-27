@@ -1,21 +1,36 @@
 export interface Negociacao {
-  nr_negociacao: number
-  obs_negocia: string
-  qtd_matmed: number
-  /** FK → Anuncio.nr_anuncio */
-  nr_anuncio: number
-  /** FK → PessoaJuridica.cd_pessoaj (quem oferta) */
-  cd_negociador: number
-  /** FK → PessoaJuridica.cd_pessoaj (quem solicita) */
-  cd_negociante: number
+  id: number
+  anuncio: number
+  comprador: number
+  vendedor: number
+  val_proposta: number | string
+  qtd_proposta: number
+  status: 'P' | 'A' | 'R' | 'C'
+  data_proposta: string
+  data_resposta?: string
+  ds_obs?: string
+  
+  // Extra fields from backend serializer
+  anuncio_nome?: string
+  vendedor_nome?: string
+  vendedor_email?: string
+  vendedor_telefone?: string
+  comprador_nome?: string
+  comprador_email?: string
+  comprador_telefone?: string
+  anuncio_val_base?: number | string
+  anuncio_qtd?: number
+  anuncio_lote?: string
 }
 
 export interface CreateNegociacaoForm {
-  obs_negocia?: string
-  qtd_matmed: number
-  nr_anuncio: number
-  cd_negociador: number
-  cd_negociante: number
+  anuncio: number
+  vendedor: number
+  val_proposta: number | string
+  qtd_proposta: number
+  ds_obs?: string
 }
 
-export type UpdateNegociacaoForm = Partial<CreateNegociacaoForm>
+export type UpdateNegociacaoForm = Partial<CreateNegociacaoForm> & {
+  status?: 'P' | 'A' | 'R' | 'C'
+}
