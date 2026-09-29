@@ -50,6 +50,10 @@ class AnuncioSerializer(serializers.ModelSerializer):
         source="cd_pessoa_anunciante.telefone",
         read_only=True
     )
+    is_recommended = serializers.BooleanField(
+        read_only=True,
+        default=False
+    )
 
     class Meta:
         model = Anuncio

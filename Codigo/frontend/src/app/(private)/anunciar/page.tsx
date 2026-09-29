@@ -129,7 +129,7 @@ export default function AnunciarPage() {
 
     setIsGenerating(true)
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/gerar-anuncio/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/medconnect/gerar-anuncio/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

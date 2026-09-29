@@ -28,6 +28,9 @@ export interface Anuncio {
   val_proposta: string | null
   val_aceito: string | null
   cd_pessoa_compradora: number | null
+
+  // Recomendação inteligente (IA)
+  is_recommended?: boolean
 }
 
 export interface CreateAnuncioForm {

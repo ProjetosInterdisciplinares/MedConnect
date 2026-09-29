@@ -1,14 +1,19 @@
 import os
+import json
 from dotenv import load_dotenv
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from google import genai
 
 from mat_med.models import MatMed
-from pessoa_juridica.models import PessoaJuridica   
+from pessoa_juridica.models import PessoaJuridica
+from anuncio.models import Anuncio
+from anuncio.serializers import AnuncioSerializer
 
 load_dotenv()
+
 
 class GerarDescricaoAnuncioView(APIView):
     def post(self, request):
@@ -68,7 +73,7 @@ class GerarDescricaoAnuncioView(APIView):
         try:
             client = genai.Client() 
             response = client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-3.8-flash',
                 contents=prompt,
             )
             
@@ -79,3 +84,161 @@ class GerarDescricaoAnuncioView(APIView):
                 {"erro": f"Erro na API do Gemini: {str(e)}"}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class BuscaSemanticaView(APIView):
+    """
+    Busca semântica no catálogo de anúncios usando o Gemini.
+    Recebe um termo de busca em linguagem natural e retorna os anúncios
+    mais relevantes, ranqueados por relevância semântica.
+    """
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request):
+        termo = request.data.get('termo', '').strip()
+
+        if not termo:
+            return Response(
+                {"erro": "O campo 'termo' é obrigatório."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Carrega anúncios ativos, excluindo os do próprio usuário
+        anuncios = Anuncio.objects.filter(
+            ie_status='A'
+        ).exclude(
+            cd_pessoa_anunciante=request.user
+        ).select_related('cd_mat', 'cd_pessoa_anunciante')
+
+        if not anuncios.exists():
+            return Response([], status=status.HTTP_200_OK)
+
+        # Monta catálogo resumido para o prompt (sem imagens para economizar tokens)
+        catalogo = []
+        for a in anuncios:
+            catalogo.append({
+                "id": a.nr_anuncio,
+                "nome": a.cd_mat.ds_mat or a.cd_mat.cd_tuss,
+                "marca": a.cd_mat.ds_marca or "N/A",
+                "categoria": a.cd_mat.ds_tipo or "N/A",
+                "unidade": a.cd_mat.unidade_med or "unidade",
+                "quantidade": a.qtd_mat,
+                "valor": str(a.val_base),
+                "lote": a.ds_lote or "",
+                "validade": str(a.dt_validade) if a.dt_validade else "",
+                "descricao": (a.ds_obs[:200] if a.ds_obs else ""),
+                "anunciante": a.cd_pessoa_anunciante.razao_social or a.cd_pessoa_anunciante.nm_pessoaj,
+            })
+
+        catalogo_json = json.dumps(catalogo, ensure_ascii=False)
+
+        prompt = f"""Você é o motor de busca inteligente do MedConnect, uma plataforma B2B de materiais e medicamentos hospitalares.
+
+O usuário está buscando: "{termo}"
+
+Catálogo de anúncios ativos:
+{catalogo_json}
+
+Sua tarefa:
+1. Analise a intenção de busca do usuário
+2. Considere sinônimos médicos e hospitalares (ex: "soro" = "solução fisiológica", "EPI" = "luva, máscara, avental")
+3. Interprete linguagem natural e coloquial
+4. Considere nomes comerciais e genéricos de medicamentos
+5. Retorne os IDs dos anúncios mais relevantes, ordenados do mais ao menos relevante
+
+Retorne APENAS um JSON válido no formato:
+{{"resultados": [id1, id2, id3, ...]}}
+
+Regras:
+- Retorne no máximo 20 resultados
+- Se nenhum anúncio for relevante, retorne {{"resultados": []}}
+- NÃO inclua explicações, apenas o JSON"""
+
+        try:
+            client = genai.Client()
+            response = client.models.generate_content(
+                model='gemini-3.8-flash',
+                contents=prompt,
+                config={
+                    'response_mime_type': 'application/json',
+                    'temperature': 0.1,
+                },
+            )
+
+            resultado = json.loads(response.text)
+            ids_ordenados = resultado.get('resultados', [])
+
+            if not ids_ordenados:
+                return Response([], status=status.HTTP_200_OK)
+
+            # Mapeia os anúncios e mantém a ordem de relevância do Gemini
+            anuncios_map = {a.nr_anuncio: a for a in anuncios}
+            anuncios_ordenados = [
+                anuncios_map[aid] for aid in ids_ordenados if aid in anuncios_map
+            ]
+
+            serializer = AnuncioSerializer(anuncios_ordenados, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except json.JSONDecodeError:
+            return Response(
+                {"erro": "A IA retornou uma resposta inválida. Tente novamente."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        except Exception as e:
+            return Response(
+                {"erro": f"Erro na busca semântica: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class AtualizarInteressesView(APIView):
+    """
+    Atualiza as tags de interesse do usuário no background, com base no
+    histórico anterior e no novo termo pesquisado.
+    """
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request):
+        termo = request.data.get('termo', '').strip()
+        if not termo:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        usuario = request.user
+        interesses_atuais = usuario.interesses_ia or ""
+
+        prompt = f"""
+        Você é um assistente de IA que extrai interesses de busca.
+        O usuário (hospital/empresa) está navegando em uma plataforma B2B de saúde.
+        
+        Tags de interesse atuais: "{interesses_atuais}"
+        Nova pesquisa do usuário: "{termo}"
+        
+        Baseado nisso, atualize as tags de interesse do usuário dando prioridade aos itens mais recentes pesquisados.
+        Retorne APENAS uma lista de até 6 palavras-chave simples, separadas por vírgula.
+        Não inclua aspas, parênteses, explicações ou texto extra.
+        Exemplo de resposta: luva, seringa, anestésico, cateter, gaze, bisturi
+        """
+
+        try:
+            client = genai.Client()
+            response = client.models.generate_content(
+                model='gemini-3.8-flash',
+                contents=prompt,
+                config={'temperature': 0.1}
+            )
+
+            novas_tags = response.text.strip().replace('"', '').replace('\n', '')
+            
+            # Limita tamanho para segurança
+            if len(novas_tags) > 200:
+                novas_tags = novas_tags[:200]
+                
+            usuario.interesses_ia = novas_tags
+            usuario.save(update_fields=['interesses_ia'])
+
+            return Response({"sucesso": True, "novos_interesses": novas_tags}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            # Em caso de falha silenciosa no background, não afeta o usuário
+            return Response({"erro": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

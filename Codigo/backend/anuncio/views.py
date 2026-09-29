@@ -2,7 +2,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework import generics, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from django.db.models import Q
+from django.db.models import Q, Case, When, Value, BooleanField
 from django.utils import timezone
 from anuncio.models import Anuncio, Negociacao
 from anuncio.serializers import AnuncioSerializer, NegociacaoSerializer
@@ -66,6 +66,33 @@ class AnuncioCreateListView(generics.ListCreateAPIView):
             queryset = queryset.filter(
                 cd_mat__ds_tipo__ds_tipo__icontains=tipo
             )
+
+        # Ordenação inteligente baseada nos interesses da IA
+        user = self.request.user
+        if hasattr(user, 'interesses_ia') and user.interesses_ia and status == 'A':
+            # Separa as tags geradas pela IA (ex: "luva, seringa")
+            tags = [t.strip() for t in user.interesses_ia.split(',') if t.strip()]
+            
+            if tags:
+                # Cria uma condição Q para verificar se o nome do material ou tipo contém alguma das tags
+                q_objects = Q()
+                for tag in tags:
+                    q_objects |= Q(cd_mat__ds_mat__icontains=tag) | Q(cd_mat__ds_tipo__icontains=tag)
+                
+                # Anota os anúncios que dão match com os interesses
+                queryset = queryset.annotate(
+                    is_recommended=Case(
+                        When(q_objects, then=Value(True)),
+                        default=Value(False),
+                        output_field=BooleanField(),
+                    )
+                ).order_by('-is_recommended', '-nr_anuncio')
+            else:
+                # Fallback ordenação normal se não tiver tags válidas
+                queryset = queryset.order_by('-nr_anuncio')
+        else:
+            # Fallback ordenação normal
+            queryset = queryset.order_by('-nr_anuncio')
 
         return queryset
 

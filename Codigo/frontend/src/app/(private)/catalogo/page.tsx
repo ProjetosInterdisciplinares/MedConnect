@@ -1,12 +1,13 @@
 "use client"
 
-import React, { useEffect, useState, useMemo } from "react"
+import React, { useEffect, useState, useMemo, useCallback } from "react"
 import servicesGetAnuncios from "@/server/(GET)-anuncios"
 import servicesGetMaterials from "@/server/(GET)-materials-and-brands"
 import servicesGetMinhaPessoaJuridica from "@/server/(GET)-minha-pessoa-juridica"
+import servicesRegistrarInteresse from "@/server/(POST)-registrar-interesse"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, PackageX, SlidersHorizontal, MapPin, Map as MapIcon, Store } from "lucide-react"
+import { Search, PackageX, SlidersHorizontal, MapPin, Map as MapIcon, Store, Sparkles, X, Star } from "lucide-react"
 import { Anuncio, MatMed, PessoaJuridica } from "@/types"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Pagination } from "@/components/ui/pagination"
@@ -36,6 +37,7 @@ export default function Anuncios() {
   const [anuncios, setAnuncios] = useState<Anuncio[]>([])
   const [materiais, setMateriais] = useState<MatMed[]>([])
   const [search, setSearch] = useState("")
+  const [appliedSearch, setAppliedSearch] = useState("")
   const [loading, setLoading] = useState(true)
   const [loggedUserId, setLoggedUserId] = useState<number | null>(null)
   const [meuPerfil, setMeuPerfil] = useState<PessoaJuridica | null>(null)
@@ -53,6 +55,7 @@ export default function Anuncios() {
 
   const [currentPage, setCurrentPage] = useState(1)
   const router = useRouter()
+
 
   useEffect(() => {
     async function load() {
@@ -108,7 +111,7 @@ export default function Anuncios() {
   }, [anuncios, loggedUserId])
 
   const filteredAnuncios = useMemo(() => {
-    const term = search.toLowerCase().trim()
+    const term = appliedSearch.toLowerCase().trim()
     let filtered = anuncios.filter((a) => {
       if (loggedUserId !== null && a.cd_pessoa_anunciante === loggedUserId) return false;
 
@@ -150,9 +153,24 @@ export default function Anuncios() {
       return matchesSearch && matchesFabricante && matchesAnunciante && matchesCategoria && matchesPrecoMin && matchesPrecoMax && matchesDistancia
     })
 
-    // Ordenação básica se a API retornou campos úteis
     if (ordenacao === "recentes") {
-      filtered = filtered.sort((a, b) => b.nr_anuncio - a.nr_anuncio)
+      // 1. Primeiro separa os recomendados dos normais
+      let recomendados = filtered.filter(a => a.is_recommended);
+      let normais = filtered.filter(a => !a.is_recommended);
+
+      // 3. Limita a 6 recomendados na vitrine, transformando o resto em "normais"
+      if (recomendados.length > 6) {
+        const extras = recomendados.slice(6).map(item => ({ ...item, is_recommended: false }));
+        normais = [...normais, ...extras];
+        recomendados = recomendados.slice(0, 6);
+      }
+
+      // 4. Ordena os normais por data (mais recentes)
+      normais = normais.sort((a, b) => b.nr_anuncio - a.nr_anuncio);
+
+      // 5. Junta tudo
+      filtered = [...recomendados, ...normais];
+
     } else if (ordenacao === "antigos") {
       filtered = filtered.sort((a, b) => a.nr_anuncio - b.nr_anuncio)
     } else if (ordenacao === "preco_menor") {
@@ -162,7 +180,7 @@ export default function Anuncios() {
     }
 
     return filtered;
-  }, [anuncios, materiaisMap, search, fabricanteFiltro, anuncianteFiltro, distanciaMax, meuPerfil, loggedUserId, categoria, ordenacao, precoMin, precoMax])
+  }, [anuncios, materiaisMap, appliedSearch, fabricanteFiltro, anuncianteFiltro, distanciaMax, meuPerfil, loggedUserId, categoria, ordenacao, precoMin, precoMax])
 
   const totalPages = useMemo(() => {
     return Math.ceil(filteredAnuncios.length / ITEMS_PER_PAGE) || 1
@@ -175,13 +193,34 @@ export default function Anuncios() {
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value)
-    setCurrentPage(1)
+  }
+
+  // Função isolada para salvar o termo sem travar a interface
+  const triggerProfileUpdate = (termo: string) => {
+    // Não damos await aqui, deixa rodar de fundo
+    servicesRegistrarInteresse(termo).catch(err => console.error("Erro ao registrar interesse:", err));
+  }
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      const term = search.trim();
+      setAppliedSearch(term);
+      setCurrentPage(1);
+      
+      // Atualiza o perfil de recomendação no fundo sempre que o usuário der Enter
+      if (term.length > 0) {
+        triggerProfileUpdate(term);
+      }
+    }
   }
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
+
+
 
   if (loading) {
     return (
@@ -335,15 +374,18 @@ export default function Anuncios() {
           <div className="flex-1 w-full flex flex-col min-w-0">
 
             {/* Search bar */}
-            <div className="flex flex-col gap-4 mb-6">
-              <div className="relative w-full">
-                <Search className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
-                <Input
-                  placeholder="Buscar insumos, fabricantes..."
-                  className="pl-11 h-11 bg-white border-0 shadow-sm text-slate-800 placeholder:text-slate-400 rounded-2xl transition-all duration-300 text-sm focus-visible:ring-2 focus-visible:ring-blue-500/30"
-                  value={search}
-                  onChange={handleSearchChange}
-                />
+            <div className="flex flex-col gap-3 mb-6">
+              <div className="relative w-full flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
+                  <Input
+                    placeholder="Buscar insumos, fabricantes... (Pressione Enter)"
+                    className="pl-11 h-11 bg-white border-0 shadow-sm text-slate-800 placeholder:text-slate-400 rounded-2xl transition-all duration-300 text-sm focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                    value={search}
+                    onChange={handleSearchChange}
+                    onKeyDown={handleSearchKeyDown}
+                  />
+                </div>
               </div>
             </div>
 
@@ -374,7 +416,15 @@ export default function Anuncios() {
                       className="bg-white rounded-[1.25rem] p-5 shadow-sm hover:shadow-2xl hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 ease-out flex flex-col cursor-pointer border border-transparent hover:border-blue-100 relative overflow-hidden group"
                     >
                       {/* Hover Top Bar */}
-                      <div className="absolute top-0 left-0 h-1.5 w-0 bg-blue-600 group-hover:w-full transition-all duration-500 ease-out" />
+                      <div className="absolute top-0 left-0 h-1.5 w-0 bg-blue-600 group-hover:w-full transition-all duration-500 ease-out z-10" />
+
+                      {/* Badge Recomendado pela IA (Discreto) */}
+                      {anuncio.is_recommended && (
+                        <div className="absolute top-3 left-3 z-20 bg-white/90 backdrop-blur-md border border-slate-200/60 text-slate-500 text-[10px] font-semibold tracking-wide px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-sm transition-all duration-300 group-hover:bg-blue-600 group-hover:border-blue-600 group-hover:text-white">
+                          <Sparkles className="w-3 h-3 text-slate-400 transition-colors duration-300 group-hover:text-white" />
+                          Recomendado
+                        </div>
+                      )}
 
                       {/* Image Area */}
                       <div className="w-full aspect-square bg-slate-50/50 rounded-xl mb-4 flex items-center justify-center border border-slate-100 overflow-hidden relative">
@@ -427,8 +477,8 @@ export default function Anuncios() {
                       </div>
 
                       {/* Footer (Location / User) */}
-                      <div className="pt-4 border-t border-slate-100 flex items-center gap-2 text-xs font-bold text-slate-700 bg-white">
-                        <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
+                      <div className="pt-4 border-t border-slate-100 flex items-center gap-2 text-xs font-bold text-slate-700 bg-white group-hover:text-blue-600 transition-colors duration-300">
+                        <MapPin className="w-4 h-4 text-slate-400 shrink-0 group-hover:text-blue-500 transition-colors duration-300" />
                         <span className="truncate" title={anunciante}>{anunciante}</span>
                         {meuPerfil?.latitude && anuncio.anunciante_lat && (
                           <div className="flex items-center gap-1.5 ml-auto">

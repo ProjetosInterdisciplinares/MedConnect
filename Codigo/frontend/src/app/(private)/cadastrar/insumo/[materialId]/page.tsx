@@ -23,7 +23,6 @@ export default function MaterialDetails() {
     servicesGetMaterialDetails(materialId).then((response) => {
       setLoading(false)
       if ("isError" in response) {
-        console.log("Erro:", response.status)
         return
       }
       setMaterial(response)

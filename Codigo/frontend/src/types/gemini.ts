@@ -12,3 +12,7 @@ export interface GerarAnuncioSuccessResponse {
 export interface GerarAnuncioErrorResponse {
   erro: string
 }
+
+export interface BuscaSemanticaRequest {
+  termo: string
+}

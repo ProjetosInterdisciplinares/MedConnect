@@ -53,6 +53,9 @@ class PessoaJuridica(models.Model):
     
     telefone = models.CharField(max_length=20, blank=True, null=True)
 
+    # Perfil inteligente de buscas gerado pela IA (ex: "luva, seringa, cateter")
+    interesses_ia = models.TextField(blank=True, null=True)
+
     @property
     def is_authenticated(self):
         return True

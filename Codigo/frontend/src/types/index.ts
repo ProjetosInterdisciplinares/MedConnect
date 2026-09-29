@@ -26,4 +26,5 @@ export type {
 	GerarAnuncioRequest,
 	GerarAnuncioSuccessResponse,
 	GerarAnuncioErrorResponse,
+	BuscaSemanticaRequest,
 } from './gemini'

@@ -86,10 +86,6 @@ export default function HistoricoPage() {
         servicesGetMeusMaaterials(),
       ])
 
-      console.log("ANUNCIOS RESULT:", anunciosResult)
-      console.log("COMPRAS RESULT:", comprasResult)
-      console.log("MATERIAIS RESULT:", materiaisResult)
-      console.log("É ARRAY?", Array.isArray(comprasResult))
 
       const listaAnuncios = Array.isArray(anunciosResult)
         ? anunciosResult
@@ -106,10 +102,8 @@ export default function HistoricoPage() {
       if (Array.isArray(listaAnuncios))
         setAnuncios(listaAnuncios)
 
-      if (Array.isArray(listaCompras)) {
-        console.log("SETANDO COMPRAS:", listaCompras)
+      if (Array.isArray(listaCompras))
         setCompras(listaCompras)
-      }
 
       if (Array.isArray(listaMateriais))
         setMateriais(listaMateriais)
@@ -194,9 +188,6 @@ export default function HistoricoPage() {
                 ? anuncio.val_proposta
                 : anuncio.val_base
             
-            console.log("ABA ATUAL:", activeTab)
-            console.log("STATE COMPRAS:", compras)
-            console.log("ITENS FILTRADOS:", itensFiltrados)
 
             return (
               <div
