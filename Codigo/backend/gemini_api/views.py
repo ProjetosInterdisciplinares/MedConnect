@@ -103,6 +103,12 @@ class BuscaSemanticaView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        from django.utils import timezone
+        hoje = timezone.now().date()
+        
+        # RN02: Lazy cron job para inativar anúncios expirados
+        Anuncio.objects.filter(ie_status='A', dt_validade__lt=hoje).update(ie_status='I')
+
         # Carrega anúncios ativos, excluindo os do próprio usuário
         anuncios = Anuncio.objects.filter(
             ie_status='A'

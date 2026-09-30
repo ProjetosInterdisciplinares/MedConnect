@@ -11,6 +11,10 @@ from anuncio.serializers import AnuncioSerializer, NegociacaoSerializer
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def meus_anuncios(request):
+    # RN02: Lazy cron job
+    hoje = timezone.now().date()
+    Anuncio.objects.filter(ie_status='A', dt_validade__lt=hoje).update(ie_status='I')
+
     anuncios = Anuncio.objects.filter(
         cd_pessoa_anunciante=request.user
     )
@@ -46,6 +50,10 @@ class AnuncioCreateListView(generics.ListCreateAPIView):
     serializer_class = AnuncioSerializer
 
     def get_queryset(self):
+        # RN02: Lazy cron job para inativar anúncios expirados
+        hoje = timezone.now().date()
+        Anuncio.objects.filter(ie_status='A', dt_validade__lt=hoje).update(ie_status='I')
+
         status = self.request.query_params.get('status', 'A')
         queryset = Anuncio.objects.filter(ie_status=status)
 

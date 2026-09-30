@@ -21,7 +21,8 @@ import {
   Shield,
   Handshake,
   Megaphone,
-  Package
+  Package,
+  BarChart
 } from "lucide-react"
 import Footer from "@/components/ui/Footer"
 import { withAuth } from "@/lib/withAuth"
@@ -58,6 +59,7 @@ const NAV_LINKS = [
     ]
   },
   { name: "Painel Administrativo", href: "/admin-painel/credenciamentos", icon: Shield, isAdminOnly: true },
+  { name: "DashBoards", href: "/admin-painel/dashboards", icon: BarChart, isAdminOnly: true },
 ]
 
 interface LayoutProps {
