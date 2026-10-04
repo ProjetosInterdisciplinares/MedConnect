@@ -80,8 +80,8 @@ MIDDLEWARE = [
 ]
 
 # CORS — em produção, usa origens específicas; em dev, permite tudo
-CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if os.environ.get('CORS_ALLOWED_ORIGINS') else []
-CORS_ALLOW_ALL_ORIGINS = DEBUG and not bool(CORS_ALLOWED_ORIGINS)
+CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'https://med-connect-felprado.vercel.app,http://localhost:3000').split(',')
+CORS_ALLOW_ALL_ORIGINS = True # Liberado para evitar erros de CORS no Vercel/Render durante o MVP
 
 # HTTPS / Security Settings
 if not DEBUG:
