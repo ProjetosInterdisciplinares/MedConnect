@@ -86,7 +86,7 @@ class GerarDescricaoAnuncioView(APIView):
 
                 client = genai.Client() 
                 response = client.models.generate_content(
-                    model='gemini-3.8-flash',
+                    model='gemini-2.0-flash',
                     contents=prompt,
                 )
                 
@@ -188,7 +188,7 @@ Regras:
         try:
             client = genai.Client()
             response = client.models.generate_content(
-                model='gemini-3.8-flash',
+                model='gemini-2.0-flash',
                 contents=prompt,
                 config={
                     'response_mime_type': 'application/json',
@@ -260,7 +260,7 @@ class AtualizarInteressesView(APIView):
         try:
             client = genai.Client()
             response = client.models.generate_content(
-                model='gemini-3.8-flash',
+                model='gemini-2.0-flash',
                 contents=prompt,
                 config={'temperature': 0.1}
             )
