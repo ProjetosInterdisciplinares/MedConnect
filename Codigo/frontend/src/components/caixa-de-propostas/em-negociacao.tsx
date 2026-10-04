@@ -132,7 +132,11 @@ export function NegociacaoTab() {
                       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm mt-2">
                         <span className="flex items-center gap-2 text-slate-600">
                           <Tag size={14} className="text-slate-400" />
-                          <span className="font-medium">Qtd: {negociacao.qtd_proposta || negociacao.anuncio_qtd || 0}</span>
+                          <span className="font-medium">
+                            <span className="text-slate-400 mr-1 text-xs uppercase tracking-wider">Disp:</span> {negociacao.anuncio_qtd} un. 
+                            <span className="mx-2 text-slate-300">|</span> 
+                            <span className="text-blue-900/70 mr-1 text-xs uppercase tracking-wider font-bold">Solicitado:</span> <span className="text-blue-900 font-black">{negociacao.qtd_proposta || negociacao.anuncio_qtd} un.</span>
+                          </span>
                         </span>
                         {negociacao.comprador && (
                           <span className="flex items-center gap-2 text-slate-600">
@@ -149,11 +153,14 @@ export function NegociacaoTab() {
                   {/* Right actions / pricing */}
                   <div className="flex items-center justify-between md:justify-end gap-8 pl-0 md:pl-6 md:border-l border-slate-100">
                     <div className="flex flex-col text-right">
-                      <span className="text-xs font-medium text-slate-400 line-through mb-1">
-                        De: {valBase.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      <span className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">
+                        Oferta (Total p/ {negociacao.qtd_proposta || negociacao.anuncio_qtd} un.)
                       </span>
                       <span className="text-slate-800 font-black text-xl tracking-tight">
                         {valProposta.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      </span>
+                      <span className="text-[10px] font-medium text-slate-400 line-through mt-0.5">
+                        De: {valBase.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                       </span>
                     </div>
 
@@ -231,7 +238,16 @@ export function NegociacaoTab() {
                   <div>
                     <h4 className="font-bold text-lg text-slate-800 mb-1">{selectedNegociacao.anuncio_nome}</h4>
                     <div className="flex gap-6 text-sm text-slate-600">
-                      <div><span className="text-slate-400 mr-1">Quantidade:</span><span className="font-semibold">{selectedNegociacao.qtd_proposta || selectedNegociacao.anuncio_qtd}</span></div>
+                      <div className="flex gap-4">
+                        <div>
+                          <span className="text-slate-400 mr-1 text-[11px] uppercase font-bold">Total Disp.:</span>
+                          <span className="font-semibold">{selectedNegociacao.anuncio_qtd} un.</span>
+                        </div>
+                        <div>
+                          <span className="text-blue-900 mr-1 text-[11px] uppercase font-bold">Qtd. Solicitada:</span>
+                          <span className="font-black text-blue-900">{selectedNegociacao.qtd_proposta || selectedNegociacao.anuncio_qtd} un.</span>
+                        </div>
+                      </div>
                       {selectedNegociacao.anuncio_lote && (
                         <div><span className="text-slate-400 mr-1">Lote:</span><span className="font-semibold">{selectedNegociacao.anuncio_lote}</span></div>
                       )}
@@ -252,7 +268,9 @@ export function NegociacaoTab() {
                 
                 <div className="bg-blue-900 p-5 rounded-2xl shadow-lg relative overflow-hidden">
                   <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-800 rounded-full blur-2xl opacity-50 pointer-events-none" />
-                  <p className="text-xs uppercase font-bold text-blue-100 mb-1 relative z-10">Valor Proposto</p>
+                  <p className="text-xs uppercase font-bold text-blue-100 mb-1 relative z-10">
+                    Proposta Total (p/ {selectedNegociacao.qtd_proposta || selectedNegociacao.anuncio_qtd} un.)
+                  </p>
                   <p className="font-black text-3xl text-white tracking-tight relative z-10 flex items-center justify-between">
                     {Number(selectedNegociacao.val_proposta || selectedNegociacao.anuncio_val_base).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                     {(Number(selectedNegociacao.val_proposta) < Number(selectedNegociacao.anuncio_val_base)) && (
@@ -338,7 +356,19 @@ export function NegociacaoTab() {
                 </p>
               )}
             </div>
-            <div className="mt-6 flex justify-end">
+            <div className="mt-6 flex flex-col sm:flex-row gap-3">
+              {successAction === "ACEITO" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSuccessOpen(false)
+                    router.push("/meus-anuncios")
+                  }}
+                  className="flex-1 px-6 py-3 text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl font-bold transition-colors shadow-sm cursor-pointer"
+                >
+                  Alterar Anúncio Restante
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
@@ -347,7 +377,7 @@ export function NegociacaoTab() {
                     router.push("/caixa-de-propostas?tab=finalizados")
                   }
                 }}
-                className={`px-6 py-3 text-white rounded-xl font-bold transition-colors w-full shadow-lg cursor-pointer ${
+                className={`flex-1 px-6 py-3 text-white rounded-xl font-bold transition-colors shadow-lg cursor-pointer ${
                   successAction === "ACEITO" 
                     ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-900/20" 
                     : "bg-rose-600 hover:bg-rose-700 shadow-rose-900/20"

@@ -7,7 +7,8 @@ class Anuncio(models.Model):
         ('A', 'Ativo'),         # Anúncio público, aguardando propostas
         ('N', 'Em Negociação'), # Proposta recebida, anúncio travado — apenas 1 comprador negociando
         ('F', 'Finalizado'),    # Negócio fechado, val_aceito registrado
-        ('I', 'Inativo'),       # Removido por validade, inconformidade ou manualmente
+        ('I', 'Inativo / Rascunho'),
+        ('S', 'Saldo de Venda Parcial'),
     ]
 
     nr_anuncio           = models.AutoField(primary_key=True)

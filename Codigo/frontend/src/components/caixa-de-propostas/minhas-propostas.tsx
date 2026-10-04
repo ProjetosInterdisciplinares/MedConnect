@@ -217,7 +217,11 @@ export function PropostasTab() {
                       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm mt-2">
                         <span className="flex items-center gap-2 text-slate-600">
                           <Tag size={14} className="text-slate-400" />
-                          <span className="font-medium">Qtd: {negociacao.qtd_proposta || negociacao.anuncio_qtd}</span>
+                          <span className="font-medium">
+                            <span className="text-slate-400 mr-1 text-xs uppercase tracking-wider">Disp:</span> {negociacao.anuncio_qtd} un. 
+                            <span className="mx-2 text-slate-300">|</span> 
+                            <span className="text-blue-900/70 mr-1 text-xs uppercase tracking-wider font-bold">Solicitado:</span> <span className="text-blue-900 font-black">{negociacao.qtd_proposta || negociacao.anuncio_qtd} un.</span>
+                          </span>
                         </span>
                         <span className="flex items-center gap-2 text-slate-500">
                           <Calendar size={14} className="text-slate-400" />
@@ -230,7 +234,9 @@ export function PropostasTab() {
                   {/* Right actions / pricing */}
                   <div className="flex items-center justify-between md:justify-end gap-8 pl-0 md:pl-6 md:border-l border-slate-100">
                     <div className="flex flex-col text-right">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">Seu Lance</span>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">
+                        Seu Lance (Total p/ {negociacao.qtd_proposta || negociacao.anuncio_qtd} un.)
+                      </span>
                       <span className={`font-black text-2xl tracking-tight ${negociacao.status === "A" ? "text-emerald-600" : "text-slate-800"}`}>
                         {Number(valorExibido).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                       </span>
@@ -330,7 +336,9 @@ export function PropostasTab() {
                     <p className="font-semibold text-slate-800">{Number(selectedNegociacao.anuncio_val_base).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
                   </div>
                   <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm bg-blue-50/50">
-                    <p className="text-[11px] font-bold text-blue-900/60 uppercase tracking-wider mb-1">Meu Lance</p>
+                    <p className="text-[11px] font-bold text-blue-900/60 uppercase tracking-wider mb-1">
+                      Lance Total (p/ {selectedNegociacao.qtd_proposta || selectedNegociacao.anuncio_qtd} un.)
+                    </p>
                     <p className="font-bold text-blue-900 text-lg">
                       {Number(selectedNegociacao.val_proposta || selectedNegociacao.anuncio_val_base).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                     </p>

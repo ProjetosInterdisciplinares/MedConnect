@@ -52,7 +52,7 @@ const TABS = [
 ]
 
 // Helpers de badge
-function getStatusBadge(ie_status: 'A' | 'N' | 'F' | 'I') {
+function getStatusBadge(ie_status: 'A' | 'N' | 'F' | 'I' | 'S') {
   switch (ie_status) {
     case "A":
       return { label: "ATIVO", className: "bg-sky-50 text-sky-700 border-sky-200" }
@@ -62,6 +62,10 @@ function getStatusBadge(ie_status: 'A' | 'N' | 'F' | 'I') {
       return { label: "FINALIZADO", className: "bg-sky-50 text-sky-700 border-sky-200" }
     case "I":
       return { label: "INATIVO", className: "bg-zinc-100 text-zinc-600 border-zinc-200" }
+    case "S":
+      return { label: "SALDO DE VENDA", className: "bg-purple-50 text-purple-700 border-purple-200" }
+    default:
+      return { label: ie_status, className: "bg-zinc-100 text-zinc-600 border-zinc-200" }
   }
 }
 

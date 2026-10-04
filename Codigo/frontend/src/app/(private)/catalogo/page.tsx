@@ -55,6 +55,7 @@ export default function Anuncios() {
 
   const [currentPage, setCurrentPage] = useState(1)
   const router = useRouter()
+  const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
 
 
   useEffect(() => {
@@ -192,7 +193,20 @@ export default function Anuncios() {
   }, [filteredAnuncios, currentPage])
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value)
+    const term = e.target.value;
+    setSearch(term);
+    setAppliedSearch(term.trim());
+    setCurrentPage(1);
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (term.trim().length > 2) {
+      searchTimeoutRef.current = setTimeout(() => {
+        triggerProfileUpdate(term.trim());
+      }, 1500);
+    }
   }
 
   // Função isolada para salvar o termo sem travar a interface
@@ -203,10 +217,8 @@ export default function Anuncios() {
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      e.preventDefault()
-      const term = search.trim();
-      setAppliedSearch(term);
-      setCurrentPage(1);
+      e.preventDefault();
+      // O filtro agora já é aplicado no onChange automaticamente
     }
   }
 
@@ -374,7 +386,7 @@ export default function Anuncios() {
                 <div className="relative flex-1">
                   <Search className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
                   <Input
-                    placeholder="Buscar insumos, fabricantes... (Pressione Enter)"
+                    placeholder="Buscar insumos, fabricantes..."
                     className="pl-11 h-11 bg-white border-0 shadow-sm text-slate-800 placeholder:text-slate-400 rounded-2xl transition-all duration-300 text-sm focus-visible:ring-2 focus-visible:ring-blue-500/30"
                     value={search}
                     onChange={handleSearchChange}

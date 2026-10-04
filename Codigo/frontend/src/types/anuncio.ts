@@ -10,7 +10,7 @@ export interface Anuncio {
   cd_pessoa_anunciante: number
   ds_obs: string
   data_anuncio: string
-  ie_status: 'A' | 'N' | 'F' | 'I'
+  ie_status: 'A' | 'N' | 'F' | 'I' | 'S'
   imagem_anuncio?: string
   anunciante_razao?: string
   anunciante_lat?: number
@@ -53,7 +53,7 @@ export interface UpdateAnuncioForm {
   qtd_mat?: number
   val_base?: string
   ds_obs?: string
-  ie_status?: 'A' | 'N' | 'F' | 'I'
+  ie_status?: 'A' | 'N' | 'F' | 'I' | 'S'
   val_proposta?: string | null
   val_aceito?: string | null
   cd_pessoa_compradora?: number | null

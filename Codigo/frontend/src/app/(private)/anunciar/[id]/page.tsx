@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ShoppingCart, Handshake, CheckCircle, Package, Info, Building2, MapPin, Map as MapIcon } from "lucide-react"
+import { ShoppingCart, Handshake, CheckCircle, Package, Info, Building2, MapPin, Map as MapIcon, AlertCircle } from "lucide-react"
 
 import {
   Dialog,
@@ -41,11 +41,19 @@ export default function AnuncioDetalhePage() {
   const [meuPerfil, setMeuPerfil] = useState<PessoaJuridica | null>(null)
   const [loading, setLoading] = useState(true)
   const [valorProposta, setValorProposta] = useState("")
+  const [qtdProposta, setQtdProposta] = useState("")
   const [modo, setModo] = useState<"COMPRA" | "PROPOSTA">("COMPRA")
   const [isMapOpen, setIsMapOpen] = useState(false)
 
   const [isSuccessOpen, setIsSuccessOpen] = useState(false)
   const [successMessage, setSuccessMessage] = useState("")
+  const [isErrorOpen, setIsErrorOpen] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
+
+  function showError(msg: string) {
+    setErrorMessage(msg)
+    setIsErrorOpen(true)
+  }
 
   useEffect(() => {
     async function load() {
@@ -77,7 +85,7 @@ export default function AnuncioDetalhePage() {
     load()
   }, [id])
 
-  const valorUnitario = useMemo(() => {
+  const valorTotal = useMemo(() => {
     if (!anuncio) return 0
     return modo === "COMPRA" ? Number(anuncio.val_base) : Number(valorProposta || 0)
   }, [anuncio, modo, valorProposta])
@@ -85,7 +93,7 @@ export default function AnuncioDetalhePage() {
   async function handleCompraDireta() {
     if (!anuncio) return
     const cdPessoa = Number(AuthManager.getInstance().getUserId())
-    if (!cdPessoa) { alert("Usuário não autenticado"); return }
+    if (!cdPessoa) { showError("Usuário não autenticado"); return }
 
     const res = await servicesPostNegociacao({
       anuncio: Number(id),
@@ -95,7 +103,7 @@ export default function AnuncioDetalhePage() {
       ds_obs: "Compra Direta via Plataforma"
     })
 
-    if ("isError" in res) { alert("Erro ao realizar compra: " + (res as any).message); return }
+    if ("isError" in res) { showError("Erro ao realizar compra: " + (res as any).message); return }
 
     setSuccessMessage("Compra realizada com sucesso!")
     setIsSuccessOpen(true)
@@ -104,18 +112,28 @@ export default function AnuncioDetalhePage() {
   async function handleProposta() {
     if (!anuncio) return
     const cdPessoa = Number(AuthManager.getInstance().getUserId())
-    if (!cdPessoa) { alert("Usuário não autenticado"); return }
-    if (!valorProposta || Number(valorProposta) <= 0) { alert("Informe um valor de proposta válido"); return }
+    if (!cdPessoa) { showError("Usuário não autenticado"); return }
+    if (!valorProposta || Number(valorProposta) <= 0) { showError("Informe um valor de proposta válido"); return }
+
+    const qtd = qtdProposta === "" ? anuncio.qtd_mat : Number(qtdProposta)
+    if (!Number.isInteger(qtd) || qtd < 1 || qtd > anuncio.qtd_mat) {
+      showError(`Informe uma quantidade entre 1 e ${anuncio.qtd_mat}`)
+      return
+    }
+    if (qtd < anuncio.qtd_mat && Number(valorProposta) === Number(anuncio.val_base)) {
+      showError("Ao comprar uma quantidade menor, é obrigatório sugerir um novo valor total (diferente do valor total).")
+      return
+    }
 
     const res = await servicesPostNegociacao({
       anuncio: Number(id),
       vendedor: anuncio.cd_pessoa_anunciante,
       val_proposta: valorProposta,
-      qtd_proposta: anuncio.qtd_mat,
+      qtd_proposta: qtd,
       ds_obs: "Proposta enviada pelo comprador"
     })
 
-    if ("isError" in res) { alert("Erro ao enviar proposta: " + (res as any).message); return }
+    if ("isError" in res) { showError("Erro ao enviar proposta: " + (res as any).message); return }
 
     setSuccessMessage("Proposta enviada com sucesso!")
     setIsSuccessOpen(true)
@@ -134,6 +152,9 @@ export default function AnuncioDetalhePage() {
   if (!anuncio) return <div className="p-10 text-center font-bold text-slate-500">Anúncio não encontrado</div>
 
   const bloqueado = anuncio.ie_status !== "A"
+
+  const qtdEfetiva = modo === "PROPOSTA" && qtdProposta !== "" ? Number(qtdProposta) || 0 : anuncio.qtd_mat
+  const compraParcial = modo === "PROPOSTA" && qtdEfetiva > 0 && qtdEfetiva < anuncio.qtd_mat
 
   return (
     <div className="relative min-h-screen w-full antialiased selection:bg-blue-500/20">
@@ -186,7 +207,7 @@ export default function AnuncioDetalhePage() {
               </div>
 
               <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-blue-500">Valor Base</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-blue-500">Valor Total</p>
                 <p className="text-base font-bold text-blue-700 mt-0.5">
                   R$ {Number(anuncio.val_base).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
@@ -299,6 +320,28 @@ export default function AnuncioDetalhePage() {
                 </div>
 
                 <div className="space-y-6">
+                  {/* quantidade — só aparece no modo PROPOSTA (compra parcial) */}
+                  {modo === "PROPOSTA" && (
+                    <div className="flex flex-col gap-2 animate-in slide-in-from-top-2 duration-300">
+                      <label className="text-sm font-bold text-slate-700">Quantidade desejada</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={anuncio.qtd_mat}
+                        step={1}
+                        value={qtdProposta}
+                        onChange={(e) => setQtdProposta(e.target.value)}
+                        placeholder={`Máx.: ${anuncio.qtd_mat} (deixe vazio para comprar tudo)`}
+                        className="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white outline-none transition-all text-base font-bold text-slate-800 placeholder:text-slate-300 placeholder:font-medium"
+                      />
+                      {compraParcial && (
+                        <p className="text-xs text-amber-600 font-semibold">
+                          Compra parcial: informe um novo valor TOTAL diferente de R$ {Number(anuncio.val_base).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}. O restante ({anuncio.qtd_mat - qtdEfetiva} un.) continuará anunciado.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
                   {/* valor sugerido — só aparece no modo PROPOSTA */}
                   {modo === "PROPOSTA" && (
                     <div className="flex flex-col gap-2 animate-in slide-in-from-top-2 duration-300">
@@ -323,12 +366,16 @@ export default function AnuncioDetalhePage() {
                       <span className="text-blue-600/70 font-black tracking-wider uppercase text-[10px]">
                         {modo === "COMPRA" ? "Total a Pagar" : "Sua Proposta"}
                       </span>
-                      <span className="text-slate-600 text-xs font-medium">Valor Unitário Base</span>
+                      <span className="text-slate-600 text-xs font-medium">
+                        {modo === "COMPRA"
+                          ? "Valor Total"
+                          : "Valor Total Sugerido"}
+                      </span>
                     </div>
                     <div className="flex items-baseline gap-1">
                       <span className="text-blue-700 font-bold text-lg">R$</span>
                       <span className="font-black text-blue-700 text-3xl tracking-tight">
-                        {valorUnitario.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {valorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
                   </div>
@@ -403,6 +450,29 @@ export default function AnuncioDetalhePage() {
               className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors w-full sm:w-auto cursor-pointer"
             >
               Ir para Minhas Negociações
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isErrorOpen} onOpenChange={setIsErrorOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600 text-xl">
+              <AlertCircle className="w-6 h-6" />
+              Atenção
+            </DialogTitle>
+            <DialogDescription className="pt-2 text-base font-medium text-slate-800">
+              {errorMessage}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <button
+              type="button"
+              onClick={() => setIsErrorOpen(false)}
+              className="px-6 py-2 bg-slate-200 text-slate-800 rounded-lg font-bold hover:bg-slate-300 transition-colors cursor-pointer"
+            >
+              OK
             </button>
           </DialogFooter>
         </DialogContent>

@@ -20,10 +20,12 @@ class ApiStatsView(views.APIView):
         anuncios_finalizados = Anuncio.objects.filter(ie_status='F').count()
         anuncios_inativos = Anuncio.objects.filter(ie_status='I').count()
         
-        # Volume Financeiro (Anúncios finalizados)
-        volume_financeiro = Anuncio.objects.filter(ie_status='F').aggregate(
-            total=Sum('val_aceito')
-        )['total'] or 0
+        # Volume Financeiro (Negociações aprovadas e Anúncios antigos finalizados)
+        vol_novos = Negociacao.objects.filter(status='A').aggregate(total=Sum('val_proposta'))['total'] or 0
+        vol_antigos = Anuncio.objects.filter(ie_status='F', negociacoes__isnull=True).aggregate(total=Sum('val_aceito'))['total'] or 0
+        volume_financeiro = vol_novos + vol_antigos
+
+        total_negociacoes_aprovadas = Negociacao.objects.filter(status='A').count() + Anuncio.objects.filter(ie_status='F', negociacoes__isnull=True).count()
 
         # Receita de Créditos
         receita_creditos = TransacaoCredito.objects.filter(tipo='C', status='A').aggregate(
@@ -136,7 +138,7 @@ class ApiStatsView(views.APIView):
         return response.Response(data={
             'total_matmeds':           MatMed.objects.count(),
             'total_pessoas_juridicas': PessoaJuridica.objects.count(),
-            'total_negociacoes':       anuncios_finalizados,
+            'total_negociacoes':       total_negociacoes_aprovadas,
             'anuncios_ativos': anuncios_ativos,
             'anuncios_negociacao': anuncios_negociacao,
             'anuncios_finalizados': anuncios_finalizados,

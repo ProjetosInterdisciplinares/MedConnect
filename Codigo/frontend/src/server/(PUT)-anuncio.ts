@@ -1,14 +1,17 @@
 "use client"
 
-import { Anuncio, UpdateAnuncioForm } from "@/types"
 import { buildUrl, getAuthHeaders, handleResponse, ServiceResult } from "@/server/middleware"
+import { UpdateAnuncioForm } from "@/types/anuncio"
 
-export default async function servicesUpdateAnuncio(nrAnuncio: number, payload: UpdateAnuncioForm): Promise<ServiceResult<Anuncio>> {
-  const response = await fetch(buildUrl(`/api/medconnect/anuncio/${nrAnuncio}/`), {
-    method: "PATCH", //Precisa ser patch pois ao alterar o status aceitar/recusar proposta, não será enviado o restante dos dados do anúncio
-    headers: getAuthHeaders(),
-    body: JSON.stringify(payload),
+export default async function servicesUpdateAnuncio(id: number, form: UpdateAnuncioForm): Promise<ServiceResult<any>> {
+  const response = await fetch(buildUrl(`/api/medconnect/anuncio/${id}/`), {
+    method: "PATCH",
+    headers: {
+      ...getAuthHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(form)
   })
 
-  return handleResponse<Anuncio>(response, "Nao foi possivel atualizar anuncio")
+  return handleResponse<any>(response, "Não foi possível atualizar o anúncio")
 }
