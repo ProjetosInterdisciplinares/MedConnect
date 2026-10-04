@@ -3,8 +3,9 @@ from rest_framework.permissions import IsAuthenticated
 from mat_med.models import MatMed
 from pessoa_juridica.models import PessoaJuridica
 from django.db.models import Sum, Count
-from django.db.models.functions import TruncMonth
+from django.db.models.functions import TruncMonth, TruncDay, TruncWeek, TruncYear
 from anuncio.models import Anuncio, Negociacao
+from creditos.models import TransacaoCredito
 from datetime import datetime
 
 class ApiStatsView(views.APIView):
@@ -22,6 +23,16 @@ class ApiStatsView(views.APIView):
         # Volume Financeiro (Anúncios finalizados)
         volume_financeiro = Anuncio.objects.filter(ie_status='F').aggregate(
             total=Sum('val_aceito')
+        )['total'] or 0
+
+        # Receita de Créditos
+        receita_creditos = TransacaoCredito.objects.filter(tipo='C', status='A').aggregate(
+            total=Sum('valor_pago')
+        )['total'] or 0
+
+        # Créditos Consumidos (Funcionalidades)
+        creditos_consumidos = TransacaoCredito.objects.filter(tipo='D').aggregate(
+            total=Sum('quantidade')
         )['total'] or 0
 
         # Total de propostas criadas
@@ -75,6 +86,53 @@ class ApiStatsView(views.APIView):
                 if month_str in historico_dict:
                     historico_dict[month_str]['propostas'] = item['count']
 
+        # Histórico de Receitas de Créditos
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        hoje = timezone.now()
+        
+        def format_rendas(qs, format_str):
+            res = []
+            for item in qs:
+                if item['periodo']:
+                    res.append({
+                        'name': item['periodo'].strftime(format_str),
+                        'valor': float(item['total'] or 0)
+                    })
+            return res
+
+        receita_diaria = TransacaoCredito.objects.filter(tipo='C', status='A', data_transacao__gte=hoje - timedelta(days=14))\
+            .annotate(periodo=TruncDay('data_transacao'))\
+            .values('periodo')\
+            .annotate(total=Sum('valor_pago'))\
+            .order_by('periodo')
+
+        receita_semanal = TransacaoCredito.objects.filter(tipo='C', status='A', data_transacao__gte=hoje - timedelta(weeks=8))\
+            .annotate(periodo=TruncWeek('data_transacao'))\
+            .values('periodo')\
+            .annotate(total=Sum('valor_pago'))\
+            .order_by('periodo')
+            
+        receita_mensal = TransacaoCredito.objects.filter(tipo='C', status='A', data_transacao__gte=hoje - timedelta(days=365))\
+            .annotate(periodo=TruncMonth('data_transacao'))\
+            .values('periodo')\
+            .annotate(total=Sum('valor_pago'))\
+            .order_by('periodo')
+            
+        receita_anual = TransacaoCredito.objects.filter(tipo='C', status='A', data_transacao__gte=hoje - timedelta(days=365*5))\
+            .annotate(periodo=TruncYear('data_transacao'))\
+            .values('periodo')\
+            .annotate(total=Sum('valor_pago'))\
+            .order_by('periodo')
+
+        historico_rendas = {
+            'diario': format_rendas(receita_diaria, '%d/%m'),
+            'semanal': format_rendas(receita_semanal, 'Sem %W/%Y'),
+            'mensal': format_rendas(receita_mensal, '%m/%Y'),
+            'anual': format_rendas(receita_anual, '%Y')
+        }
+
         return response.Response(data={
             'total_matmeds':           MatMed.objects.count(),
             'total_pessoas_juridicas': PessoaJuridica.objects.count(),
@@ -84,6 +142,9 @@ class ApiStatsView(views.APIView):
             'anuncios_finalizados': anuncios_finalizados,
             'anuncios_inativos': anuncios_inativos,
             'volume_financeiro': float(volume_financeiro),
+            'receita_creditos': float(receita_creditos),
+            'creditos_consumidos': creditos_consumidos,
             'total_propostas': total_propostas,
             'historico': list(historico_dict.values()),
+            'historico_rendas': historico_rendas,
         }, status=status.HTTP_200_OK)

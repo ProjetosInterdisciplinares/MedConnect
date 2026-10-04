@@ -19,6 +19,7 @@ export type PessoaJuridica = {
 	telefone?: string | null
 	latitude?: number | null
 	longitude?: number | null
+	saldo_creditos?: number
 }
 
 export interface CreatePessoaJuridicaForm {

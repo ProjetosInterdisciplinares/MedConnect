@@ -28,3 +28,12 @@ export type {
 	GerarAnuncioErrorResponse,
 	BuscaSemanticaRequest,
 } from './gemini'
+export type {
+	PacoteCredito,
+	TransacaoCredito,
+	SaldoCreditos,
+	MetodoPagamento,
+	TipoTransacaoCredito,
+	ComprarCreditosRequest,
+	ComprarCreditosResponse,
+} from './creditos'

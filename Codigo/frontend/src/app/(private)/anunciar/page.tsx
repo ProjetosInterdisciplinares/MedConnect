@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Megaphone, Package, Hash, DollarSign, FileText, Sparkles, CheckCircle, ImagePlus, X, Crop, ZoomIn, Calendar, Layers, FileSpreadsheet } from "lucide-react"
+import { Megaphone, Package, Hash, DollarSign, FileText, Sparkles, CheckCircle, ImagePlus, X, Crop, ZoomIn, Calendar, Layers, FileSpreadsheet, Coins } from "lucide-react"
 import Cropper, { Area } from "react-easy-crop"
 import {
   Dialog,
@@ -23,6 +23,9 @@ import {
 } from "@/components/ui/select"
 import servicesGetMatMed from "@/server/(GET)-mat-med"
 import servicesCreateAnuncio from "@/server/(POST)-anuncio"
+import servicesGerarAnuncio from "@/server/(POST)-gerar-anuncio"
+import servicesGetCreditosSaldo from "@/server/(GET)-creditos-saldo"
+import { notificarCreditosAtualizados } from "@/lib/creditos"
 import { CreateAnuncioForm, MatMed } from "@/types"
 import AnimatedBackground from "@/components/ui/animated-background"
 import CadastroMassa from "@/components/anunciar/cadastro-massa"
@@ -89,7 +92,18 @@ export default function AnunciarPage() {
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [isSuccessOpen, setIsSuccessOpen] = useState(false)
+  const [isConfirmPublishOpen, setIsConfirmPublishOpen] = useState(false)
+  const [isConfirmAIOpen, setIsConfirmAIOpen] = useState(false)
+  const [isInsufficientCreditsOpen, setIsInsufficientCreditsOpen] = useState(false)
+  const [missingCreditsFeature, setMissingCreditsFeature] = useState("")
   const [lastSaved, setLastSaved] = useState<CreateAnuncioForm | null>(null)
+  
+  // Modal genérico para alertas de erro
+  const [errorModal, setErrorModal] = useState<{ open: boolean; title: string; message: string }>({ open: false, title: "", message: "" })
+  
+  function showError(title: string, message: string) {
+    setErrorModal({ open: true, title, message })
+  }
 
   // Estados do Cropper
   const [cropModalOpen, setCropModalOpen] = useState(false)
@@ -121,40 +135,37 @@ export default function AnunciarPage() {
     setAnuncioForm((prev) => ({ ...prev, cd_mat: cdMat }))
   }
 
-  async function handleGenerateAIDescription() {
-    if (!anuncioForm.cd_mat || !anuncioForm.qtd_mat) {
-      alert("Por favor, selecione o Insumo e defina a quantidade antes de gerar a descrição por IA.")
-      return
-    }
-
+  async function handleConfirmAI() {
+    setIsConfirmAIOpen(false)
     setIsGenerating(true)
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/medconnect/gerar-anuncio/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          cd_mat: anuncioForm.cd_mat,
-          ds_lote: anuncioForm.ds_lote,
-          dt_validade: anuncioForm.dt_validade,
-          cd_pessoa_anunciante: anuncioForm.cd_pessoa_anunciante,
-          qtd_mat: anuncioForm.qtd_mat,
-        }),
+      const response = await (servicesGerarAnuncio as any)({
+        cd_mat: anuncioForm.cd_mat,
+        ds_lote: anuncioForm.ds_lote,
+        dt_validade: anuncioForm.dt_validade,
+        cd_pessoa_anunciante: anuncioForm.cd_pessoa_anunciante,
+        qtd_mat: anuncioForm.qtd_mat,
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.erro || "Erro interno ao processar a descrição.")
+      if (response && "isError" in response) {
+        if (response.status === 402) {
+          setMissingCreditsFeature("gerar a descrição com IA (1 crédito)")
+          setIsInsufficientCreditsOpen(true)
+          return
+        }
+        throw new Error(response.message || "Erro interno ao processar a descrição.")
       }
 
-      const data = await response.json()
-      if (data.texto_sugerido) {
-        setAnuncioForm((prev) => ({ ...prev, ds_obs: data.texto_sugerido }))
+      if (response.texto_sugerido) {
+        setAnuncioForm((prev) => ({ ...prev, ds_obs: response.texto_sugerido }))
+        
+        servicesGetCreditosSaldo().then(res => {
+          if (!("isError" in res)) notificarCreditosAtualizados(res.saldo)
+        })
       }
     } catch (error: any) {
       console.error("Erro na geração por IA:", error)
-      alert(error.message || "Não foi possível gerar a descrição automática no momento.")
+      showError("Erro na Geração", error.message || "Não foi possível gerar a descrição automática no momento.")
     } finally {
       setIsGenerating(false)
     }
@@ -165,7 +176,7 @@ export default function AnunciarPage() {
     if (!file) return
 
     if (file.size > 5242880) {
-      alert("A imagem selecionada é muito grande. O limite máximo é de 5MB.")
+      showError("Imagem muito grande", "A imagem selecionada é muito grande. O limite máximo é de 5MB.")
       return
     }
 
@@ -176,7 +187,7 @@ export default function AnunciarPage() {
       setCropModalOpen(true)
     }
     reader.onerror = () => {
-      alert("Não foi possível ler o arquivo de imagem.")
+      showError("Erro de Leitura", "Não foi possível ler o arquivo de imagem.")
     }
     reader.readAsDataURL(file)
   }
@@ -190,7 +201,7 @@ export default function AnunciarPage() {
         setImageToCrop("")
       } catch (e) {
         console.error(e)
-        alert("Erro ao cortar a imagem")
+        showError("Erro ao Cortar", "Não foi possível cortar e processar a imagem.")
       }
     }
   }
@@ -227,21 +238,53 @@ export default function AnunciarPage() {
       cd_pessoa_anunciante: anuncioForm.cd_pessoa_anunciante,
     }
 
-    const response = await (servicesCreateAnuncio as any)(dataToSend)
+    setLastSaved(dataToSend)
+    setIsConfirmPublishOpen(true)
+  }
+
+  async function handleConfirmPublish() {
+    if (!lastSaved) return
+    setIsConfirmPublishOpen(false)
+    
+    const response = await (servicesCreateAnuncio as any)(lastSaved)
 
     if (response && "isError" in response) {
       console.error("Erro ao criar anúncio:", response.message)
-      setFieldErrors({ global: response.message || "Falha ao publicar o anúncio. Tente novamente." })
+      if (response.status === 402) {
+        setMissingCreditsFeature("publicar o anúncio (5 créditos)")
+        setIsInsufficientCreditsOpen(true)
+      } else {
+        setFieldErrors({ global: response.message || "Falha ao publicar o anúncio. Tente novamente." })
+      }
       return
     }
 
-    setLastSaved(dataToSend)
     setIsSuccessOpen(true)
+    
+    // Atualiza o saldo global pois consumimos 5 créditos
+    servicesGetCreditosSaldo().then(res => {
+      if (!("isError" in res)) notificarCreditosAtualizados(res.saldo)
+    })
+  }
+
+  function resetForm() {
+    setAnuncioForm({
+      cd_mat: 0,
+      ds_lote: "",
+      dt_fabricacao: "",
+      dt_validade: "",
+      qtd_mat: 0,
+      val_base: "",
+      ds_obs: "",
+      cd_pessoa_anunciante: AuthManager.getInstance().getUserId() || 0,
+      imagem_anuncio: "",
+    })
+    setLastSaved(null)
   }
 
   function handleCloseSuccess() {
     setIsSuccessOpen(false)
-    router.push("/catalogo")
+    resetForm()
   }
 
   return (
@@ -463,19 +506,31 @@ export default function AnunciarPage() {
                       rightElement={
                         <button
                           type="button"
-                          onClick={handleGenerateAIDescription}
+                          onClick={() => {
+                            if (!anuncioForm.cd_mat || !anuncioForm.qtd_mat) {
+                              showError("Atenção", "Por favor, selecione o Insumo e defina a quantidade antes de gerar a descrição por IA.")
+                              return
+                            }
+                            setIsConfirmAIOpen(true)
+                          }}
                           disabled={isGenerating}
-                          className="text-xs flex items-center gap-1.5 text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-100 font-bold px-3 py-1.5 rounded-lg shadow-sm transition-all duration-200 disabled:opacity-60 cursor-pointer"
+                          className="text-xs flex items-center gap-2 text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 font-bold px-3 py-1.5 rounded-lg shadow-md transition-all duration-200 disabled:opacity-60 cursor-pointer border border-indigo-400/30"
                         >
                           {isGenerating ? (
                             <>
-                              <span className="w-3 h-3 border-2 border-blue-900 border-t-transparent rounded-full animate-spin"></span>
+                              <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                               Gerando...
                             </>
                           ) : (
                             <>
-                              <Sparkles size={13} className="animate-pulse" />
-                              Gerar Descrição com IA
+                              <span className="flex items-center gap-1">
+                                <Sparkles size={13} className="animate-pulse text-amber-300" />
+                                Gerar com IA
+                              </span>
+                              <span className="bg-black/20 px-1.5 py-0.5 rounded text-[10px] flex items-center gap-1 border border-white/10">
+                                <Coins size={12} className="text-amber-300" />
+                                1 Crédito
+                              </span>
                             </>
                           )}
                         </button>
@@ -531,9 +586,15 @@ export default function AnunciarPage() {
 
                   <button
                     type="submit"
-                    className="w-full text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-md shadow-blue-900/20 bg-blue-900 hover:bg-blue-950 mt-4 cursor-pointer"
+                    className="group w-full text-white font-bold py-4 rounded-xl flex items-center justify-between px-6 transition-all duration-300 shadow-lg shadow-blue-900/20 bg-blue-900 hover:bg-blue-950 mt-4 cursor-pointer overflow-hidden relative"
                   >
-                    Publicar no Marketplace
+                    <span className="flex items-center gap-2 text-lg">
+                      Publicar no Marketplace
+                    </span>
+                    <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1.5 rounded-xl border border-white/10 group-hover:bg-white/30 transition-colors shadow-inner">
+                      <Coins size={16} className="text-amber-300" />
+                      <span className="text-sm font-black">5 Créditos</span>
+                    </div>
                   </button>
                 </form>
               </div>
@@ -564,13 +625,186 @@ export default function AnunciarPage() {
                   {lastSaved.ds_lote && <p className="flex justify-between"><span className="font-semibold text-slate-500">Lote</span> <span className="font-bold text-slate-800 text-right">{lastSaved.ds_lote}</span></p>}
                 </div>
               )}
-              <div className="mt-6 flex justify-end">
+              <div className="mt-6 flex gap-3">
                 <button
                   type="button"
                   onClick={handleCloseSuccess}
+                  className="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-colors w-full"
+                >
+                  Continuar Anunciando
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push("/catalogo")}
                   className="px-6 py-2.5 bg-blue-900 text-white rounded-xl font-bold hover:bg-blue-950 transition-colors w-full shadow-lg shadow-blue-900/20 cursor-pointer"
                 >
                   Ir para o Catálogo
+                </button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* MODAL DE CONFIRMAÇÃO IA */}
+        <Dialog open={isConfirmAIOpen} onOpenChange={setIsConfirmAIOpen}>
+          <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
+            <DialogHeader className="m-0 bg-indigo-600 px-6 py-5 rounded-t-xl border-b border-indigo-700">
+              <DialogTitle className="flex items-center gap-2 text-white text-xl font-black">
+                <Sparkles className="w-6 h-6" />
+                Gerar Descrição
+              </DialogTitle>
+              <DialogDescription className="text-indigo-100">
+                Confirmação de Ação
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="p-6">
+              <div className="flex flex-col items-center text-center mb-6">
+                <p className="text-slate-600 text-sm font-medium leading-relaxed">
+                  Usar inteligência artificial para criar uma descrição profissional para este insumo custa <span className="font-bold text-indigo-700 text-base">1 Crédito</span>.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3 w-full">
+                <button
+                  type="button"
+                  onClick={handleConfirmAI}
+                  className="w-full py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-black shadow-lg shadow-indigo-500/30 hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                >
+                  <Sparkles size={18} className="text-amber-300" /> Confirmar e Gerar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmAIOpen(false)}
+                  className="w-full py-2.5 bg-white text-slate-500 border border-slate-200 hover:bg-slate-100 rounded-xl font-bold transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* MODAL GENÉRICO DE AVISO/ERRO */}
+        <Dialog open={errorModal.open} onOpenChange={(open) => setErrorModal(prev => ({ ...prev, open }))}>
+          <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
+            <DialogHeader className="m-0 bg-slate-900 px-6 py-5 rounded-t-xl border-b border-slate-950">
+              <DialogTitle className="flex items-center gap-2 text-white text-xl font-black">
+                <Megaphone className="w-5 h-5 text-amber-400" />
+                {errorModal.title}
+              </DialogTitle>
+              <DialogDescription className="text-slate-400 text-sm">
+                Mensagem do Sistema
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="p-6 text-center flex flex-col items-center">
+              <p className="text-slate-600 mb-6 text-sm font-medium leading-relaxed">
+                {errorModal.message}
+              </p>
+              
+              <button
+                type="button"
+                onClick={() => setErrorModal(prev => ({ ...prev, open: false }))}
+                className="w-full py-2.5 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/20"
+              >
+                Entendi
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* MODAL DE CONFIRMAÇÃO DE PUBLICAÇÃO */}
+        <Dialog open={isConfirmPublishOpen} onOpenChange={setIsConfirmPublishOpen}>
+          <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
+            <DialogHeader className="m-0 bg-blue-900 px-6 py-5 rounded-t-xl border-b border-blue-950">
+              <DialogTitle className="flex items-center gap-2 text-white text-xl font-black">
+                <Megaphone className="w-6 h-6" />
+                Confirmar Publicação
+              </DialogTitle>
+              <DialogDescription className="text-blue-100">
+                Revise os dados antes de tornar seu insumo público.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="p-6">
+              {lastSaved && (
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3 text-sm mb-6">
+                  <p className="flex justify-between border-b border-slate-100 pb-2">
+                    <span className="font-semibold text-slate-500">Insumo</span> 
+                    <span className="font-bold text-slate-800 text-right">{materiais.find(m => String(m.cd_mat) === String(lastSaved.cd_mat))?.ds_mat || "Insumo"}</span>
+                  </p>
+                  <p className="flex justify-between border-b border-slate-100 pb-2">
+                    <span className="font-semibold text-slate-500">Quantidade</span> 
+                    <span className="font-bold text-slate-800 text-right">{lastSaved.qtd_mat} unid.</span>
+                  </p>
+                  <p className="flex justify-between border-b border-slate-100 pb-2">
+                    <span className="font-semibold text-slate-500">Valor Base</span> 
+                    <span className="font-bold text-slate-800 text-right">R$ {lastSaved.val_base}</span>
+                  </p>
+                  <p className="flex justify-between">
+                    <span className="font-semibold text-slate-500">Custo da Ação</span> 
+                    <span className="font-black text-amber-500 text-right flex items-center gap-1.5">
+                      <Coins size={16} />
+                      5 Créditos
+                    </span>
+                  </p>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-3 w-full">
+                <button
+                  type="button"
+                  onClick={handleConfirmPublish}
+                  className="w-full py-3 bg-blue-900 text-white rounded-xl font-black shadow-lg shadow-blue-900/20 hover:bg-blue-950 transition-colors flex items-center justify-center gap-2"
+                >
+                  Confirmar e Descontar (5 Créditos)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmPublishOpen(false)}
+                  className="w-full py-2.5 bg-white text-slate-500 border border-slate-200 hover:bg-slate-100 rounded-xl font-bold transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* MODAL SEM CRÉDITOS */}
+        <Dialog open={isInsufficientCreditsOpen} onOpenChange={setIsInsufficientCreditsOpen}>
+          <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
+            <DialogHeader className="m-0 bg-amber-500 px-6 py-5 rounded-t-xl border-b border-amber-600">
+              <DialogTitle className="flex items-center gap-2 text-white text-xl font-black">
+                <DollarSign className="w-6 h-6" />
+                Sem créditos!
+              </DialogTitle>
+              <DialogDescription className="text-amber-100">
+                Saldo Insuficiente
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="p-6 text-center flex flex-col items-center">
+              <p className="text-slate-600 mb-6 text-sm font-medium leading-relaxed">
+                Você não possui saldo suficiente para {missingCreditsFeature}. <br />
+                Adquira um pacote de créditos para continuar turbinando suas negociações.
+              </p>
+              
+              <div className="flex flex-col gap-3 w-full">
+                <button
+                  type="button"
+                  onClick={() => router.push("/creditos")}
+                  className="w-full py-3 bg-gradient-to-r from-amber-400 to-amber-500 text-white rounded-xl font-black shadow-lg shadow-amber-500/30 hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                >
+                  <Coins size={18} /> Ir para a Central de Créditos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsInsufficientCreditsOpen(false)}
+                  className="w-full py-2.5 bg-white text-slate-500 border border-slate-200 hover:bg-slate-100 rounded-xl font-bold transition-colors"
+                >
+                  Cancelar
                 </button>
               </div>
             </div>

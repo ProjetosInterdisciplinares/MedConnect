@@ -30,18 +30,12 @@ def login(request):
             status=status.HTTP_401_UNAUTHORIZED
         )
         
-    # Verifica a senha criptografada. Se for a senha antiga em texto puro, também permite e já atualiza?
-    # Melhor exigir criptografia e criar um script para encriptar as antigas.
+    # Verifica a senha criptografada.
     if not check_password(password, user.senha_pj):
-        # Fallback para senhas antigas em texto puro (migração automática)
-        if user.senha_pj == password:
-            user.senha_pj = make_password(password)
-            user.save()
-        else:
-            return Response(
-                {"error": "Credenciais inválidas"},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+        return Response(
+            {"error": "Credenciais inválidas"},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
     if user.status == "PENDENTE":
         return Response(
             {

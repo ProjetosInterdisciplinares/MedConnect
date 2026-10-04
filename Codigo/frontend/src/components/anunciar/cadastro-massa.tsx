@@ -1,5 +1,7 @@
 "use client"
 
+import { useRouter } from "next/navigation"
+
 import React, { useState, useCallback } from "react"
 import {
   Upload,
@@ -18,6 +20,9 @@ import {
   HelpCircle,
   Info,
   ImagePlus,
+  Coins,
+  Megaphone,
+  DollarSign,
 } from "lucide-react"
 import {
   Dialog,
@@ -28,6 +33,8 @@ import {
 } from "@/components/ui/dialog"
 import { buildUrl, getAuthHeaders } from "@/server/middleware"
 import { AuthManager } from "@/lib/AuthManager"
+import servicesGetCreditosSaldo from "@/server/(GET)-creditos-saldo"
+import { notificarCreditosAtualizados } from "@/lib/creditos"
 
 // ── Types ────────────────────────────────────────────────────────────
 interface BulkInsumo {
@@ -96,6 +103,10 @@ export default function CadastroMassa() {
   const [publishSuccess, setPublishSuccess] = useState<PublishResponse | null>(null)
   const [showTutorial, setShowTutorial] = useState(false)
   const [fileName, setFileName] = useState<string>("")
+  const router = useRouter()
+  const [isConfirmPublishOpen, setIsConfirmPublishOpen] = useState(false)
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false)
+  const [isInsufficientCreditsOpen, setIsInsufficientCreditsOpen] = useState(false)
 
   // ── Download template ──────────────────────────────────────────────
   async function handleDownloadTemplate() {
@@ -268,6 +279,12 @@ export default function CadastroMassa() {
       const data = await response.json()
 
       if (!response.ok) {
+        setIsConfirmPublishOpen(false)
+        if (response.status === 402) {
+          setIsInsufficientCreditsOpen(true)
+          return
+        }
+        
         const msg = data.erro || data.detail || data.message || JSON.stringify(data)
         const detalhes = data.detalhes
           ? `\n\nDetalhes: ${data.detalhes.map((d: any) => `Anúncio ${(d.index ?? 0) + 1}: ${d.erro}`).join("; ")}`
@@ -277,8 +294,15 @@ export default function CadastroMassa() {
       }
 
       setPublishSuccess(data)
+      setIsConfirmPublishOpen(false)
+      setIsSuccessModalOpen(true)
+      
+      servicesGetCreditosSaldo().then(res => {
+        if (!("isError" in res)) notificarCreditosAtualizados(res.saldo)
+      })
     } catch (err: any) {
       setPublishError(`Erro de conexão: ${err?.message || "Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente."}`)
+      setIsConfirmPublishOpen(false)
     } finally {
       setPublishing(false)
     }
@@ -302,54 +326,7 @@ export default function CadastroMassa() {
 
   return (
     <div className="space-y-6">
-      {/* ─── Success State ─────────────────────────────────────────── */}
-      {publishSuccess ? (
-        <div className="bg-white border border-slate-100 rounded-3xl p-6 md:p-8 shadow-sm">
-          <div className="text-center py-8">
-            <div className="w-20 h-20 mx-auto mb-6 bg-emerald-50 rounded-full flex items-center justify-center">
-              <CheckCircle className="w-10 h-10 text-emerald-500" />
-            </div>
-            <h2 className="text-2xl font-black text-slate-800 mb-2">
-              Anúncios Publicados!
-            </h2>
-            <p className="text-slate-500 mb-8 text-lg">
-              {publishSuccess.total_criados} anúncio(s) foram criados com sucesso.
-            </p>
-
-            <div className="max-w-2xl mx-auto bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden">
-              <div className="bg-blue-900 px-6 py-3">
-                <h3 className="text-white font-bold text-sm flex items-center gap-2">
-                  <Package size={16} /> Anúncios Criados
-                </h3>
-              </div>
-              <div className="divide-y divide-slate-100">
-                {publishSuccess.anuncios.map((ad) => (
-                  <div key={ad.nr_anuncio} className="px-6 py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-                        <CheckCircle size={14} className="text-emerald-500" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-slate-800">{ad.ds_mat}</p>
-                        <p className="text-xs text-slate-500">Lote: {ad.ds_lote} · Qtd: {ad.qtd_mat}</p>
-                      </div>
-                    </div>
-                    <span className="text-sm font-bold text-blue-900">R$ {ad.val_base}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleReset}
-              className="mt-8 px-8 py-3 bg-blue-900 text-white rounded-xl font-bold hover:bg-blue-950 transition-colors shadow-lg shadow-blue-900/20 cursor-pointer"
-            >
-              Importar Mais Anúncios
-            </button>
-          </div>
-        </div>
-      ) : validationData && adRows.length > 0 ? (
+      {validationData && adRows.length > 0 ? (
         /* ─── Preview State ────────────────────────────────────────── */
         <div className="space-y-6">
           {/* Summary Cards */}
@@ -411,12 +388,12 @@ export default function CadastroMassa() {
               {adRows.map((row) => (
                 <div
                   key={row.index}
-                  className={`transition-colors ${
+                  className={`transition-all duration-300 ${
                     !row.valido
                       ? "bg-red-50/50"
                       : row.publicar
                       ? "bg-white hover:bg-slate-50/50"
-                      : "bg-slate-50/80"
+                      : "bg-slate-50/80 opacity-50"
                   }`}
                 >
                   {/* Main Row */}
@@ -691,9 +668,9 @@ export default function CadastroMassa() {
 
               <button
                 type="button"
-                onClick={handlePublishAll}
+                onClick={() => setIsConfirmPublishOpen(true)}
                 disabled={publishing || totalToPublish === 0}
-                className="px-8 py-3 bg-blue-900 text-white rounded-xl font-bold hover:bg-blue-950 transition-all shadow-lg shadow-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap cursor-pointer"
+                className="group px-8 py-3 bg-blue-900 text-white rounded-xl font-bold hover:bg-blue-950 transition-all shadow-lg shadow-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-4 whitespace-nowrap cursor-pointer"
               >
                 {publishing ? (
                   <>
@@ -702,8 +679,16 @@ export default function CadastroMassa() {
                   </>
                 ) : (
                   <>
-                    <Upload size={18} />
-                    Publicar Todos ({totalToPublish})
+                    <div className="flex items-center gap-2">
+                      <Upload size={18} />
+                      Publicar Todos ({totalToPublish})
+                    </div>
+                    {totalToPublish > 0 && (
+                      <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1 rounded-lg border border-white/10 group-hover:bg-white/30 transition-colors shadow-inner text-sm">
+                        <Coins size={16} className="text-amber-300" />
+                        <span>{totalToPublish * 5} Créditos</span>
+                      </div>
+                    )}
                   </>
                 )}
               </button>
@@ -950,6 +935,153 @@ export default function CadastroMassa() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* MODAL DE CONFIRMAÇÃO DE PUBLICAÇÃO */}
+      <Dialog open={isConfirmPublishOpen} onOpenChange={setIsConfirmPublishOpen}>
+        <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
+          <DialogHeader className="m-0 bg-blue-900 px-6 py-5 rounded-t-xl border-b border-blue-950">
+            <DialogTitle className="flex items-center gap-2 text-white text-xl font-black">
+              <Megaphone className="w-6 h-6" />
+              Confirmar Publicação em Massa
+            </DialogTitle>
+            <DialogDescription className="text-blue-100">
+              Revise os dados antes de descontar seus créditos.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="p-6">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3 text-sm mb-6">
+              <p className="flex justify-between border-b border-slate-100 pb-2">
+                <span className="font-semibold text-slate-500">Anúncios Selecionados</span> 
+                <span className="font-bold text-slate-800 text-right">{totalToPublish}</span>
+              </p>
+              <p className="flex justify-between border-b border-slate-100 pb-2">
+                <span className="font-semibold text-slate-500">Novos Insumos</span> 
+                <span className="font-bold text-amber-600 text-right">{totalNewInsumos}</span>
+              </p>
+              <p className="flex justify-between">
+                <span className="font-semibold text-slate-500">Custo Total</span> 
+                <span className="font-black text-amber-500 text-right flex items-center gap-1.5">
+                  <Coins size={16} />
+                  {totalToPublish * 5} Créditos
+                </span>
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 w-full">
+              <button
+                type="button"
+                onClick={handlePublishAll}
+                disabled={publishing}
+                className="w-full py-3 bg-blue-900 text-white rounded-xl font-black shadow-lg shadow-blue-900/20 hover:bg-blue-950 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {publishing ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  `Confirmar e Descontar (${totalToPublish * 5} Créditos)`
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsConfirmPublishOpen(false)}
+                disabled={publishing}
+                className="w-full py-2.5 bg-white text-slate-500 border border-slate-200 hover:bg-slate-100 rounded-xl font-bold transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL SEM CRÉDITOS */}
+      <Dialog open={isInsufficientCreditsOpen} onOpenChange={setIsInsufficientCreditsOpen}>
+        <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
+          <DialogHeader className="m-0 bg-amber-500 px-6 py-5 rounded-t-xl border-b border-amber-600">
+            <DialogTitle className="flex items-center gap-2 text-white text-xl font-black">
+              <DollarSign className="w-6 h-6" />
+              Sem créditos!
+            </DialogTitle>
+            <DialogDescription className="text-amber-100">
+              Saldo Insuficiente
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="p-6 text-center flex flex-col items-center">
+            <p className="text-slate-600 mb-6 text-sm font-medium leading-relaxed">
+              Você não possui saldo suficiente para publicar esses anúncios. <br />
+              Adquira um pacote de créditos para continuar turbinando suas negociações.
+            </p>
+            
+            <div className="flex flex-col gap-3 w-full">
+              <button
+                type="button"
+                onClick={() => router.push("/creditos")}
+                className="w-full py-3 bg-gradient-to-r from-amber-400 to-amber-500 text-white rounded-xl font-black shadow-lg shadow-amber-500/30 hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              >
+                <Coins size={18} /> Ir para a Central de Créditos
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsInsufficientCreditsOpen(false)}
+                className="w-full py-2.5 bg-white text-slate-500 border border-slate-200 hover:bg-slate-100 rounded-xl font-bold transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL SUCESSO PUBLICAÇÃO */}
+      <Dialog open={isSuccessModalOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsSuccessModalOpen(false)
+          handleReset()
+        }
+      }}>
+        <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
+          <DialogHeader className="m-0 bg-emerald-500 px-6 py-5 rounded-t-xl border-b border-emerald-600">
+            <DialogTitle className="flex items-center gap-2 text-white text-xl font-black">
+              <CheckCircle className="w-6 h-6" />
+              Tudo Certo!
+            </DialogTitle>
+            <DialogDescription className="text-emerald-100">
+              {publishSuccess?.total_criados} anúncios foram publicados com sucesso.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="p-6 text-center flex flex-col items-center">
+            <p className="text-slate-600 mb-6 text-sm font-medium leading-relaxed">
+              Os anúncios já estão disponíveis no mercado para que outras empresas façam propostas. Você pode acompanhá-los no catálogo.
+            </p>
+            
+            <div className="flex flex-col gap-3 w-full">
+              <button
+                type="button"
+                onClick={() => router.push("/catalogo")}
+                className="w-full py-3 bg-emerald-600 text-white rounded-xl font-black hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-600/20"
+              >
+                Ir para o Catálogo
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSuccessModalOpen(false)
+                  handleReset()
+                }}
+                className="w-full py-2.5 bg-white text-slate-500 border border-slate-200 hover:bg-slate-100 rounded-xl font-bold transition-colors"
+              >
+                Publicar Mais
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   )
 }

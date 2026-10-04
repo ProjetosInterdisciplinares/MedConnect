@@ -10,6 +10,7 @@ import { PessoaJuridica } from "@/types"
 import PerfilHeader from "@/components/perfil/PerfilHeader"
 import MeusMateriais from "@/components/perfil/MeusMateriais"
 import AnimatedBackground from "@/components/ui/animated-background"
+import CarteiraCreditos from "@/components/creditos/CarteiraCreditos"
 
 export default function PerfilPage() {
   const [empresa, setEmpresa] =
@@ -38,6 +39,10 @@ export default function PerfilPage() {
       <div className="max-w-5xl mx-auto py-8 px-4 relative z-10">
 
         <PerfilHeader empresa={empresa} />
+
+        <div className="mt-8">
+          <CarteiraCreditos />
+        </div>
 
         <div className="mt-8">
           <div className="flex items-center gap-2 mb-6">

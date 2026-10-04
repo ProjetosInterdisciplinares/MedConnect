@@ -10,6 +10,7 @@ import AnimatedBackground from "@/components/ui/animated-background"
 export default function DashboardsPage() {
   const [stats, setStats] = useState<StatisticsResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [rendasTimeFrame, setRendasTimeFrame] = useState<'diario' | 'semanal' | 'mensal' | 'anual'>('mensal')
 
   useEffect(() => {
     async function loadStats() {
@@ -107,6 +108,49 @@ export default function DashboardsPage() {
             <div className="flex items-center gap-1.5 mt-4 text-blue-600 text-sm font-bold bg-blue-50 w-fit px-2.5 py-1 rounded-lg">
               <TrendingUp size={14} />
               <span>Indicador de sucesso</span>
+            </div>
+          </div>
+
+          {/* Card: Receita de Créditos */}
+          <div className="bg-white rounded-[1.25rem] p-6 shadow-sm hover:shadow-2xl hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 ease-out flex flex-col relative overflow-hidden group border border-transparent hover:border-amber-100">
+            <div className="absolute top-0 left-0 h-1.5 w-0 bg-amber-500 group-hover:w-full transition-all duration-500 ease-out z-10" />
+            <div className="absolute -right-4 -top-4 p-4 opacity-[0.03] group-hover:opacity-10 group-hover:rotate-12 transition-all duration-500 group-hover:scale-110">
+              <DollarSign size={120} />
+            </div>
+            
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-bold text-slate-500 text-sm tracking-wide uppercase">Venda de Créditos</h3>
+              <div className="bg-amber-50 text-amber-500 p-2.5 rounded-xl shadow-sm">
+                <DollarSign size={20} />
+              </div>
+            </div>
+            <p className="text-3xl lg:text-4xl font-black text-slate-800 tracking-tight truncate group-hover:text-amber-600 transition-colors">
+              {formatCurrency(stats.receita_creditos || 0)}
+            </p>
+            <div className="flex items-center gap-1.5 mt-4 text-amber-600 text-sm font-bold bg-amber-50 w-fit px-2.5 py-1 rounded-lg">
+              <TrendingUp size={14} />
+              <span>Receita da Plataforma</span>
+            </div>
+          </div>
+
+          {/* Card: Créditos Consumidos */}
+          <div className="bg-white rounded-[1.25rem] p-6 shadow-sm hover:shadow-2xl hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 ease-out flex flex-col relative overflow-hidden group border border-transparent hover:border-purple-100">
+            <div className="absolute top-0 left-0 h-1.5 w-0 bg-purple-500 group-hover:w-full transition-all duration-500 ease-out z-10" />
+            <div className="absolute -right-4 -top-4 p-4 opacity-[0.03] group-hover:opacity-10 group-hover:-rotate-12 transition-all duration-500 group-hover:scale-110">
+              <Activity size={120} />
+            </div>
+            
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-bold text-slate-500 text-sm tracking-wide uppercase">Créditos Utilizados</h3>
+              <div className="bg-purple-50 text-purple-600 p-2.5 rounded-xl shadow-sm">
+                <Activity size={20} />
+              </div>
+            </div>
+            <p className="text-3xl lg:text-4xl font-black text-slate-800 tracking-tight group-hover:text-purple-600 transition-colors">
+              {stats.creditos_consumidos || 0}
+            </p>
+            <div className="mt-4 text-slate-500 text-sm font-medium">
+              IA e Publicações
             </div>
           </div>
 
@@ -335,6 +379,55 @@ export default function DashboardsPage() {
                 <Legend verticalAlign="top" height={36} wrapperStyle={{ fontWeight: 600, fontSize: '13px', color: '#475569' }}/>
                 <Area type="monotone" name="Novos Anúncios" dataKey="anuncios" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorAnuncios)" animationDuration={2000} />
                 <Area type="monotone" name="Novas Propostas" dataKey="propostas" stroke="#f59e0b" strokeWidth={3} fillOpacity={1} fill="url(#colorPropostas)" animationDuration={2000} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Histórico Temporal de Rendas (Créditos) */}
+        <div className="mt-6 lg:mt-8 bg-white rounded-[1.25rem] p-6 lg:p-8 shadow-sm border border-slate-100 hover:shadow-xl transition-shadow duration-300 animate-in fade-in slide-in-from-bottom-16 duration-1000 delay-500 fill-mode-both">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-50 rounded-lg text-amber-500">
+                <DollarSign size={20} />
+              </div>
+              <h2 className="text-xl font-extrabold text-slate-800">Receita da Plataforma (Venda de Créditos)</h2>
+            </div>
+            
+            <div className="flex items-center bg-slate-100 p-1 rounded-lg">
+              {['diario', 'semanal', 'mensal', 'anual'].map((tf) => (
+                <button
+                  key={tf}
+                  onClick={() => setRendasTimeFrame(tf as any)}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-md capitalize transition-colors ${rendasTimeFrame === tf ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  {tf === 'diario' ? 'Dias' : tf === 'semanal' ? 'Semanas' : tf === 'mensal' ? 'Meses' : 'Anos'}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="h-[350px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={stats.historico_rendas?.[rendasTimeFrame] || []}
+                margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="colorRenda" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 13, fontWeight: 600 }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} tickFormatter={(val) => `R$ ${val}`} />
+                <RechartsTooltip 
+                  formatter={(value: any) => [formatCurrency(Number(value) || 0), 'Receita']}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
+                  itemStyle={{ fontWeight: 'bold' }}
+                />
+                <Area type="monotone" name="Receita (R$)" dataKey="valor" stroke="#f59e0b" strokeWidth={3} fillOpacity={1} fill="url(#colorRenda)" animationDuration={1000} />
               </AreaChart>
             </ResponsiveContainer>
           </div>

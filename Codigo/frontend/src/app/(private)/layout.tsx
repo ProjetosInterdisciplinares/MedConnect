@@ -8,12 +8,12 @@ import { AuthManager } from "@/lib/AuthManager"
 import { PessoaJuridica, Anuncio } from "@/types"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
-import { 
-  LogOut, 
-  Store, 
-  FileText, 
+import {
+  LogOut,
+  Store,
+  FileText,
   SquarePlus,
-  ChevronDown, 
+  ChevronDown,
   Inbox,
   Menu,
   X,
@@ -26,6 +26,8 @@ import {
 } from "lucide-react"
 import Footer from "@/components/ui/Footer"
 import { withAuth } from "@/lib/withAuth"
+import CreditosBadge from "@/components/creditos/CreditosBadge"
+import { onCreditosAtualizados } from "@/lib/creditos"
 
 import {
   DropdownMenu,
@@ -40,18 +42,18 @@ import {
 const NAV_LINKS = [
   { name: "Catálogo", href: "/catalogo", icon: Store },
   { name: "Cadastrar Materiais", href: "/cadastrar", icon: FileText },
-  { 
-    name: "Anunciar", 
-    href: "#", 
+  {
+    name: "Anunciar",
+    href: "#",
     icon: SquarePlus,
     subLinks: [
       { name: "Publicar Anúncio", href: "/anunciar", icon: Megaphone },
       { name: "Meus Anúncios", href: "/meus-anuncios", icon: Package }
     ]
   },
-  { 
-    name: "Negociações", 
-    href: "#", 
+  {
+    name: "Negociações",
+    href: "#",
     icon: Handshake,
     subLinks: [
       { name: "Minhas Negociações", href: "/minhas-negociacoes", icon: Handshake },
@@ -101,6 +103,13 @@ function Layout({ children }: LayoutProps) {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
+  // Listener para sincronização de saldo
+  useEffect(() => {
+    return onCreditosAtualizados((novoSaldo) => {
+      setEmpresa((prev) => prev ? { ...prev, saldo_creditos: novoSaldo } : null)
+    })
+  }, [])
+
   // Carrega a empresa
   useEffect(() => {
     async function carregarDados() {
@@ -113,22 +122,22 @@ function Layout({ children }: LayoutProps) {
       // 2. Carrega anúncios e negociações para verificar notificações
       try {
         const [anunciosResult, negociacoesResult] = await Promise.all([
-           servicesGetMeusAnuncios(),
-           servicesGetNegociacoes()
+          servicesGetMeusAnuncios(),
+          servicesGetNegociacoes()
         ])
-        
+
         const myUserId = Number(AuthManager.getInstance().getUserId())
-        
+
         let pendingIds = ""
         let soldIds = ""
-        
+
         // Sold Anuncios: mantemos buscando os Anúncios ("F")
         if (Array.isArray(anunciosResult)) {
           soldIds = anunciosResult.filter(a => a.ie_status === "F").map(a => a.nr_anuncio).join(',')
         } else if ((anunciosResult as any)?.data) {
           soldIds = ((anunciosResult as any).data as Anuncio[]).filter(a => a.ie_status === "F").map(a => a.nr_anuncio).join(',')
         }
-        
+
         // Pendentes: Negociações que EU recebi ("P")
         let negociacoesList: any[] = []
         if (Array.isArray(negociacoesResult)) {
@@ -136,9 +145,9 @@ function Layout({ children }: LayoutProps) {
         } else if ((negociacoesResult as any)?.data) {
           negociacoesList = (negociacoesResult as any).data
         }
-        
+
         pendingIds = negociacoesList.filter(n => n.vendedor === myUserId && n.status === "P").map(n => String(n.id)).join(',')
-        
+
         const currentPendingIds = pendingIds ? pendingIds.split(',') : []
         const currentSoldIds = soldIds ? soldIds.split(',') : []
 
@@ -163,13 +172,13 @@ function Layout({ children }: LayoutProps) {
         // Verifica compras finalizadas (negociações enviadas aceitas ou recusadas)
         let acceptedIds = negociacoesList.filter(n => n.comprador === myUserId && n.status === "A").map(n => String(n.id)).join(',')
         let refusedIds = negociacoesList.filter(n => n.comprador === myUserId && (n.status === "R" || n.status === "C")).map(n => String(n.id)).join(',')
-        
+
         const currentAcceptedIds = acceptedIds ? acceptedIds.split(',') : []
         const currentRefusedIds = refusedIds ? refusedIds.split(',') : []
-        
+
         const seenAccepted = localStorage.getItem('seen_accepted_negotiations') ? localStorage.getItem('seen_accepted_negotiations')!.split(',') : []
         const seenRefused = localStorage.getItem('seen_refused_negotiations') ? localStorage.getItem('seen_refused_negotiations')!.split(',') : []
-        
+
         const newAcceptedList = currentAcceptedIds.filter(id => !seenAccepted.includes(id))
         const newRefusedList = currentRefusedIds.filter(id => !seenRefused.includes(id))
 
@@ -220,7 +229,7 @@ function Layout({ children }: LayoutProps) {
     <div className="w-full min-h-screen flex flex-col items-center text-zinc-900 font-sans antialiased scroll-smooth"
       style={{ background: "linear-gradient(160deg, #ffffff 0%, #eff6ff 25%, #eff6ff 50%, #ecfdf5 75%, #ffffff 100%)" }}
     >
-      
+
       {/* ═══════════════ NAVBAR ═══════════════ */}
       <nav
         style={{
@@ -231,7 +240,7 @@ function Layout({ children }: LayoutProps) {
           borderBottom: scrolled ? "1px solid rgba(255,255,255,0.05)" : "1px solid rgba(255,255,255,0.08)",
           transition: "height 0.4s cubic-bezier(0.4,0,0.2,1), background-color 0.4s cubic-bezier(0.4,0,0.2,1), box-shadow 0.4s cubic-bezier(0.4,0,0.2,1), border-bottom 0.4s ease",
         }}
-        className="w-full flex items-center justify-between px-6 md:px-10 sticky top-0 z-50"
+        className="w-full flex items-center justify-between px-3 sm:px-6 md:px-10 sticky top-0 z-50"
       >
 
         {/* LOGO */}
@@ -252,13 +261,13 @@ function Layout({ children }: LayoutProps) {
               className="w-5 h-5 filter invert"
             />
           </div>
-          <span className="font-extrabold text-xl text-white tracking-wider group-hover:text-blue-200 transition-colors duration-300">
+          <span className="font-extrabold text-lg sm:text-xl text-white tracking-wider group-hover:text-blue-200 transition-colors duration-300">
             Med<span className="text-blue-400">Connect</span>
           </span>
         </Link>
 
         {/* MENU PRINCIPAL (DESKTOP) */}
-        <div className="hidden lg:flex items-center gap-1">
+        <div className="hidden xl:flex items-center gap-1">
           {NAV_LINKS.filter(link => !link.isAdminOnly || empresa?.is_admin).map((link) => {
             const Icon = link.icon
             const isActive = pathname === link.href || link.subLinks?.some(sub => pathname === sub.href.split('?')[0])
@@ -270,7 +279,7 @@ function Layout({ children }: LayoutProps) {
                   <button
                     type="button"
                     onClick={() => setOpenDesktopDropdown(isDropdownOpen ? null : link.name)}
-                    className="group relative flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-full transition-all duration-300 overflow-hidden outline-none cursor-pointer"
+                    className="group relative flex items-center gap-1.5 2xl:gap-2 px-2.5 2xl:px-4 py-2 text-sm font-semibold rounded-full transition-all duration-300 overflow-hidden outline-none cursor-pointer whitespace-nowrap"
                     style={{
                       color: isActive || isDropdownOpen ? "#ffffff" : "rgba(191,219,254,0.7)",
                       backgroundColor: isActive || isDropdownOpen ? "rgba(255,255,255,0.1)" : "transparent",
@@ -279,8 +288,8 @@ function Layout({ children }: LayoutProps) {
                     <span className="absolute inset-0 rounded-full bg-white/0 group-hover:bg-white/10 scale-75 group-hover:scale-100 opacity-0 group-hover:opacity-100 transition-all duration-300" />
                     <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-0.5 bg-blue-400 rounded-full transition-all duration-300" style={{ width: isActive ? "24px" : "0px" }} />
                     <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-0 group-hover:w-6 h-0.5 bg-blue-400 rounded-full transition-all duration-300" />
-                    
-                    <Icon size={15} className="relative z-10 group-hover:scale-110 group-hover:text-blue-300 transition-all duration-300" />
+
+                    <Icon size={15} className="relative z-10 shrink-0 group-hover:scale-110 group-hover:text-blue-300 transition-all duration-300" />
                     <span className="relative z-10 group-hover:text-white transition-colors duration-300 flex items-center gap-2">
                       {link.name}
                       {((link.name === "Negociações" && (newPendingCount > 0 || newAcceptedCount > 0 || newRefusedCount > 0 || newSoldAnunciosCount > 0))) ? (
@@ -290,7 +299,7 @@ function Layout({ children }: LayoutProps) {
                           {renderBadge(newRefusedCount, "rose", false)}
                         </div>
                       ) : null}
-                      <ChevronDown size={14} className={`ml-1 transition-all duration-300 ${isDropdownOpen ? "rotate-180 text-blue-400" : "opacity-70 group-hover:text-white"}`} />
+                      <ChevronDown size={14} className={`ml-0.5 shrink-0 transition-all duration-300 ${isDropdownOpen ? "rotate-180 text-blue-400" : "opacity-70 group-hover:text-white"}`} />
                     </span>
                   </button>
 
@@ -344,7 +353,7 @@ function Layout({ children }: LayoutProps) {
               <Link
                 key={link.href}
                 href={link.href}
-                className="group relative flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-full transition-all duration-300 overflow-hidden"
+                className="group relative flex items-center gap-1.5 2xl:gap-2 px-2.5 2xl:px-4 py-2 text-sm font-semibold rounded-full transition-all duration-300 overflow-hidden whitespace-nowrap"
                 style={{
                   color: isActive ? "#ffffff" : "rgba(191,219,254,0.7)",
                   backgroundColor: isActive ? "rgba(255,255,255,0.1)" : "transparent",
@@ -356,8 +365,8 @@ function Layout({ children }: LayoutProps) {
                   style={{ width: isActive ? "24px" : "0px" }}
                 />
                 <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-0 group-hover:w-6 h-0.5 bg-blue-400 rounded-full transition-all duration-300" />
-                
-                <Icon size={15} className="relative z-10 group-hover:scale-110 group-hover:text-blue-300 transition-all duration-300" />
+
+                <Icon size={15} className="relative z-10 shrink-0 group-hover:scale-110 group-hover:text-blue-300 transition-all duration-300" />
                 <span className="relative z-10 group-hover:text-white transition-colors duration-300 flex items-center gap-2">
                   {link.name}
                 </span>
@@ -367,13 +376,15 @@ function Layout({ children }: LayoutProps) {
         </div>
 
         {/* AÇÕES DIREITA */}
-        <div className="flex items-center gap-3 z-50">
-          
+        <div className="flex items-center gap-1.5 sm:gap-3 z-50">
+
+          <CreditosBadge saldo={empresa?.saldo_creditos ?? null} />
+
           {/* USER MENU */}
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center gap-2.5 bg-white/10 hover:bg-white/15 focus:outline-none pl-1.5 pr-2 lg:pr-4 py-1.5 rounded-full transition-all duration-300 text-white border border-white/5 hover:border-white/10 active:scale-[0.98] cursor-pointer outline-none ring-0">
+            <DropdownMenuTrigger className="flex items-center gap-1 sm:gap-2.5 bg-white/10 hover:bg-white/15 focus:outline-none p-1 sm:pl-1.5 sm:pr-2 lg:pr-4 sm:py-1.5 rounded-full transition-all duration-300 text-white border border-white/5 hover:border-white/10 active:scale-[0.98] cursor-pointer outline-none ring-0">
               <div
-                className="w-7 h-7 lg:w-8 lg:h-8 rounded-full flex items-center justify-center font-bold text-xs lg:text-sm tracking-wider text-white shadow-inner overflow-hidden border border-blue-400/30"
+                className="w-7 h-7 lg:w-8 lg:h-8 shrink-0 rounded-full flex items-center justify-center font-bold text-xs lg:text-sm tracking-wider text-white shadow-inner overflow-hidden border border-blue-400/30"
                 style={{ background: "linear-gradient(135deg, #3b82f6, #2563eb)" }}
               >
                 {empresa?.imagem_perfil ? (
@@ -382,7 +393,7 @@ function Layout({ children }: LayoutProps) {
                   empresa?.nm_pessoaj?.substring(0, 2).toUpperCase() ?? "PJ"
                 )}
               </div>
-              <span className="hidden lg:block text-sm font-semibold tracking-wide max-w-30 truncate text-blue-100/90">
+              <span className="hidden xl:block text-sm font-semibold tracking-wide max-w-30 truncate text-blue-100/90">
                 {empresa?.nm_pessoaj ?? "Perfil"}
               </span>
               <ChevronDown size={14} className="text-blue-200/60 transition-transform duration-300" />
@@ -417,24 +428,25 @@ function Layout({ children }: LayoutProps) {
           </DropdownMenu>
 
           {/* BOTÃO HAMBÚRGUER (MOBILE & TABLET) */}
-          <button 
-            className="lg:hidden text-white p-2 hover:bg-white/10 rounded-xl transition-colors duration-300"
+          <button
+            className="xl:hidden text-white p-1 sm:p-2 hover:bg-white/10 rounded-xl transition-colors duration-300"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label="Toggle menu"
           >
-            <div className="relative w-6 h-6">
-              <Menu size={24} className={`absolute inset-0 transition-all duration-300 ${isMobileMenuOpen ? "opacity-0 rotate-90 scale-75" : "opacity-100 rotate-0 scale-100"}`} />
-              <X size={24} className={`absolute inset-0 transition-all duration-300 ${isMobileMenuOpen ? "opacity-100 rotate-0 scale-100" : "opacity-0 -rotate-90 scale-75"}`} />
+            <div className="relative w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center">
+              <Menu className={`absolute inset-0 w-full h-full transition-all duration-300 ${isMobileMenuOpen ? "opacity-0 rotate-90 scale-75" : "opacity-100 rotate-0 scale-100"}`} />
+              <X className={`absolute inset-0 w-full h-full transition-all duration-300 ${isMobileMenuOpen ? "opacity-100 rotate-0 scale-100" : "opacity-0 -rotate-90 scale-75"}`} />
             </div>
           </button>
         </div>
+      </nav>
 
-        {/* MOBILE MENU OVERLAY — full-screen como na landing */}
-        <div
-          className={`lg:hidden fixed inset-0 top-14 z-40 transition-all duration-400 ${isMobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
-          style={{ backgroundColor: "rgba(23, 37, 84, 0.98)", backdropFilter: "blur(20px)" }}
-        >
-          <div className="relative flex flex-col items-center gap-2 pt-8 px-6 transition-all duration-400 overflow-y-auto max-h-[80vh] w-full">
+      {/* MOBILE MENU OVERLAY — full-screen como na landing */}
+      <div
+        className={`xl:hidden fixed inset-0 z-40 transition-all duration-400 ${isMobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+        style={{ backgroundColor: "rgba(23, 37, 84, 0.98)", backdropFilter: "blur(20px)" }}
+      >
+        <div className="relative flex flex-col items-center gap-2 pt-20 pb-24 px-6 transition-all duration-400 overflow-y-auto h-full w-full">
             {NAV_LINKS.filter(link => !link.isAdminOnly || empresa?.is_admin).map((link, i) => {
               const Icon = link.icon
               const isActive = pathname === link.href || link.subLinks?.some(sub => pathname === sub.href.split('?')[0])
@@ -447,8 +459,8 @@ function Layout({ children }: LayoutProps) {
                       type="button"
                       onClick={() => setOpenMobileDropdown(isMobileDropdownOpen ? null : link.name)}
                       className={`flex items-center gap-3 w-full px-6 py-4 text-base font-semibold rounded-xl transition-all duration-300 cursor-pointer
-                        ${isActive 
-                          ? "bg-white/10 text-white" 
+                        ${isActive
+                          ? "bg-white/10 text-white"
                           : "text-zinc-200 hover:text-white hover:bg-white/10"
                         }`}
                     >
@@ -474,8 +486,8 @@ function Layout({ children }: LayoutProps) {
                               href={sub.href}
                               onClick={() => setIsMobileMenuOpen(false)}
                               className={`flex items-center gap-3 w-full px-6 py-3 text-[15px] font-semibold rounded-xl transition-all duration-200
-                                ${isSubActive 
-                                  ? "bg-white/10 text-white" 
+                                ${isSubActive
+                                  ? "bg-white/10 text-white"
                                   : "text-zinc-300 hover:text-white hover:bg-white/5"
                                 }`}
                             >
@@ -512,8 +524,8 @@ function Layout({ children }: LayoutProps) {
                   href={link.href}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={`flex items-center gap-3 w-full px-6 py-4 text-base font-semibold rounded-xl transition-all duration-300
-                    ${isActive 
-                      ? "bg-white/10 text-white" 
+                    ${isActive
+                      ? "bg-white/10 text-white"
                       : "text-zinc-200 hover:text-white hover:bg-white/10"
                     }`}
                   style={{ transitionDelay: `${i * 50}ms` }}
@@ -526,15 +538,14 @@ function Layout({ children }: LayoutProps) {
             })}
           </div>
         </div>
-      </nav>
 
       {/* CONTEÚDO DA PÁGINA */}
       <main className="w-full flex-1 p-4 md:p-8 max-w-7xl">
         {children}
       </main>
 
-      <Footer/>
-    
+      <Footer />
+
     </div>
   )
 }

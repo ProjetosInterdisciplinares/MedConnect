@@ -278,3 +278,63 @@
 html {
   scroll-behavior: smooth;
 }
+
+/* ─── Créditos MedConnect ─────────────────────────────────── */
+
+@keyframes credit-shine {
+  0% { transform: translateX(-120%) skewX(-20deg); }
+  60%, 100% { transform: translateX(220%) skewX(-20deg); }
+}
+
+@keyframes credit-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.18); }
+  70% { transform: scale(0.96); }
+  100% { transform: scale(1); }
+}
+
+@keyframes credit-float {
+  0%, 100% { transform: translateY(0) rotate(-6deg); }
+  50% { transform: translateY(-10px) rotate(6deg); }
+}
+
+@keyframes credit-rise {
+  0% { transform: translateY(12px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.credit-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.credit-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  animation: credit-shine 3.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.animate-credit-pop {
+  animation: credit-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.animate-credit-float {
+  animation: credit-float 6s ease-in-out infinite;
+}
+
+.animate-credit-rise {
+  animation: credit-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .credit-shine::after,
+  .animate-credit-pop,
+  .animate-credit-float,
+  .animate-credit-rise {
+    animation: none;
+  }
+}

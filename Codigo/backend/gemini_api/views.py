@@ -6,16 +6,20 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from google import genai
+from django.db import transaction
 
 from mat_med.models import MatMed
 from pessoa_juridica.models import PessoaJuridica
 from anuncio.models import Anuncio
 from anuncio.serializers import AnuncioSerializer
+from creditos.services import consumir_funcionalidade, SaldoInsuficienteError
 
 load_dotenv()
 
 
 class GerarDescricaoAnuncioView(APIView):
+    permission_classes = (IsAuthenticated,)
+    
     def post(self, request):
         dados = request.data
         
@@ -71,17 +75,38 @@ class GerarDescricaoAnuncioView(APIView):
         """
 
         try:
-            client = genai.Client() 
-            response = client.models.generate_content(
-                model='gemini-3.8-flash',
-                contents=prompt,
-            )
-            
-            return Response({"texto_sugerido": response.text}, status=status.HTTP_200_OK)
+            with transaction.atomic():
+                # 1. Tenta consumir créditos antes de bater na IA
+                consumir_funcionalidade(
+                    pessoa_juridica=request.user,
+                    funcionalidade='IA_DESCRICAO',
+                    descricao=f'Geração de descrição com IA para {material.ds_mat if material.ds_mat else material.cd_tuss}',
+                    referencia=f'MAT-{material.cd_mat}'
+                )
 
-        except Exception as e:
+                client = genai.Client() 
+                response = client.models.generate_content(
+                    model='gemini-3.8-flash',
+                    contents=prompt,
+                )
+                
+                return Response({"texto_sugerido": response.text}, status=status.HTTP_200_OK)
+
+        except SaldoInsuficienteError as e:
             return Response(
-                {"erro": f"Erro na API do Gemini: {str(e)}"}, 
+                {"erro": str(e), "saldo_insuficiente": True},
+                status=status.HTTP_402_PAYMENT_REQUIRED
+            )
+        except Exception as e:
+            error_str = str(e).lower()
+            if "503" in error_str or "unavailable" in error_str or "high demand" in error_str:
+                msg = "O serviço de inteligência artificial está com alta demanda no momento. Por favor, tente novamente em alguns instantes."
+            else:
+                msg = "Ocorreu um erro interno ao se comunicar com a inteligência artificial. Tente novamente mais tarde."
+            
+            # Aqui, idealmente, você logaria o erro real (e) no Sentry ou logger
+            return Response(
+                {"erro": msg}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -192,8 +217,14 @@ Regras:
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         except Exception as e:
+            error_str = str(e).lower()
+            if "503" in error_str or "unavailable" in error_str:
+                msg = "A busca inteligente está temporariamente indisponível devido à alta demanda."
+            else:
+                msg = "Ocorreu um erro ao realizar a busca semântica."
+                
             return Response(
-                {"erro": f"Erro na busca semântica: {str(e)}"},
+                {"erro": msg},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 

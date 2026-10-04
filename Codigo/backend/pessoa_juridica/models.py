@@ -56,6 +56,9 @@ class PessoaJuridica(models.Model):
     # Perfil inteligente de buscas gerado pela IA (ex: "luva, seringa, cateter")
     interesses_ia = models.TextField(blank=True, null=True)
 
+    # Saldo de créditos (RF14). NÃO altere diretamente — use creditos.services
+    saldo_creditos = models.PositiveIntegerField(default=0)
+
     @property
     def is_authenticated(self):
         return True

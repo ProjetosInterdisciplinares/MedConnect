@@ -6,7 +6,9 @@ class PessoaJuridicaSerializer(serializers.ModelSerializer):
         model = PessoaJuridica
         fields = '__all__'
         extra_kwargs = {
-            'senha_pj': {'write_only': True}
+            'senha_pj': {'write_only': True},
+            # Saldo só muda pelo app de créditos (compra/consumo)
+            'saldo_creditos': {'read_only': True},
         }
 
     def validate(self, attrs):

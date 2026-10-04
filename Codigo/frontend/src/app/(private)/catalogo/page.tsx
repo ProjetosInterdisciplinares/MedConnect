@@ -207,11 +207,6 @@ export default function Anuncios() {
       const term = search.trim();
       setAppliedSearch(term);
       setCurrentPage(1);
-      
-      // Atualiza o perfil de recomendação no fundo sempre que o usuário der Enter
-      if (term.length > 0) {
-        triggerProfileUpdate(term);
-      }
     }
   }
 
@@ -412,7 +407,12 @@ export default function Anuncios() {
                   return (
                     <div
                       key={anuncio.nr_anuncio}
-                      onClick={() => router.push(`/anunciar/${anuncio.nr_anuncio}`)}
+                      onClick={() => {
+                        if (nomeMaterial && nomeMaterial !== "Material não identificado") {
+                          triggerProfileUpdate(nomeMaterial)
+                        }
+                        router.push(`/anunciar/${anuncio.nr_anuncio}`)
+                      }}
                       className="bg-white rounded-[1.25rem] p-5 shadow-sm hover:shadow-2xl hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 ease-out flex flex-col cursor-pointer border border-transparent hover:border-blue-100 relative overflow-hidden group"
                     >
                       {/* Hover Top Bar */}

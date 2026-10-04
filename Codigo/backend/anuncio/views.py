@@ -2,6 +2,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework import generics, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework import status
 from django.db.models import Q, Case, When, Value, BooleanField
 from django.utils import timezone
 from anuncio.models import Anuncio, Negociacao
@@ -103,6 +104,29 @@ class AnuncioCreateListView(generics.ListCreateAPIView):
             queryset = queryset.order_by('-nr_anuncio')
 
         return queryset
+
+    def create(self, request, *args, **kwargs):
+        from creditos.services import consumir_funcionalidade, SaldoInsuficienteError
+        
+        try:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            
+            consumir_funcionalidade(
+                pessoa_juridica=request.user,
+                funcionalidade='PUBLICAR_ANUNCIO',
+                descricao='Publicação de novo anúncio no catálogo'
+            )
+            
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            
+        except SaldoInsuficienteError as e:
+            return Response(
+                {"erro": str(e), "saldo_insuficiente": True},
+                status=status.HTTP_402_PAYMENT_REQUIRED
+            )
 
 
 class AnuncioRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):

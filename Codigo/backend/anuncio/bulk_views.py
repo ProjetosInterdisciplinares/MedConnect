@@ -20,6 +20,7 @@ from openpyxl.utils import get_column_letter
 
 from anuncio.models import Anuncio
 from mat_med.models import MatMed
+from creditos.services import debitar_creditos, SaldoInsuficienteError, CUSTOS_FUNCIONALIDADES
 
 
 @api_view(["GET"])
@@ -428,8 +429,20 @@ def publish_bulk_ads(request):
         if m.cd_tuss
     }
 
+    total_anuncios = len(ads_data)
+    custo_unitario = CUSTOS_FUNCIONALIDADES.get('PUBLICAR_ANUNCIO', 5)
+    custo_total = total_anuncios * custo_unitario
+
     try:
         with transaction.atomic():
+            if custo_total > 0:
+                debitar_creditos(
+                    pessoa_juridica=request.user,
+                    quantidade=custo_total,
+                    descricao=f'Publicação em massa de {total_anuncios} anúncios',
+                    funcionalidade='PUBLICAR_ANUNCIO'
+                )
+
             for idx, item in enumerate(ads_data):
                 try:
                     insumo_data = item.get("insumo", {})
@@ -487,6 +500,11 @@ def publish_bulk_ads(request):
                     })
                     raise  # Rollback the entire transaction
 
+    except SaldoInsuficienteError as e:
+        return Response(
+            {"erro": str(e), "codigo": "SALDO_INSUFICIENTE", "custo_total": custo_total},
+            status=status.HTTP_402_PAYMENT_REQUIRED
+        )
     except Exception:
         if errors:
             return Response(
