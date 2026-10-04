@@ -84,13 +84,14 @@ class GerarDescricaoAnuncioView(APIView):
                     referencia=f'MAT-{material.cd_mat}'
                 )
 
-                client = genai.Client() 
-                response = client.models.generate_content(
-                    model='gemini-2.0-flash',
-                    contents=prompt,
+                api_key = os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY')
+                client = genai.Client(api_key=api_key) 
+                interaction = client.interactions.create(
+                    model='gemini-3.8-flash',
+                    input=prompt,
                 )
                 
-                return Response({"texto_sugerido": response.text}, status=status.HTTP_200_OK)
+                return Response({"texto_sugerido": interaction.output_text}, status=status.HTTP_200_OK)
 
         except SaldoInsuficienteError as e:
             return Response(
@@ -186,17 +187,15 @@ Regras:
 - NÃO inclua explicações, apenas o JSON"""
 
         try:
-            client = genai.Client()
-            response = client.models.generate_content(
-                model='gemini-2.0-flash',
-                contents=prompt,
-                config={
-                    'response_mime_type': 'application/json',
-                    'temperature': 0.1,
-                },
+            api_key = os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY')
+            client = genai.Client(api_key=api_key)
+            interaction = client.interactions.create(
+                model='gemini-3.8-flash',
+                input=prompt,
+                response_format={"type": "json"}
             )
 
-            resultado = json.loads(response.text)
+            resultado = json.loads(interaction.output_text)
             ids_ordenados = resultado.get('resultados', [])
 
             if not ids_ordenados:
@@ -258,14 +257,14 @@ class AtualizarInteressesView(APIView):
         """
 
         try:
-            client = genai.Client()
-            response = client.models.generate_content(
-                model='gemini-2.0-flash',
-                contents=prompt,
-                config={'temperature': 0.1}
+            api_key = os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY')
+            client = genai.Client(api_key=api_key)
+            interaction = client.interactions.create(
+                model='gemini-3.8-flash',
+                input=prompt,
             )
 
-            novas_tags = response.text.strip().replace('"', '').replace('\n', '')
+            novas_tags = interaction.output_text.strip().replace('"', '').replace('\n', '')
             
             # Limita tamanho para segurança
             if len(novas_tags) > 200:
