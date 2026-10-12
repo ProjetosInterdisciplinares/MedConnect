@@ -46,7 +46,7 @@ export default function MeusMateriais() {
 
   if (loading) {
     return (
-      <p className="text-zinc-500">
+      <p className="text-muted">
         Carregando materiais...
       </p>
     )

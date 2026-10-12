@@ -7,6 +7,7 @@ interface PaginationProps {
   totalItems: number;
   itemsPerPage: number;
   onPageChange: (page: number) => void;
+  className?: string;
 }
 
 export function Pagination({
@@ -15,6 +16,7 @@ export function Pagination({
   totalItems,
   itemsPerPage,
   onPageChange,
+  className,
 }: PaginationProps) {
   if (totalPages <= 1) return null;
 
@@ -39,14 +41,14 @@ export function Pagination({
   const pages = generatePages();
 
   return (
-    <div className="w-full flex items-center justify-between bg-white px-6 py-4 rounded-xl border border-slate-200/60 shadow-sm overflow-x-auto">
+    <div className={`w-full flex items-center justify-between bg-surface px-6 py-4 rounded-xl border border-border/60 shadow-sm overflow-x-auto ${className || ""}`}>
       
       {/* Controles da Esquerda */}
       <div className="flex items-center gap-4 sm:gap-8 min-w-max">
         <button
           onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
           disabled={currentPage === 1}
-          className="text-[15px] font-bold text-[#235873] disabled:opacity-50 disabled:cursor-not-allowed hover:text-blue-700 transition-colors"
+          className="cursor-pointer text-[15px] font-bold text-brand-header disabled:opacity-50 disabled:cursor-not-allowed hover:text-brand-hover transition-colors"
         >
           &lt; Anterior
         </button>
@@ -62,9 +64,9 @@ export function Pagination({
               <button
                 key={`page-${page}`}
                 onClick={() => onPageChange(page as number)}
-                className={`text-[15px] font-medium transition-colors w-5 h-7 flex items-center justify-center ${
+                className={`cursor-pointer text-[15px] font-medium transition-colors w-5 h-7 flex items-center justify-center ${
                   isCurrent 
-                    ? "text-[#235873] font-bold border-b-2 border-[#235873]" 
+                    ? "text-brand font-bold border-b-2 border-brand" 
                     : "text-slate-400 hover:text-slate-600"
                 }`}
               >
@@ -77,7 +79,7 @@ export function Pagination({
         <button
           onClick={() => onPageChange(Math.min(currentPage + 1, totalPages))}
           disabled={currentPage === totalPages}
-          className="text-[15px] font-bold text-[#235873] disabled:opacity-50 disabled:cursor-not-allowed hover:text-blue-700 transition-colors"
+          className="cursor-pointer text-[15px] font-bold text-brand-header disabled:opacity-50 disabled:cursor-not-allowed hover:text-brand-hover transition-colors"
         >
           Próxima &gt;
         </button>

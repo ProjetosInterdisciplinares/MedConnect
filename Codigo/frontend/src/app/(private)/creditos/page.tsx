@@ -11,7 +11,7 @@ import { notificarCreditosAtualizados } from "@/lib/creditos"
 
 import { SaldoCreditos, PacoteCredito, TransacaoCredito } from "@/types"
 
-import AnimatedBackground from "@/components/ui/animated-background"
+
 import CreditoCoin from "@/components/creditos/CreditoCoin"
 import PacoteCard from "@/components/creditos/PacoteCard"
 import ExtratoItem from "@/components/creditos/ExtratoItem"
@@ -22,9 +22,9 @@ export default function CreditosPage() {
   const [saldo, setSaldo] = useState<SaldoCreditos | null>(null)
   const [pacotes, setPacotes] = useState<PacoteCredito[]>([])
   const [extrato, setExtrato] = useState<TransacaoCredito[]>([])
-  
+
   const [carregando, setCarregando] = useState(true)
-  
+
   const [pacoteSelecionado, setPacoteSelecionado] = useState<PacoteCredito | null>(null)
 
   async function carregarDados() {
@@ -38,7 +38,7 @@ export default function CreditosPage() {
     if (!("isError" in saldoRes)) setSaldo(saldoRes)
     if (Array.isArray(pacotesRes)) setPacotes(pacotesRes)
     if (Array.isArray(extratoRes)) setExtrato(extratoRes)
-      
+
     setCarregando(false)
   }
 
@@ -48,15 +48,15 @@ export default function CreditosPage() {
 
   function handleCompraSuccess(resultado: any) {
     // Atualiza saldo atual local
-    setSaldo(prev => prev ? { 
-      ...prev, 
-      saldo: resultado.saldo, 
-      total_adquirido: prev.total_adquirido + resultado.transacao.quantidade 
+    setSaldo(prev => prev ? {
+      ...prev,
+      saldo: resultado.saldo,
+      total_adquirido: prev.total_adquirido + resultado.transacao.quantidade
     } : null)
-    
+
     // Adiciona a transação ao topo do extrato
     setExtrato(prev => [resultado.transacao, ...prev])
-    
+
     // Notifica outros componentes (header)
     notificarCreditosAtualizados(resultado.saldo)
   }
@@ -67,14 +67,14 @@ export default function CreditosPage() {
 
   return (
     <div className="relative min-h-screen w-full antialiased">
-      <AnimatedBackground />
-      
+
+
       <div className="max-w-6xl mx-auto py-8 px-4 relative z-10 space-y-12">
         {/* Cabeçalho */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
-            <Link 
-              href="/perfil" 
+            <Link
+              href="/perfil"
               className="inline-flex items-center gap-1.5 text-sm font-bold text-slate-500 hover:text-blue-600 transition-colors mb-4"
             >
               <ArrowLeft size={16} /> Voltar ao perfil
@@ -89,7 +89,7 @@ export default function CreditosPage() {
               Adquira créditos para turbinar seus anúncios, gerar descrições com inteligência artificial e destacar seus materiais na plataforma.
             </p>
           </div>
-          
+
           <div className="shrink-0 bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-5 shadow-sm">
             <CreditoCoin size={48} className="drop-shadow-md" />
             <div>
@@ -111,7 +111,7 @@ export default function CreditosPage() {
             <Wallet size={24} className="text-blue-700" />
             <h2 className="text-xl font-bold text-slate-800">Escolha o melhor pacote</h2>
           </div>
-          
+
           {carregando ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {[1, 2, 3, 4].map(i => (
@@ -124,12 +124,12 @@ export default function CreditosPage() {
                 const precoPorCredito = parseFloat(pacote.preco) / pacote.total_creditos
                 const economia = precoBasePorCredito > 0 ? Math.round((1 - (precoPorCredito / precoBasePorCredito)) * 100) : 0
                 return (
-                  <PacoteCard 
-                    key={pacote.id} 
-                    pacote={pacote} 
-                    economia={economia} 
-                    index={index} 
-                    onComprar={setPacoteSelecionado} 
+                  <PacoteCard
+                    key={pacote.id}
+                    pacote={pacote}
+                    economia={economia}
+                    index={index}
+                    onComprar={setPacoteSelecionado}
                   />
                 )
               })}
@@ -143,7 +143,7 @@ export default function CreditosPage() {
             <History size={24} className="text-blue-700" />
             <h2 className="text-xl font-bold text-slate-800">Extrato de movimentações</h2>
           </div>
-          
+
           {carregando ? (
             <div className="space-y-3">
               {[1, 2, 3].map(i => (
@@ -168,7 +168,7 @@ export default function CreditosPage() {
         </section>
       </div>
 
-      <CheckoutDialog 
+      <CheckoutDialog
         pacote={pacoteSelecionado}
         saldoAtual={saldo?.saldo ?? 0}
         onClose={() => setPacoteSelecionado(null)}

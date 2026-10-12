@@ -42,7 +42,7 @@ import {
   TooltipContent,
   TooltipProvider,
 } from "@/components/ui/tooltip"
-import AnimatedBackground from "@/components/ui/animated-background"
+
 
 
 /* ─── Password strength checker ─────────────────────────────── */
@@ -66,7 +66,7 @@ function RequiredLabel({ children, htmlFor }: { children: React.ReactNode; htmlF
   return (
     <label
       htmlFor={htmlFor}
-      className="text-sm font-medium text-gray-700 flex items-center gap-1"
+      className="text-sm font-medium text-slate-700 flex items-center gap-1"
     >
       {children}
       <span className="text-red-500 text-xs" aria-hidden="true">*</span>
@@ -265,9 +265,9 @@ export default function Form(): JSX.Element {
 
   return (
     <TooltipProvider>
-      <div className="relative min-h-screen w-full flex items-start justify-center pt-16 md:pt-24 pb-0 font-sans text-gray-900 overflow-hidden">
+      <div className="relative min-h-screen w-full flex items-start justify-center pt-16 md:pt-24 pb-0 font-sans text-heading overflow-hidden">
 
-        <AnimatedBackground />
+
 
         {/* container principal da animação */}
         <div className="relative overflow-hidden w-full max-w-[850px] h-[650px] max-h-[85vh] bg-white/85 backdrop-blur-md rounded-3xl z-10"
@@ -285,12 +285,12 @@ export default function Form(): JSX.Element {
               <div className="w-full max-w-[340px]">
                 <div className="mb-5">
                   <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl mb-3"
-                    style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)" }}
+                    style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-hover))" }}
                   >
                     <Building2 className="w-6 h-6 text-white" />
                   </div>
-                  <h1 className="font-bold text-2xl text-gray-900">Criar Conta</h1>
-                  <p className="text-sm text-gray-500 mt-1">Preencha os dados para solicitar credenciamento</p>
+                  <h1 className="font-bold text-2xl text-heading">Criar Conta</h1>
+                  <p className="text-sm text-muted mt-1">Preencha os dados para solicitar credenciamento</p>
                 </div>
 
                 <form
@@ -302,14 +302,14 @@ export default function Form(): JSX.Element {
                   <div className="flex flex-col gap-1 text-left">
                     <RequiredLabel htmlFor="reg-nome">Nome da Empresa</RequiredLabel>
                     <div className="relative">
-                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
                       <Input
                         id="reg-nome"
                         placeholder="Ex: MedTech Ltda"
-                        className={`pl-10 h-10 bg-gray-50 border rounded-xl transition-all duration-200
+                        className={`pl-10 h-10 bg-surface-subtle border rounded-xl transition-all duration-200
                           ${registerForm.formState.errors.nm_pessoaj
                             ? "border-red-300 focus-visible:ring-red-400"
-                            : "border-gray-200 focus-visible:ring-blue-500 hover:border-gray-300"}`}
+                            : "border-border focus-visible:ring-blue-500 hover:border-slate-300"}`}
                         {...registerForm.register("nm_pessoaj")}
                       />
                     </div>
@@ -325,14 +325,14 @@ export default function Form(): JSX.Element {
                   <div className="flex flex-col gap-1 text-left">
                     <RequiredLabel htmlFor="reg-razao">Razão Social</RequiredLabel>
                     <div className="relative">
-                      <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
                       <Input
                         id="reg-razao"
                         placeholder="Ex: MedTech Comércio Ltda"
-                        className={`pl-10 h-10 bg-gray-50 border rounded-xl transition-all duration-200
+                        className={`pl-10 h-10 bg-surface-subtle border rounded-xl transition-all duration-200
                           ${registerForm.formState.errors.razao_social
                             ? "border-red-300 focus-visible:ring-red-400"
-                            : "border-gray-200 focus-visible:ring-blue-500 hover:border-gray-300"}`}
+                            : "border-border focus-visible:ring-blue-500 hover:border-slate-300"}`}
                         {...registerForm.register("razao_social")}
                       />
                     </div>
@@ -348,15 +348,15 @@ export default function Form(): JSX.Element {
                   <div className="flex flex-col gap-1 text-left">
                     <RequiredLabel htmlFor="reg-cnpj">CNPJ</RequiredLabel>
                     <div className="relative">
-                      <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
                       <Input
                         id="reg-cnpj"
                         placeholder="00.000.000/0000-00"
                         maxLength={18}
-                        className={`pl-10 h-10 bg-gray-50 border rounded-xl transition-all duration-200
+                        className={`pl-10 h-10 bg-surface-subtle border rounded-xl transition-all duration-200
                           ${registerForm.formState.errors.nr_cnpj
                             ? "border-red-300 focus-visible:ring-red-400"
-                            : "border-gray-200 focus-visible:ring-blue-500 hover:border-gray-300"}`}
+                            : "border-border focus-visible:ring-blue-500 hover:border-slate-300"}`}
                         {...registerForm.register("nr_cnpj", {
                           onChange: (e) => {
                             e.target.value = formatCNPJ(e.target.value)
@@ -376,15 +376,15 @@ export default function Form(): JSX.Element {
                   <div className="flex flex-col gap-1 text-left">
                     <RequiredLabel htmlFor="reg-email">E-mail Corporativo</RequiredLabel>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
                       <Input
                         id="reg-email"
                         type="email"
                         placeholder="contato@empresa.com.br"
-                        className={`pl-10 h-10 bg-gray-50 border rounded-xl transition-all duration-200
+                        className={`pl-10 h-10 bg-surface-subtle border rounded-xl transition-all duration-200
                           ${registerForm.formState.errors.email_pj
                             ? "border-red-300 focus-visible:ring-red-400"
-                            : "border-gray-200 focus-visible:ring-blue-500 hover:border-gray-300"}`}
+                            : "border-border focus-visible:ring-blue-500 hover:border-slate-300"}`}
                         {...registerForm.register("email_pj")}
                       />
                     </div>
@@ -400,14 +400,14 @@ export default function Form(): JSX.Element {
                   <div className="flex flex-col gap-1 text-left">
                     <RequiredLabel htmlFor="reg-resp">Responsável Técnico</RequiredLabel>
                     <div className="relative">
-                      <UserCog className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      <UserCog className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
                       <Input
                         id="reg-resp"
                         placeholder="Nome completo"
-                        className={`pl-10 h-10 bg-gray-50 border rounded-xl transition-all duration-200
+                        className={`pl-10 h-10 bg-surface-subtle border rounded-xl transition-all duration-200
                           ${registerForm.formState.errors.resp_tec
                             ? "border-red-300 focus-visible:ring-red-400"
-                            : "border-gray-200 focus-visible:ring-blue-500 hover:border-gray-300"}`}
+                            : "border-border focus-visible:ring-blue-500 hover:border-slate-300"}`}
                         {...registerForm.register("resp_tec")}
                       />
                     </div>
@@ -427,10 +427,10 @@ export default function Form(): JSX.Element {
                       <Input
                         id="reg-telefone"
                         placeholder="(00) 00000-0000"
-                        className={`h-10 bg-gray-50 border rounded-xl transition-all duration-200
+                        className={`h-10 bg-surface-subtle border rounded-xl transition-all duration-200
                           ${registerForm.formState.errors.telefone
                             ? "border-red-300 focus-visible:ring-red-400"
-                            : "border-gray-200 focus-visible:ring-blue-500"}`}
+                            : "border-border focus-visible:ring-blue-500"}`}
                         {...registerForm.register("telefone")}
                       />
                     </div>
@@ -441,10 +441,10 @@ export default function Form(): JSX.Element {
                         id="reg-cep"
                         placeholder="00000-000"
                         maxLength={9}
-                        className={`h-10 bg-gray-50 border rounded-xl transition-all duration-200
+                        className={`h-10 bg-surface-subtle border rounded-xl transition-all duration-200
                           ${registerForm.formState.errors.cep
                             ? "border-red-300 focus-visible:ring-red-400"
-                            : "border-gray-200 focus-visible:ring-blue-500"}`}
+                            : "border-border focus-visible:ring-blue-500"}`}
                         {...registerForm.register("cep", {
                           onChange: (e) => {
                             let val = e.target.value.replace(/\D/g, "")
@@ -464,10 +464,10 @@ export default function Form(): JSX.Element {
                             id="reg-logradouro"
                             placeholder="Rua / Avenida"
                             readOnly
-                            className={`h-10 bg-gray-100 border rounded-xl transition-all duration-200
+                            className={`h-10 bg-surface-muted border rounded-xl transition-all duration-200
                               ${registerForm.formState.errors.logradouro
                                 ? "border-red-300 focus-visible:ring-red-400"
-                                : "border-gray-200 focus-visible:ring-blue-500"}`}
+                                : "border-border focus-visible:ring-blue-500"}`}
                             {...registerForm.register("logradouro")}
                           />
                         </div>
@@ -477,10 +477,10 @@ export default function Form(): JSX.Element {
                           <Input
                             id="reg-numero"
                             placeholder="Nº"
-                            className={`h-10 bg-gray-50 border rounded-xl transition-all duration-200
+                            className={`h-10 bg-surface-subtle border rounded-xl transition-all duration-200
                               ${registerForm.formState.errors.numero
                                 ? "border-red-300 focus-visible:ring-red-400"
-                                : "border-gray-200 focus-visible:ring-blue-500"}`}
+                                : "border-border focus-visible:ring-blue-500"}`}
                             {...registerForm.register("numero")}
                           />
                         </div>
@@ -491,10 +491,10 @@ export default function Form(): JSX.Element {
                             id="reg-bairro"
                             placeholder="Bairro"
                             readOnly
-                            className={`h-10 bg-gray-100 border rounded-xl transition-all duration-200
+                            className={`h-10 bg-surface-muted border rounded-xl transition-all duration-200
                               ${registerForm.formState.errors.bairro
                                 ? "border-red-300 focus-visible:ring-red-400"
-                                : "border-gray-200 focus-visible:ring-blue-500"}`}
+                                : "border-border focus-visible:ring-blue-500"}`}
                             {...registerForm.register("bairro")}
                           />
                         </div>
@@ -505,10 +505,10 @@ export default function Form(): JSX.Element {
                             id="reg-cidade"
                             placeholder="Cidade"
                             readOnly
-                            className={`h-10 bg-gray-100 border rounded-xl transition-all duration-200
+                            className={`h-10 bg-surface-muted border rounded-xl transition-all duration-200
                               ${registerForm.formState.errors.cidade
                                 ? "border-red-300 focus-visible:ring-red-400"
-                                : "border-gray-200 focus-visible:ring-blue-500"}`}
+                                : "border-border focus-visible:ring-blue-500"}`}
                             {...registerForm.register("cidade")}
                           />
                         </div>
@@ -520,10 +520,10 @@ export default function Form(): JSX.Element {
                             placeholder="SP"
                             maxLength={2}
                             readOnly
-                            className={`h-10 bg-gray-100 border rounded-xl transition-all duration-200 uppercase
+                            className={`h-10 bg-surface-muted border rounded-xl transition-all duration-200 uppercase
                               ${registerForm.formState.errors.estado
                                 ? "border-red-300 focus-visible:ring-red-400"
-                                : "border-gray-200 focus-visible:ring-blue-500"}`}
+                                : "border-border focus-visible:ring-blue-500"}`}
                             {...registerForm.register("estado")}
                           />
                         </div>
@@ -537,43 +537,43 @@ export default function Form(): JSX.Element {
                       <RequiredLabel htmlFor="reg-senha">Senha</RequiredLabel>
                       <Tooltip>
                         <TooltipTrigger
-                          className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 hover:bg-blue-100 transition-colors cursor-help"
+                          className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-200 hover:bg-blue-100 transition-colors cursor-help"
                           type="button"
                           aria-label="Requisitos de senha"
                         >
-                          <HelpCircle className="w-3 h-3 text-gray-500" />
+                          <HelpCircle className="w-3 h-3 text-muted" />
                         </TooltipTrigger>
                         <TooltipContent side="right" className="max-w-[260px] p-3 text-left">
                           <p className="font-semibold text-xs mb-1.5">Requisitos de senha segura:</p>
                           <ul className="text-xs space-y-1">
                             <li className="flex items-center gap-1.5">
                               {(watchPassword?.length || 0) >= 8
-                                ? <CheckCircle2 className="w-3 h-3 text-cyan-400 shrink-0" />
-                                : <AlertCircle className="w-3 h-3 text-gray-400 shrink-0" />}
+                                ? <CheckCircle2 className="w-3 h-3 text-success shrink-0" />
+                                : <AlertCircle className="w-3 h-3 text-subtle shrink-0" />}
                               Mínimo 8 caracteres
                             </li>
                             <li className="flex items-center gap-1.5">
                               {/[A-Z]/.test(watchPassword || "")
-                                ? <CheckCircle2 className="w-3 h-3 text-cyan-400 shrink-0" />
-                                : <AlertCircle className="w-3 h-3 text-gray-400 shrink-0" />}
+                                ? <CheckCircle2 className="w-3 h-3 text-success shrink-0" />
+                                : <AlertCircle className="w-3 h-3 text-subtle shrink-0" />}
                               1 letra maiúscula (A-Z)
                             </li>
                             <li className="flex items-center gap-1.5">
                               {/[a-z]/.test(watchPassword || "")
-                                ? <CheckCircle2 className="w-3 h-3 text-cyan-400 shrink-0" />
-                                : <AlertCircle className="w-3 h-3 text-gray-400 shrink-0" />}
+                                ? <CheckCircle2 className="w-3 h-3 text-success shrink-0" />
+                                : <AlertCircle className="w-3 h-3 text-subtle shrink-0" />}
                               1 letra minúscula (a-z)
                             </li>
                             <li className="flex items-center gap-1.5">
                               {/[0-9]/.test(watchPassword || "")
-                                ? <CheckCircle2 className="w-3 h-3 text-cyan-400 shrink-0" />
-                                : <AlertCircle className="w-3 h-3 text-gray-400 shrink-0" />}
+                                ? <CheckCircle2 className="w-3 h-3 text-success shrink-0" />
+                                : <AlertCircle className="w-3 h-3 text-subtle shrink-0" />}
                               1 número (0-9)
                             </li>
                             <li className="flex items-center gap-1.5">
                               {/[^A-Za-z0-9]/.test(watchPassword || "")
-                                ? <CheckCircle2 className="w-3 h-3 text-cyan-400 shrink-0" />
-                                : <AlertCircle className="w-3 h-3 text-gray-400 shrink-0" />}
+                                ? <CheckCircle2 className="w-3 h-3 text-success shrink-0" />
+                                : <AlertCircle className="w-3 h-3 text-subtle shrink-0" />}
                               1 caractere especial (!@#$%...)
                             </li>
                           </ul>
@@ -581,21 +581,21 @@ export default function Form(): JSX.Element {
                       </Tooltip>
                     </div>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
                       <Input
                         id="reg-senha"
                         type={showRegisterPassword ? "text" : "password"}
                         placeholder="Crie uma senha segura"
-                        className={`pl-10 pr-10 h-10 bg-gray-50 border rounded-xl transition-all duration-200
+                        className={`pl-10 pr-10 h-10 bg-surface-subtle border rounded-xl transition-all duration-200
                           ${registerForm.formState.errors.senha_pj
                             ? "border-red-300 focus-visible:ring-red-400"
-                            : "border-gray-200 focus-visible:ring-blue-500 hover:border-gray-300"}`}
+                            : "border-border focus-visible:ring-blue-500 hover:border-slate-300"}`}
                         {...registerForm.register("senha_pj")}
                       />
                       <button
                         type="button"
                         onClick={() => setShowRegisterPassword(!showRegisterPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-subtle hover:text-slate-600 transition-colors"
                         aria-label={showRegisterPassword ? "Ocultar senha" : "Mostrar senha"}
                       >
                         {showRegisterPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -605,7 +605,7 @@ export default function Form(): JSX.Element {
                     {/* Password strength bar */}
                     {watchPassword && watchPassword.length > 0 && (
                       <div className="flex items-center gap-2 mt-0.5">
-                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="flex-1 h-1.5 bg-surface-muted rounded-full overflow-hidden">
                           <div
                             className="h-full rounded-full transition-all duration-500 ease-out"
                             style={{
@@ -632,7 +632,7 @@ export default function Form(): JSX.Element {
                     type="submit"
                     disabled={isSubmit}
                     className="rounded-xl text-white font-semibold text-sm py-2.5 h-11 mt-1 transition-all duration-300 hover:shadow-lg active:scale-[0.98]"
-                    style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)" }}
+                    style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-hover))" }}
                   >
                     {isSubmit ? (
                       <span className="flex items-center gap-2">Enviando... <Spinner className="w-4 h-4" /></span>
@@ -641,7 +641,7 @@ export default function Form(): JSX.Element {
                     )}
                   </Button>
 
-                  <p className="text-[11px] text-gray-400 mt-1">
+                  <p className="text-[11px] text-subtle mt-1">
                     Todos os campos marcados com <span className="text-red-500">*</span> são obrigatórios
                   </p>
                 </form>
@@ -669,12 +669,12 @@ export default function Form(): JSX.Element {
                   <>
                     <div className="mb-5">
                       <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl mb-3"
-                        style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)" }}
+                        style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-hover))" }}
                       >
                         <Lock className="w-6 h-6 text-white" />
                       </div>
-                      <h1 className="font-bold text-2xl text-gray-900">Bem-vindo</h1>
-                      <p className="text-sm text-gray-500 mt-1">Acesse com suas credenciais corporativas</p>
+                      <h1 className="font-bold text-2xl text-heading">Bem-vindo</h1>
+                      <p className="text-sm text-muted mt-1">Acesse com suas credenciais corporativas</p>
                     </div>
 
                     {/* Login error banner */}
@@ -695,16 +695,16 @@ export default function Form(): JSX.Element {
                       <div className="flex flex-col gap-1 text-left">
                         <RequiredLabel htmlFor="cnpj-input">CNPJ</RequiredLabel>
                         <div className="relative">
-                          <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                          <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
                           <Input
                             id="cnpj-input"
                             placeholder="00.000.000/0000-00"
                             maxLength={18}
                             disabled={isSubmit}
-                            className={`w-full pl-10 h-10 bg-gray-50 border rounded-xl transition-all duration-200
+                            className={`w-full pl-10 h-10 bg-surface-subtle border rounded-xl transition-all duration-200
                               ${form.formState.errors.cnpj
                                 ? "border-red-300 focus-visible:ring-red-400"
-                                : "border-gray-200 focus-visible:ring-blue-500 hover:border-gray-300"}`}
+                                : "border-border focus-visible:ring-blue-500 hover:border-slate-300"}`}
                             {...form.register("cnpj", {
                               onChange: (e) => {
                                 e.target.value = formatCNPJ(e.target.value)
@@ -725,7 +725,7 @@ export default function Form(): JSX.Element {
                       <div className="flex flex-col gap-1 text-left">
                         <RequiredLabel htmlFor="password-input">Senha</RequiredLabel>
                         <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
                           <Input
                             id="password-input"
                             type={showLoginPassword ? "text" : "password"}
@@ -733,10 +733,10 @@ export default function Form(): JSX.Element {
                             disabled={isSubmit}
                             placeholder="Sua senha corporativa"
                             autoComplete="current-password"
-                            className={`w-full pl-10 pr-10 h-10 bg-gray-50 border rounded-xl transition-all duration-200
+                            className={`w-full pl-10 pr-10 h-10 bg-surface-subtle border rounded-xl transition-all duration-200
                               ${form.formState.errors.password
                                 ? "border-red-300 focus-visible:ring-red-400"
-                                : "border-gray-200 focus-visible:ring-blue-500 hover:border-gray-300"}`}
+                                : "border-border focus-visible:ring-blue-500 hover:border-slate-300"}`}
                             {...form.register("password", {
                               onChange: () => setLoginError(null)
                             })}
@@ -744,7 +744,7 @@ export default function Form(): JSX.Element {
                           <button
                             type="button"
                             onClick={() => setShowLoginPassword(!showLoginPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-subtle hover:text-slate-600 transition-colors"
                             aria-label={showLoginPassword ? "Ocultar senha" : "Mostrar senha"}
                           >
                             {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -765,7 +765,7 @@ export default function Form(): JSX.Element {
                           setLoginError(null)
                           form.reset()
                         }}
-                        className="text-sm text-gray-500 hover:text-blue-700 hover:underline transition-colors self-end -mt-1"
+                        className="text-sm text-muted hover:text-blue-700 hover:underline transition-colors self-end -mt-1"
                       >
                         Esqueceu sua senha?
                       </button>
@@ -774,7 +774,7 @@ export default function Form(): JSX.Element {
                         type="submit"
                         disabled={isSubmit}
                         className="w-full rounded-xl text-white font-semibold text-sm py-3.5 h-12 flex items-center justify-center transition-all duration-300 hover:shadow-lg active:scale-[0.98] mt-2"
-                        style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)", boxShadow: "0 4px 15px rgba(13, 148, 136, 0.2)" }}
+                        style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-hover))", boxShadow: "0 4px 15px rgba(13, 148, 136, 0.2)" }}
                       >
                         {isSubmit ? (
                           <span className="flex items-center gap-2">Entrando... <Spinner className="w-4 h-4" /></span>
@@ -783,6 +783,7 @@ export default function Form(): JSX.Element {
                         )}
                       </Button>
                     </form>
+
 
                     <button
                       onClick={() => setIsRightPanelActive(true)}
@@ -795,12 +796,12 @@ export default function Form(): JSX.Element {
                   <>
                     <div className="mb-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
                       <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl mb-3"
-                        style={{ background: "linear-gradient(135deg, #172554, #1e3a8a)" }}
+                        style={{ background: "linear-gradient(135deg, var(--brand-navy), var(--brand-header))" }}
                       >
                         <UserCog className="w-6 h-6 text-white" />
                       </div>
-                      <h1 className="font-bold text-2xl text-gray-900">Recuperar Senha</h1>
-                      <p className="text-sm text-gray-500 mt-1">Informe os dados da empresa para redefinir o acesso.</p>
+                      <h1 className="font-bold text-2xl text-heading">Recuperar Senha</h1>
+                      <p className="text-sm text-muted mt-1">Informe os dados da empresa para redefinir o acesso.</p>
                     </div>
 
                     {/* Reset error banner */}
@@ -820,14 +821,14 @@ export default function Form(): JSX.Element {
                       <div className="flex flex-col gap-1 text-left">
                         <RequiredLabel htmlFor="reset-cnpj">CNPJ</RequiredLabel>
                         <div className="relative">
-                          <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                          <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
                           <Input
                             id="reset-cnpj"
                             placeholder="00.000.000/0000-00"
                             maxLength={18}
                             disabled={isSubmit}
-                            className={`w-full pl-10 h-10 bg-gray-50 border rounded-xl transition-all duration-200
-                              ${resetPasswordForm.formState.errors.cnpj ? "border-red-300 focus-visible:ring-red-400" : "border-gray-200 focus-visible:ring-blue-500 hover:border-gray-300"}`}
+                            className={`w-full pl-10 h-10 bg-surface-subtle border rounded-xl transition-all duration-200
+                              ${resetPasswordForm.formState.errors.cnpj ? "border-red-300 focus-visible:ring-red-400" : "border-border focus-visible:ring-blue-500 hover:border-slate-300"}`}
                             {...resetPasswordForm.register("cnpj", {
                               onChange: (e) => {
                                 e.target.value = formatCNPJ(e.target.value)
@@ -848,14 +849,14 @@ export default function Form(): JSX.Element {
                       <div className="flex flex-col gap-1 text-left">
                         <RequiredLabel htmlFor="reset-email">E-mail Cadastrado</RequiredLabel>
                         <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
                           <Input
                             id="reset-email"
                             type="email"
                             disabled={isSubmit}
                             placeholder="exemplo@empresa.com"
-                            className={`w-full pl-10 pr-4 bg-gray-50 border py-2.5 h-11 rounded-xl transition-all duration-200
-                              ${resetPasswordForm.formState.errors.email ? "border-red-300 focus-visible:ring-red-400" : "border-gray-200 focus-visible:ring-blue-500"}`}
+                            className={`w-full pl-10 pr-4 bg-surface-subtle border py-2.5 h-11 rounded-xl transition-all duration-200
+                              ${resetPasswordForm.formState.errors.email ? "border-red-300 focus-visible:ring-red-400" : "border-border focus-visible:ring-blue-500"}`}
                             {...resetPasswordForm.register("email", {
                               onChange: () => setResetError(null)
                             })}
@@ -873,14 +874,14 @@ export default function Form(): JSX.Element {
                       <div className="flex flex-col gap-1 text-left">
                         <RequiredLabel htmlFor="reset-new-password">Nova Senha</RequiredLabel>
                         <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
                           <Input
                             id="reset-new-password"
                             type={showResetNewPassword ? "text" : "password"}
                             disabled={isSubmit}
                             placeholder="Digite a nova senha"
-                            className={`w-full pl-10 pr-10 bg-gray-50 border py-2.5 h-11 rounded-xl transition-all duration-200
-                              ${resetPasswordForm.formState.errors.new_password ? "border-red-300 focus-visible:ring-red-400" : "border-gray-200 focus-visible:ring-blue-500"}`}
+                            className={`w-full pl-10 pr-10 bg-surface-subtle border py-2.5 h-11 rounded-xl transition-all duration-200
+                              ${resetPasswordForm.formState.errors.new_password ? "border-red-300 focus-visible:ring-red-400" : "border-border focus-visible:ring-blue-500"}`}
                             {...resetPasswordForm.register("new_password", {
                               onChange: () => setResetError(null)
                             })}
@@ -888,7 +889,7 @@ export default function Form(): JSX.Element {
                           <button
                             type="button"
                             onClick={() => setShowResetNewPassword(!showResetNewPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-subtle hover:text-slate-600 transition-colors"
                           >
                             {showResetNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                           </button>
@@ -905,14 +906,14 @@ export default function Form(): JSX.Element {
                       <div className="flex flex-col gap-1 text-left">
                         <RequiredLabel htmlFor="reset-confirm-password">Confirmar Nova Senha</RequiredLabel>
                         <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
                           <Input
                             id="reset-confirm-password"
                             type={showResetConfirmPassword ? "text" : "password"}
                             disabled={isSubmit}
                             placeholder="Repita a nova senha"
-                            className={`w-full pl-10 pr-10 bg-gray-50 border py-2.5 h-11 rounded-xl transition-all duration-200
-                              ${resetPasswordForm.formState.errors.confirm_password ? "border-red-300 focus-visible:ring-red-400" : "border-gray-200 focus-visible:ring-blue-500"}`}
+                            className={`w-full pl-10 pr-10 bg-surface-subtle border py-2.5 h-11 rounded-xl transition-all duration-200
+                              ${resetPasswordForm.formState.errors.confirm_password ? "border-red-300 focus-visible:ring-red-400" : "border-border focus-visible:ring-blue-500"}`}
                             {...resetPasswordForm.register("confirm_password", {
                               onChange: () => setResetError(null)
                             })}
@@ -920,7 +921,7 @@ export default function Form(): JSX.Element {
                           <button
                             type="button"
                             onClick={() => setShowResetConfirmPassword(!showResetConfirmPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-subtle hover:text-slate-600 transition-colors"
                           >
                             {showResetConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                           </button>
@@ -938,7 +939,7 @@ export default function Form(): JSX.Element {
                           type="submit"
                           disabled={isSubmit}
                           className="w-full rounded-xl text-white font-semibold text-sm py-3.5 h-12 flex items-center justify-center transition-all duration-300 hover:shadow-lg active:scale-[0.98]"
-                          style={{ background: "linear-gradient(135deg, #172554, #1e3a8a)", boxShadow: "0 4px 15px rgba(23, 37, 84, 0.2)" }}
+                          style={{ background: "linear-gradient(135deg, var(--brand-navy), var(--brand-header))", boxShadow: "0 4px 15px rgba(23, 37, 84, 0.2)" }}
                         >
                           {isSubmit ? (
                             <span className="flex items-center gap-2">Redefinindo... <Spinner className="w-4 h-4" /></span>
@@ -956,7 +957,7 @@ export default function Form(): JSX.Element {
                             resetPasswordForm.reset()
                             setResetError(null)
                           }}
-                          className="text-sm font-semibold text-gray-500 hover:text-gray-800 py-2 transition-colors disabled:opacity-50"
+                          className="text-sm font-semibold text-muted hover:text-main py-2 transition-colors disabled:opacity-50"
                         >
                           Voltar para Login
                         </Button>

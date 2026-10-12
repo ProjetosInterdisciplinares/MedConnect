@@ -12,7 +12,7 @@ interface Props {
 }
 
 /**
- * Pílula de saldo exibida no header (navbar escura).
+ * Pílula de saldo exibida no header escuro.
  * Faz um "pop" sempre que o saldo muda.
  */
 export default function CreditosBadge({ saldo, isActive = false }: Props) {
@@ -44,14 +44,14 @@ export default function CreditosBadge({ saldo, isActive = false }: Props) {
       </span>
 
       <span className="flex flex-col leading-none pr-0.5">
-        <span className="text-[13px] font-extrabold text-white tabular-nums tracking-tight">
+        <span className="text-[13px] font-extrabold tabular-nums tracking-tight text-white">
           {saldo === null ? (
-            <span className="inline-block w-6 h-3 rounded bg-white/20 animate-pulse align-middle" />
+            <span className="inline-block w-6 h-3 rounded animate-pulse align-middle bg-white/20" />
           ) : (
             formatCreditos(saldo)
           )}
         </span>
-        <span className="hidden sm:block text-[9px] font-bold uppercase tracking-[0.12em] text-blue-200/60 mt-0.5 group-hover:text-amber-300/80 transition-colors">
+        <span className="hidden sm:block text-[9px] font-bold uppercase tracking-[0.12em] mt-0.5 transition-colors text-blue-200/60 group-hover:text-amber-300/80">
           créditos
         </span>
       </span>

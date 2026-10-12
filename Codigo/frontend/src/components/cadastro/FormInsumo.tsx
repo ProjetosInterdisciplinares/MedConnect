@@ -134,8 +134,8 @@ export default function FormInsumo() {
                 setInsumoForm((prev) => ({ ...prev, ds_tipo: value || undefined }))
               }}
             >
-              <SelectTrigger className={`w-full bg-white border rounded-lg text-sm h-11 ${
-                fieldErrors.ds_tipo ? "border-red-300 focus:ring-red-400" : "border-zinc-200"
+              <SelectTrigger className={`w-full bg-surface border rounded-lg text-sm h-11 ${
+                fieldErrors.ds_tipo ? "border-danger focus:ring-danger/20" : "border-border"
               }`}>
                 <SelectValue placeholder="Selecione uma categoria" />
               </SelectTrigger>
@@ -197,7 +197,7 @@ export default function FormInsumo() {
               }))
             }
           >
-            <SelectTrigger className="w-full bg-white border border-zinc-200 rounded-lg text-sm h-11">
+            <SelectTrigger className="w-full bg-surface border border-border rounded-lg text-sm h-11">
               <SelectValue placeholder="Selecione" />
             </SelectTrigger>
             <SelectContent>

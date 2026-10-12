@@ -157,40 +157,40 @@ export function PropostasTab() {
 
               // Configurações visuais baseadas no status
               let statusConfig = {
-                badgeBg: "bg-amber-50",
-                badgeBorder: "border-amber-200",
-                badgeText: "text-amber-700",
+                badgeBg: "bg-warning-subtle",
+                badgeBorder: "border-warning-border",
+                badgeText: "text-warning",
                 icon: <Clock size={12} className="mr-1.5" />,
                 label: "AGUARDANDO",
-                rowBg: "hover:bg-amber-50/20"
+                rowBg: "hover:bg-warning-subtle/20"
               }
 
               if (negociacao.status === "A") {
                 statusConfig = {
-                  badgeBg: "bg-emerald-50",
-                  badgeBorder: "border-emerald-200",
-                  badgeText: "text-emerald-700",
+                  badgeBg: "bg-success-subtle",
+                  badgeBorder: "border-success-border",
+                  badgeText: "text-success",
                   icon: <CheckCircle2 size={12} className="mr-1.5" />,
                   label: "APROVADA",
-                  rowBg: "hover:bg-emerald-50/20"
+                  rowBg: "hover:bg-success-subtle/20"
                 }
               } else if (negociacao.status === "R") {
                 statusConfig = {
-                  badgeBg: "bg-rose-50",
-                  badgeBorder: "border-rose-200",
-                  badgeText: "text-rose-700",
+                  badgeBg: "bg-danger-subtle",
+                  badgeBorder: "border-danger-border",
+                  badgeText: "text-danger",
                   icon: <Ban size={12} className="mr-1.5" />,
                   label: "RECUSADA",
-                  rowBg: "hover:bg-rose-50/20"
+                  rowBg: "hover:bg-danger-subtle/20"
                 }
               } else if (negociacao.status === "C") {
                 statusConfig = {
-                  badgeBg: "bg-slate-50",
-                  badgeBorder: "border-slate-200",
-                  badgeText: "text-slate-600",
+                  badgeBg: "bg-surface-muted",
+                  badgeBorder: "border-border",
+                  badgeText: "text-muted",
                   icon: <Ban size={12} className="mr-1.5" />,
                   label: "CANCELADA",
-                  rowBg: "hover:bg-slate-50/20"
+                  rowBg: "hover:bg-surface-subtle"
                 }
               }
 
@@ -249,7 +249,7 @@ export function PropostasTab() {
                             e.stopPropagation();
                             cancelarProposta(negociacao);
                           }} 
-                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all" 
+                          className="p-2 text-slate-400 hover:text-danger hover:bg-danger-subtle rounded-lg transition-all" 
                           title="Cancelar minha proposta"
                         >
                           <XCircle className="w-5 h-5" />
@@ -345,10 +345,10 @@ export function PropostasTab() {
                   </div>
                   <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center items-start">
                     <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</p>
-                    {selectedNegociacao.status === "P" && <span className="text-amber-600 font-bold text-sm bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200">Aguardando</span>}
-                    {selectedNegociacao.status === "A" && <span className="text-emerald-600 font-bold text-sm bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">Aprovada</span>}
-                    {selectedNegociacao.status === "R" && <span className="text-rose-600 font-bold text-sm bg-rose-50 px-2.5 py-1 rounded-md border border-rose-200">Recusada</span>}
-                    {selectedNegociacao.status === "C" && <span className="text-slate-600 font-bold text-sm bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200">Cancelada</span>}
+                    {selectedNegociacao.status === "P" && <span className="text-warning font-bold text-sm bg-warning-subtle px-2.5 py-1 rounded-md border border-warning-border">Aguardando</span>}
+                    {selectedNegociacao.status === "A" && <span className="text-success font-bold text-sm bg-success-subtle px-2.5 py-1 rounded-md border border-success-border">Aprovada</span>}
+                    {selectedNegociacao.status === "R" && <span className="text-danger font-bold text-sm bg-danger-subtle px-2.5 py-1 rounded-md border border-danger-border">Recusada</span>}
+                    {selectedNegociacao.status === "C" && <span className="text-muted font-bold text-sm bg-surface-muted px-2.5 py-1 rounded-md border border-border">Cancelada</span>}
                   </div>
                 </div>
 

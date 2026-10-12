@@ -5,10 +5,10 @@ import { TransacaoCredito } from "@/types"
 import { formatBRL, formatCreditos, formatDataHora } from "@/lib/creditos"
 
 const ESTILOS_TIPO = {
-  C: { icon: ArrowDownLeft, bg: "bg-emerald-50", fg: "text-emerald-600", ring: "ring-emerald-100" },
-  D: { icon: ArrowUpRight, bg: "bg-rose-50", fg: "text-rose-600", ring: "ring-rose-100" },
-  E: { icon: RotateCcw, bg: "bg-sky-50", fg: "text-sky-600", ring: "ring-sky-100" },
-  B: { icon: Gift, bg: "bg-violet-50", fg: "text-violet-600", ring: "ring-violet-100" },
+  C: { icon: ArrowDownLeft, bg: "bg-success-subtle", fg: "text-success", ring: "ring-success-border" },
+  D: { icon: ArrowUpRight, bg: "bg-danger-subtle", fg: "text-danger", ring: "ring-danger-border" },
+  E: { icon: RotateCcw, bg: "bg-brand-subtle", fg: "text-brand", ring: "ring-brand-border" },
+  B: { icon: Gift, bg: "bg-brand-subtle", fg: "text-brand", ring: "ring-brand-border" },
 } as const
 
 interface Props {
@@ -47,7 +47,7 @@ export default function ExtratoItem({ transacao: t, compact = false, index = 0 }
             </>
           )}
           {t.status !== "A" && (
-            <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase ${t.status === "P" ? "bg-amber-50 text-amber-600" : "bg-rose-50 text-rose-600"}`}>
+            <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase ${t.status === "P" ? "bg-warning-subtle text-warning" : "bg-danger-subtle text-danger"}`}>
               {t.status_display}
             </span>
           )}
@@ -55,7 +55,7 @@ export default function ExtratoItem({ transacao: t, compact = false, index = 0 }
       </div>
 
       <div className="text-right shrink-0">
-        <p className={`text-sm font-extrabold tabular-nums ${t.is_entrada ? "text-emerald-600" : "text-rose-600"}`}>
+        <p className={`text-sm font-extrabold tabular-nums ${t.is_entrada ? "text-success" : "text-danger"}`}>
           {t.is_entrada ? "+" : "−"}{formatCreditos(t.quantidade)}
         </p>
         {!compact && (

@@ -44,7 +44,7 @@ export default function PacoteCard({ pacote, economia, index, onComprar }: Props
             <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed min-h-[32px]">{pacote.descricao}</p>
           </div>
           {economia > 0 && (
-            <span className="shrink-0 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-extrabold uppercase tracking-wide ring-1 ring-emerald-100">
+            <span className="shrink-0 px-2 py-1 rounded-lg bg-success-subtle text-success text-[10px] font-extrabold uppercase tracking-wide ring-1 ring-success-border">
               −{economia}%
             </span>
           )}
@@ -86,7 +86,7 @@ export default function PacoteCard({ pacote, economia, index, onComprar }: Props
           className={`relative mt-6 w-full rounded-xl py-3 text-sm font-extrabold transition-all duration-300 cursor-pointer active:scale-[0.97]
             ${destaque
               ? "credit-shine text-blue-950 hover:brightness-105"
-              : "bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white border border-blue-100 hover:border-blue-600"
+              : "bg-brand-subtle text-brand hover:bg-brand hover:text-white border border-brand-border hover:border-brand"
             }`}
           style={destaque ? { background: "linear-gradient(135deg, #fde68a, #fbbf24 50%, #f59e0b)", boxShadow: "0 10px 24px -6px rgba(245,158,11,0.55)" } : undefined}
         >

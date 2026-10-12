@@ -2,15 +2,15 @@
 
 import React from "react"
 import MeusAnuncios from "@/components/perfil/HistoricoDeOperacoes"
-import AnimatedBackground from "@/components/ui/animated-background"
+
 import { Handshake } from "lucide-react"
 
 export default function MinhasNegociacoesPage() {
   return (
     <div className="relative min-h-screen w-full antialiased bg-slate-50/50 selection:bg-blue-500/20">
-      <AnimatedBackground />
+
       <div className="max-w-[1200px] mx-auto py-8 md:py-12 px-4 sm:px-6 lg:px-8 font-sans relative z-10">
-        
+
         {/* Header da Página */}
         <div className="mb-8 md:mb-12">
           <div className="flex items-center gap-3 mb-2">

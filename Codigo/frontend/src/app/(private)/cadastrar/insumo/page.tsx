@@ -10,12 +10,12 @@ export default function CadastroInsumoPage() {
           Cadastro de Insumos
         </h1>
 
-        <p className="text-zinc-500 text-sm mt-1">
+        <p className="text-muted text-sm mt-1">
           Cadastre novos insumos.
         </p>
       </div>
 
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 md:p-8 shadow-sm">
+      <div className="bg-surface border border-border rounded-2xl p-6 md:p-8 shadow-sm">
         <FormInsumo />
       </div>
     </div>

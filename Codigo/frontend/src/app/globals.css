@@ -46,9 +46,85 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* ─── MedConnect Design Tokens ─── */
+  --color-brand-navy: var(--brand-navy);
+  --color-brand-header: var(--brand-header);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-subtle: var(--brand-subtle);
+  --color-brand-border: var(--brand-border);
+
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-surface-muted: var(--surface-muted);
+
+  --color-border-subtle: var(--border-subtle);
+
+  --color-main: var(--text-main);
+  --color-heading: var(--text-heading);
+  --color-muted-text: var(--text-muted);
+  --color-text-main: var(--text-main);
+  --color-text-heading: var(--text-heading);
+  --color-text-muted: var(--text-muted);
+  --color-text-subtle: var(--text-subtle);
+  --color-text-inverted: var(--text-inverted);
+  --color-subtle: var(--text-subtle);
+  --color-inverted: var(--text-inverted);
+
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-success-border: var(--success-border);
+
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-warning-border: var(--warning-border);
+
+  --color-danger: var(--danger);
+  --color-danger-subtle: var(--danger-subtle);
+  --color-danger-border: var(--danger-border);
 }
 
 :root {
+  --navbar-height: 64px;
+  --sticky-gap: 16px;
+
+  /* ─── MedConnect Standardized Design Tokens ─── */
+  --brand-navy: #172554;
+  --brand-header: #0f3b57;
+  --brand: #2563eb;
+  --brand-hover: #1d4ed8;
+  --brand-accent: #3b82f6;
+  --brand-subtle: #eff6ff;
+  --brand-border: #dbeafe;
+
+  --canvas: #f4f6f9;
+  --surface: #ffffff;
+  --surface-subtle: #f8fafc;
+  --surface-muted: #f1f5f9;
+
+  --border-subtle: #f1f5f9;
+
+  --text-main: #1e293b;
+  --text-heading: #0f172a;
+  --text-muted: #64748b;
+  --text-subtle: #94a3b8;
+  --text-inverted: #ffffff;
+
+  --success: #059669;
+  --success-subtle: #ecfdf5;
+  --success-border: #a7f3d0;
+
+  --warning: #d97706;
+  --warning-subtle: #fffbeb;
+  --warning-border: #fde68a;
+
+  --danger: #dc2626;
+  --danger-subtle: #fef2f2;
+  --danger-border: #fecaca;
+
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -127,6 +203,22 @@
   html {
     @apply font-sans;
   }
+}
+
+@utility text-main {
+  color: var(--text-main);
+}
+@utility text-heading {
+  color: var(--text-heading);
+}
+@utility text-muted {
+  color: var(--text-muted);
+}
+@utility text-subtle {
+  color: var(--text-subtle);
+}
+@utility text-inverted {
+  color: var(--text-inverted);
 }
 
 /* ─── Landing Page Animations ─────────────────────────────── */
@@ -337,4 +429,59 @@ html {
   .animate-credit-rise {
     animation: none;
   }
+}
+
+/* ─── Cursor Pointer Global para Todos os Elementos Clicáveis ─── */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]):not([data-disabled="true"]),
+a,
+select:not(:disabled),
+summary,
+input[type="button"]:not(:disabled),
+input[type="submit"]:not(:disabled),
+input[type="reset"]:not(:disabled),
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled),
+label[for],
+label:has(input:not(:disabled)),
+[data-slot="select-trigger"]:not([data-disabled="true"]),
+[data-slot="select-item"]:not([data-disabled="true"]),
+[data-slot="dropdown-menu-item"]:not([data-disabled="true"]),
+[data-slot="dropdown-menu-trigger"]:not([data-disabled="true"]),
+[data-slot="dropdown-menu-sub-trigger"]:not([data-disabled="true"]),
+[data-slot="dropdown-menu-checkbox-item"]:not([data-disabled="true"]),
+[data-slot="dropdown-menu-radio-item"]:not([data-disabled="true"]),
+[data-slot="dialog-close"]:not([data-disabled="true"]),
+[data-slot="sheet-close"]:not([data-disabled="true"]),
+[data-slot="alert-dialog-trigger"]:not([data-disabled="true"]),
+[data-slot="alert-dialog-action"]:not([data-disabled="true"]),
+[data-slot="alert-dialog-cancel"]:not([data-disabled="true"]),
+[data-slot="accordion-trigger"]:not([aria-disabled="true"]),
+[data-slot="tabs-trigger"]:not([aria-disabled="true"]),
+[data-slot="navigation-menu-trigger"]:not([aria-disabled="true"]),
+[data-slot="navigation-menu-link"]:not([aria-disabled="true"]),
+[data-slot="pagination-link"]:not([aria-disabled="true"]),
+[data-slot="pagination-previous"]:not([aria-disabled="true"]),
+[data-slot="pagination-next"]:not([aria-disabled="true"]),
+[role="tab"]:not([aria-disabled="true"]):not([data-disabled="true"]),
+[role="menuitem"]:not([aria-disabled="true"]):not([data-disabled="true"]),
+[role="menuitemcheckbox"]:not([aria-disabled="true"]):not([data-disabled="true"]),
+[role="menuitemradio"]:not([aria-disabled="true"]):not([data-disabled="true"]),
+[role="option"]:not([aria-disabled="true"]):not([data-disabled="true"]),
+[role="switch"]:not([aria-disabled="true"]):not([data-disabled="true"]),
+[role="checkbox"]:not([aria-disabled="true"]):not([data-disabled="true"]),
+[role="radio"]:not([aria-disabled="true"]):not([data-disabled="true"]),
+[role="link"]:not([aria-disabled="true"]):not([data-disabled="true"]),
+[data-clickable="true"] {
+  cursor: pointer;
+}
+
+button:disabled,
+[role="button"][aria-disabled="true"],
+[role="button"][data-disabled="true"],
+input:disabled,
+select:disabled,
+[data-disabled="true"],
+[aria-disabled="true"] {
+  cursor: not-allowed;
 }

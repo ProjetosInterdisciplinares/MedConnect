@@ -158,7 +158,7 @@ export default function CheckoutDialog({ pacote, saldoAtual, onClose, onSuccess 
                 onClick={confirmar}
                 disabled={etapa === "processando"}
                 className="credit-shine w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-extrabold text-white transition-all active:scale-[0.98] disabled:opacity-80 cursor-pointer"
-                style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)", boxShadow: "0 10px 24px -8px rgba(37,99,235,0.6)" }}
+                style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-hover))", boxShadow: "0 10px 24px -8px rgba(37,99,235,0.6)" }}
               >
                 {etapa === "processando" ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> Processando pagamento...</>

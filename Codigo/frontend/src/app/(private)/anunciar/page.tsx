@@ -27,7 +27,7 @@ import servicesGerarAnuncio from "@/server/(POST)-gerar-anuncio"
 import servicesGetCreditosSaldo from "@/server/(GET)-creditos-saldo"
 import { notificarCreditosAtualizados } from "@/lib/creditos"
 import { CreateAnuncioForm, MatMed } from "@/types"
-import AnimatedBackground from "@/components/ui/animated-background"
+
 import CadastroMassa from "@/components/anunciar/cadastro-massa"
 
 import InputField from "@/components/cadastro/InputField"
@@ -97,10 +97,10 @@ export default function AnunciarPage() {
   const [isInsufficientCreditsOpen, setIsInsufficientCreditsOpen] = useState(false)
   const [missingCreditsFeature, setMissingCreditsFeature] = useState("")
   const [lastSaved, setLastSaved] = useState<CreateAnuncioForm | null>(null)
-  
+
   // Modal genérico para alertas de erro
   const [errorModal, setErrorModal] = useState<{ open: boolean; title: string; message: string }>({ open: false, title: "", message: "" })
-  
+
   function showError(title: string, message: string) {
     setErrorModal({ open: true, title, message })
   }
@@ -158,7 +158,7 @@ export default function AnunciarPage() {
 
       if (response.texto_sugerido) {
         setAnuncioForm((prev) => ({ ...prev, ds_obs: response.texto_sugerido }))
-        
+
         servicesGetCreditosSaldo().then(res => {
           if (!("isError" in res)) notificarCreditosAtualizados(res.saldo)
         })
@@ -245,7 +245,7 @@ export default function AnunciarPage() {
   async function handleConfirmPublish() {
     if (!lastSaved) return
     setIsConfirmPublishOpen(false)
-    
+
     const response = await (servicesCreateAnuncio as any)(lastSaved)
 
     if (response && "isError" in response) {
@@ -260,7 +260,7 @@ export default function AnunciarPage() {
     }
 
     setIsSuccessOpen(true)
-    
+
     // Atualiza o saldo global pois consumimos 5 créditos
     servicesGetCreditosSaldo().then(res => {
       if (!("isError" in res)) notificarCreditosAtualizados(res.saldo)
@@ -289,7 +289,7 @@ export default function AnunciarPage() {
 
   return (
     <div className="relative min-h-screen w-full antialiased bg-slate-50/50 selection:bg-blue-900/20">
-      <AnimatedBackground />
+
       <div className="max-w-7xl mx-auto py-8 px-4 relative z-10">
 
         {/* Header da Página */}
@@ -383,7 +383,7 @@ export default function AnunciarPage() {
                       >
                         <SelectTrigger className={`w-full bg-slate-50 border rounded-xl text-sm h-[42px] ${fieldErrors.cd_mat ? "border-red-300 focus:ring-2 focus:ring-red-400" : "border-slate-200 focus:ring-blue-900/20 focus:border-blue-900"
                           }`}>
-                          <div className="flex items-center gap-2 text-zinc-500 truncate">
+                          <div className="flex items-center gap-2 text-muted truncate">
                             <Package size={16} className="shrink-0" />
                             <SelectValue placeholder="Selecione o insumo cadastrado">
                               {anuncioForm.cd_mat
@@ -702,7 +702,7 @@ export default function AnunciarPage() {
               <p className="text-slate-600 mb-6 text-sm font-medium leading-relaxed">
                 {errorModal.message}
               </p>
-              
+
               <button
                 type="button"
                 onClick={() => setErrorModal(prev => ({ ...prev, open: false }))}
@@ -731,19 +731,19 @@ export default function AnunciarPage() {
               {lastSaved && (
                 <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3 text-sm mb-6">
                   <p className="flex justify-between border-b border-slate-100 pb-2">
-                    <span className="font-semibold text-slate-500">Insumo</span> 
+                    <span className="font-semibold text-slate-500">Insumo</span>
                     <span className="font-bold text-slate-800 text-right">{materiais.find(m => String(m.cd_mat) === String(lastSaved.cd_mat))?.ds_mat || "Insumo"}</span>
                   </p>
                   <p className="flex justify-between border-b border-slate-100 pb-2">
-                    <span className="font-semibold text-slate-500">Quantidade</span> 
+                    <span className="font-semibold text-slate-500">Quantidade</span>
                     <span className="font-bold text-slate-800 text-right">{lastSaved.qtd_mat} unid.</span>
                   </p>
                   <p className="flex justify-between border-b border-slate-100 pb-2">
-                    <span className="font-semibold text-slate-500">Valor Base</span> 
+                    <span className="font-semibold text-slate-500">Valor Base</span>
                     <span className="font-bold text-slate-800 text-right">R$ {lastSaved.val_base}</span>
                   </p>
                   <p className="flex justify-between">
-                    <span className="font-semibold text-slate-500">Custo da Ação</span> 
+                    <span className="font-semibold text-slate-500">Custo da Ação</span>
                     <span className="font-black text-amber-500 text-right flex items-center gap-1.5">
                       <Coins size={16} />
                       5 Créditos
@@ -790,7 +790,7 @@ export default function AnunciarPage() {
                 Você não possui saldo suficiente para {missingCreditsFeature}. <br />
                 Adquira um pacote de créditos para continuar turbinando suas negociações.
               </p>
-              
+
               <div className="flex flex-col gap-3 w-full">
                 <button
                   type="button"

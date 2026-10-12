@@ -1,17 +1,16 @@
 "use client"
 
-import React, { useEffect, useState, useMemo, useCallback } from "react"
+import React, { useEffect, useState, useMemo, useRef } from "react"
 import servicesGetAnuncios from "@/server/(GET)-anuncios"
 import servicesGetMaterials from "@/server/(GET)-materials-and-brands"
 import servicesGetMinhaPessoaJuridica from "@/server/(GET)-minha-pessoa-juridica"
 import servicesRegistrarInteresse from "@/server/(POST)-registrar-interesse"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, PackageX, SlidersHorizontal, MapPin, Map as MapIcon, Store, Sparkles, X, Star } from "lucide-react"
+import { Search, PackageX, SlidersHorizontal, MapPin, Sparkles, X, RotateCcw } from "lucide-react"
 import { Anuncio, MatMed, PessoaJuridica } from "@/types"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Pagination } from "@/components/ui/pagination"
-import AnimatedBackground from "@/components/ui/animated-background"
 import { AuthManager } from "@/lib/AuthManager"
 import {
   Dialog,
@@ -19,21 +18,33 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useIsStuck } from "@/hooks/useIsStuck"
+import { SearchAndSort } from "@/components/catalogo/SearchAndSort"
 
-const ITEMS_PER_PAGE = 6;
+// Quantidade de anúncios por página (9 itens compõe perfeitamente o grid 3x3 do conceito visual)
+const ITEMS_PER_PAGE = 9
 
+/**
+ * Calcula a distância em quilômetros entre duas coordenadas geográficas (Fórmula de Haversine).
+ */
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371; // km
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+  const R = 6371 // Raio da Terra em km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLon = ((lon2 - lon1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
 }
 
-export default function Anuncios() {
+export default function CatalogoPage() {
+  /* ─────────────────────────────────────────────────────────────
+   * ESTADOS PRINCIPAIS (Dados, busca, filtros e paginação)
+   * ───────────────────────────────────────────────────────────── */
   const [anuncios, setAnuncios] = useState<Anuncio[]>([])
   const [materiais, setMateriais] = useState<MatMed[]>([])
   const [search, setSearch] = useState("")
@@ -42,22 +53,67 @@ export default function Anuncios() {
   const [loggedUserId, setLoggedUserId] = useState<number | null>(null)
   const [meuPerfil, setMeuPerfil] = useState<PessoaJuridica | null>(null)
 
+  // Filtros da barra lateral
   const [categoria, setCategoria] = useState("Todas")
   const [fabricanteFiltro, setFabricanteFiltro] = useState("")
   const searchParams = useSearchParams()
   const initialAnunciante = searchParams.get("anunciante") || ""
   const [anuncianteFiltro, setAnuncianteFiltro] = useState(initialAnunciante)
   const [distanciaMax, setDistanciaMax] = useState<string>("Todas")
-  const [selectedMapAnuncio, setSelectedMapAnuncio] = useState<Anuncio | null>(null)
-  const [ordenacao, setOrdenacao] = useState("recentes")
   const [precoMin, setPrecoMin] = useState("")
   const [precoMax, setPrecoMax] = useState("")
+  const [ordenacao, setOrdenacao] = useState("Recentes")
 
+  // Estado para visualização de mapa em modal
+  const [selectedMapAnuncio, setSelectedMapAnuncio] = useState<Anuncio | null>(null)
+
+  // Controle de responsividade para filtros no mobile e tablet
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
+
+  // Paginação e navegação
   const [currentPage, setCurrentPage] = useState(1)
   const router = useRouter()
-  const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Detecção de sticky card com IntersectionObserver
+  const { isStuck, sentinelRef } = useIsStuck()
+  const mainSearchInputRef = useRef<HTMLInputElement | null>(null)
+  const stickySearchInputRef = useRef<HTMLInputElement | null>(null)
 
+  // Preserva o foco e posição do cursor caso o usuário esteja digitando durante a transição
+  useEffect(() => {
+    const activeEl = typeof document !== "undefined" ? document.activeElement : null
+    const wasMainFocused = activeEl === mainSearchInputRef.current
+    const wasStickyFocused = activeEl === stickySearchInputRef.current
+
+    if (isStuck && wasMainFocused) {
+      const start = mainSearchInputRef.current?.selectionStart ?? null
+      const end = mainSearchInputRef.current?.selectionEnd ?? null
+      requestAnimationFrame(() => {
+        if (stickySearchInputRef.current) {
+          stickySearchInputRef.current.focus()
+          if (start !== null && end !== null) {
+            stickySearchInputRef.current.setSelectionRange(start, end)
+          }
+        }
+      })
+    } else if (!isStuck && wasStickyFocused) {
+      const start = stickySearchInputRef.current?.selectionStart ?? null
+      const end = stickySearchInputRef.current?.selectionEnd ?? null
+      requestAnimationFrame(() => {
+        if (mainSearchInputRef.current) {
+          mainSearchInputRef.current.focus()
+          if (start !== null && end !== null) {
+            mainSearchInputRef.current.setSelectionRange(start, end)
+          }
+        }
+      })
+    }
+  }, [isStuck])
+
+  /* ─────────────────────────────────────────────────────────────
+   * CARREGAMENTO INICIAL DE DADOS
+   * ───────────────────────────────────────────────────────────── */
   useEffect(() => {
     async function load() {
       try {
@@ -76,7 +132,7 @@ export default function Anuncios() {
           setMeuPerfil(perfilResult as PessoaJuridica)
         }
       } catch (error) {
-        console.error("Erro ao buscar dados do catálogo:", error)
+        console.error("Erro ao carregar dados do catálogo:", error)
       } finally {
         setLoading(false)
       }
@@ -85,104 +141,177 @@ export default function Anuncios() {
     load()
   }, [])
 
+  /* ─────────────────────────────────────────────────────────────
+   * MEMOS E TRATAMENTO DE FILTROS
+   * ───────────────────────────────────────────────────────────── */
+  // Dicionário de materiais por código para lookup rápido O(1)
   const materiaisMap = useMemo(() => {
     return new Map(materiais.map((m) => [m.cd_mat, m]))
   }, [materiais])
 
+  // Lista única e ordenada de fabricantes existentes nos anúncios
   const fabricantesUnicos = useMemo(() => {
     const fabs = new Set<string>()
-    anuncios.forEach(a => {
-      if (loggedUserId !== null && a.cd_pessoa_anunciante === loggedUserId) return;
+    anuncios.forEach((a) => {
+      if (loggedUserId !== null && a.cd_pessoa_anunciante === loggedUserId) return
       const materialObj = materiaisMap.get(a.cd_mat)
-      const fab = String(materialObj?.ds_marca || (a as any).nm_fabricante || (a as any).ds_marca_mat || "Outros").trim()
+      const fab = String(
+        materialObj?.ds_marca ||
+        (a as any).nm_fabricante ||
+        (a as any).ds_marca_mat ||
+        "Outros"
+      ).trim()
       if (fab && fab !== "undefined") fabs.add(fab)
     })
     return Array.from(fabs).sort()
   }, [anuncios, loggedUserId, materiaisMap])
 
-  const localizacoesUnicas = useMemo(() => {
-    const locs = new Set<string>()
-    anuncios.forEach(a => {
-      if (loggedUserId !== null && a.cd_pessoa_anunciante === loggedUserId) return;
-      // Usando o nome do anunciante como "localização" caso não exista cidade no banco
-      const loc = String(a.anunciante_razao || (a as any).ds_cidade || (a as any).nm_cidade || "Desconhecida").trim()
-      if (loc && loc !== "undefined") locs.add(loc)
-    })
-    return Array.from(locs).sort()
-  }, [anuncios, loggedUserId])
-
+  // Filtragem e ordenação dos anúncios
   const filteredAnuncios = useMemo(() => {
     const term = appliedSearch.toLowerCase().trim()
     let filtered = anuncios.filter((a) => {
-      if (loggedUserId !== null && a.cd_pessoa_anunciante === loggedUserId) return false;
+      // Ignora anúncios publicados pela própria instituição logada
+      if (loggedUserId !== null && a.cd_pessoa_anunciante === loggedUserId) return false
 
       const materialObj = materiaisMap.get(a.cd_mat)
       const nomeProduct = materialObj?.ds_mat?.toLowerCase() ?? ""
       const tipoProduct = materialObj?.ds_tipo ?? ""
-      const vendedor = String((a as any).nm_vendedor || (a as any).ds_empresa || (a as any).anunciante_razao || "").toLowerCase()
+      const vendedor = String(
+        (a as any).nm_vendedor || (a as any).ds_empresa || (a as any).anunciante_razao || ""
+      ).toLowerCase()
       const nrAnuncio = a.nr_anuncio?.toString() || ""
-      const fabricante = String(materialObj?.ds_marca || (a as any).nm_fabricante || (a as any).ds_marca_mat || "Outros").toLowerCase()
-      const anuncianteStr = String(a.anunciante_razao || (a as any).nm_vendedor || (a as any).ds_empresa || "").toLowerCase()
+      const fabricante = String(
+        materialObj?.ds_marca || (a as any).nm_fabricante || (a as any).ds_marca_mat || "Outros"
+      ).toLowerCase()
+      const anuncianteStr = String(
+        a.anunciante_razao || (a as any).nm_vendedor || (a as any).ds_empresa || ""
+      ).toLowerCase()
 
-      const matchesSearch = (
+      // Termo de busca
+      const matchesSearch =
         nrAnuncio.includes(term) ||
         nomeProduct.includes(term) ||
         vendedor.includes(term) ||
         fabricante.includes(term)
-      )
 
-      const matchesFabricante = !fabricanteFiltro || fabricante.includes(fabricanteFiltro.toLowerCase())
-      const matchesAnunciante = !anuncianteFiltro || anuncianteStr.includes(anuncianteFiltro.toLowerCase())
+      // Filtro de fabricante
+      const matchesFabricante =
+        !fabricanteFiltro || fabricante.includes(fabricanteFiltro.toLowerCase())
 
+      // Filtro de anunciante
+      const matchesAnunciante =
+        !anuncianteFiltro || anuncianteStr.includes(anuncianteFiltro.toLowerCase())
+
+      // Filtro de categoria
       const matchesCategoria =
         categoria === "Todas" ||
-        (categoria === "Medicamentos" && (tipoProduct === "MD01" || tipoProduct.toLowerCase() === "medicamento")) ||
-        (categoria === "Materiais Hospitalares" && (tipoProduct === "MT01" || tipoProduct.toLowerCase() === "material hospitalar"));
+        (categoria === "Medicamentos" &&
+          (tipoProduct === "MD01" || tipoProduct.toLowerCase() === "medicamento")) ||
+        (categoria === "Materiais Hospitalares" &&
+          (tipoProduct === "MT01" || tipoProduct.toLowerCase() === "material hospitalar"))
 
+      // Filtro de preço mínimo e máximo
       const valBase = Number((a as any).val_base || 0)
       const matchesPrecoMin = precoMin === "" || valBase >= Number(precoMin)
       const matchesPrecoMax = precoMax === "" || valBase <= Number(precoMax)
 
-      let matchesDistancia = true;
-      if (distanciaMax !== "Todas" && meuPerfil?.latitude && meuPerfil?.longitude && a.anunciante_lat && a.anunciante_lon) {
-        const d = getDistance(Number(meuPerfil.latitude), Number(meuPerfil.longitude), Number(a.anunciante_lat), Number(a.anunciante_lon));
-        matchesDistancia = d <= Number(distanciaMax);
+      // Filtro por raio de distância geográfica
+      let matchesDistancia = true
+      if (
+        distanciaMax !== "Todas" &&
+        meuPerfil?.latitude &&
+        meuPerfil?.longitude &&
+        a.anunciante_lat &&
+        a.anunciante_lon
+      ) {
+        const d = getDistance(
+          Number(meuPerfil.latitude),
+          Number(meuPerfil.longitude),
+          Number(a.anunciante_lat),
+          Number(a.anunciante_lon)
+        )
+        matchesDistancia = d <= Number(distanciaMax)
       } else if (distanciaMax !== "Todas") {
-        matchesDistancia = false; // Se tiver filtro de dist mas n temos lat/long
+        matchesDistancia = false
       }
 
-      return matchesSearch && matchesFabricante && matchesAnunciante && matchesCategoria && matchesPrecoMin && matchesPrecoMax && matchesDistancia
+      return (
+        matchesSearch &&
+        matchesFabricante &&
+        matchesAnunciante &&
+        matchesCategoria &&
+        matchesPrecoMin &&
+        matchesPrecoMax &&
+        matchesDistancia
+      )
     })
 
-    if (ordenacao === "recentes") {
-      // 1. Primeiro separa os recomendados dos normais
-      let recomendados = filtered.filter(a => a.is_recommended);
-      let normais = filtered.filter(a => !a.is_recommended);
+    // Ordenação dos resultados
+    if (ordenacao === "recentes" || ordenacao === "Recentes") {
+      let recomendados = filtered.filter((a) => a.is_recommended)
+      let normais = filtered.filter((a) => !a.is_recommended)
 
-      // 3. Limita a 6 recomendados na vitrine, transformando o resto em "normais"
+      // Limita até 6 recomendados no topo da vitrine
       if (recomendados.length > 6) {
-        const extras = recomendados.slice(6).map(item => ({ ...item, is_recommended: false }));
-        normais = [...normais, ...extras];
-        recomendados = recomendados.slice(0, 6);
+        const extras = recomendados.slice(6).map((item) => ({ ...item, is_recommended: false }))
+        normais = [...normais, ...extras]
+        recomendados = recomendados.slice(0, 6)
       }
 
-      // 4. Ordena os normais por data (mais recentes)
-      normais = normais.sort((a, b) => b.nr_anuncio - a.nr_anuncio);
-
-      // 5. Junta tudo
-      filtered = [...recomendados, ...normais];
-
-    } else if (ordenacao === "antigos") {
+      normais = normais.sort((a, b) => b.nr_anuncio - a.nr_anuncio)
+      filtered = [...recomendados, ...normais]
+    } else if (ordenacao === "antigos" || ordenacao === "Antigos") {
       filtered = filtered.sort((a, b) => a.nr_anuncio - b.nr_anuncio)
-    } else if (ordenacao === "preco_menor") {
-      filtered = filtered.sort((a, b) => Number((a as any).val_base || 0) - Number((b as any).val_base || 0))
-    } else if (ordenacao === "preco_maior") {
-      filtered = filtered.sort((a, b) => Number((b as any).val_base || 0) - Number((a as any).val_base || 0))
+    } else if (ordenacao === "preco_menor" || ordenacao === "Menor preço") {
+      filtered = filtered.sort(
+        (a, b) => Number((a as any).val_base || 0) - Number((b as any).val_base || 0)
+      )
+    } else if (ordenacao === "preco_maior" || ordenacao === "Maior preço") {
+      filtered = filtered.sort(
+        (a, b) => Number((b as any).val_base || 0) - Number((a as any).val_base || 0)
+      )
     }
 
-    return filtered;
-  }, [anuncios, materiaisMap, appliedSearch, fabricanteFiltro, anuncianteFiltro, distanciaMax, meuPerfil, loggedUserId, categoria, ordenacao, precoMin, precoMax])
+    return filtered
+  }, [
+    anuncios,
+    materiaisMap,
+    appliedSearch,
+    fabricanteFiltro,
+    anuncianteFiltro,
+    distanciaMax,
+    meuPerfil,
+    loggedUserId,
+    categoria,
+    ordenacao,
+    precoMin,
+    precoMax,
+  ])
 
+  // Contagem de filtros ativos para badge e botão de reset
+  const activeFiltersCount = useMemo(() => {
+    let count = 0
+    if (categoria !== "Todas") count++
+    if (fabricanteFiltro) count++
+    if (anuncianteFiltro) count++
+    if (distanciaMax !== "Todas") count++
+    if (precoMin !== "") count++
+    if (precoMax !== "") count++
+    return count
+  }, [categoria, fabricanteFiltro, anuncianteFiltro, distanciaMax, precoMin, precoMax])
+
+  // Limpa todos os filtros aplicados
+  const handleClearFilters = () => {
+    setCategoria("Todas")
+    setFabricanteFiltro("")
+    setAnuncianteFiltro("")
+    setDistanciaMax("Todas")
+    setPrecoMin("")
+    setPrecoMax("")
+    setCurrentPage(1)
+  }
+
+  // Paginação
   const totalPages = useMemo(() => {
     return Math.ceil(filteredAnuncios.length / ITEMS_PER_PAGE) || 1
   }, [filteredAnuncios])
@@ -192,34 +321,28 @@ export default function Anuncios() {
     return filteredAnuncios.slice(startIndex, startIndex + ITEMS_PER_PAGE)
   }, [filteredAnuncios, currentPage])
 
+  // Manipulação da busca com debounce para persistência de interesse
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const term = e.target.value;
-    setSearch(term);
-    setAppliedSearch(term.trim());
-    setCurrentPage(1);
+    const term = e.target.value
+    setSearch(term)
+    setAppliedSearch(term.trim())
+    setCurrentPage(1)
 
     if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
+      clearTimeout(searchTimeoutRef.current)
     }
 
     if (term.trim().length > 2) {
       searchTimeoutRef.current = setTimeout(() => {
-        triggerProfileUpdate(term.trim());
-      }, 1500);
+        triggerProfileUpdate(term.trim())
+      }, 1500)
     }
   }
 
-  // Função isolada para salvar o termo sem travar a interface
   const triggerProfileUpdate = (termo: string) => {
-    // Não damos await aqui, deixa rodar de fundo
-    servicesRegistrarInteresse(termo).catch(err => console.error("Erro ao registrar interesse:", err));
-  }
-
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      // O filtro agora já é aplicado no onChange automaticamente
-    }
+    servicesRegistrarInteresse(termo).catch((err) =>
+      console.error("Erro ao registrar interesse:", err)
+    )
   }
 
   const handlePageChange = (page: number) => {
@@ -227,67 +350,184 @@ export default function Anuncios() {
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
-
-
+  /* ─────────────────────────────────────────────────────────────
+   * ESTADO DE CARREGAMENTO (SPINNER)
+   * ───────────────────────────────────────────────────────────── */
   if (loading) {
     return (
-      <div className="min-h-screen bg-transparent w-full flex items-center justify-center p-6">
+      <div className="min-h-screen bg-gray-200 w-full flex items-center justify-center p-6">
         <div className="text-center space-y-3">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-slate-500 font-medium">Carregando catálogo de anúncios...</p>
+          <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-slate-500 font-medium text-sm">Carregando catálogo de insumos...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-transparent w-full selection:bg-blue-500/20 antialiased relative">
-      <AnimatedBackground />
-      <div className="w-full max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 relative z-10">
+    /* ═══════════════════════════════════════════════════════════════
+     * CONTAINER PRINCIPAL DA PÁGINA
+     * Fundo limpo e suave em tom neutro sólido (#f4f6f9),
+     * proporcionando contraste e foco nos cards de produtos
+     * ═══════════════════════════════════════════════════════════════ */
+    <div className="w-full px-3 sm:px-6 md:px-10 lg:pl-20 lg:pr-20 text-slate-800 selection:bg-blue-500/20 antialiased">
+      <div className="w-full max-w-[1380px] mx-auto py-6 sm:py-10 px-0 sm:px-4 lg:px-8">
 
-        {/* Título da página */}
-        <div className="mb-8 md:mb-12">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 rounded-2xl bg-blue-900 text-white flex items-center justify-center shadow-lg shadow-blue-900/20 shrink-0">
-              <Store size={20} />
-            </div>
-            <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">
-              Marketplace
-            </h1>
-          </div>
-          <p className="text-slate-500 text-sm md:text-base font-medium max-w-2xl ml-[60px]">
-            {filteredAnuncios.length} anúncios disponíveis
+        {/* ═══════════════════════════════════════════════════════════════
+         * 1. CABEÇALHO DA PÁGINA
+         * Apresenta o título "Catálogo de Insumos" e o total de anúncios disponíveis,
+         * com estilo limpo e tipografia moderna e elegante.
+         * ═══════════════════════════════════════════════════════════════ */}
+        <header className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-brand-header tracking-tight">
+            Catálogo de Insumos
+          </h1>
+          <p className="text-slate-500 text-sm font-medium mt-1">
+            {filteredAnuncios.length} {filteredAnuncios.length === 1 ? "anúncio disponível" : "anúncios disponíveis"}
           </p>
+        </header>
+
+        {/* ═══════════════════════════════════════════════════════════════
+         * 2. CONTROLE RESPONSIVO DE FILTROS PARA MOBILE E TABLET
+         * Em telas pequenas e médias (abaixo de 1024px), permite recolher/expandir
+         * os filtros para não empurrar os produtos para baixo.
+         * ═══════════════════════════════════════════════════════════════ */}
+        <div className="lg:hidden mb-4">
+          <button
+            type="button"
+            onClick={() => setMobileFiltersOpen((prev) => !prev)}
+            className="w-full flex items-center justify-between bg-white px-4 py-3 rounded-xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-colors"
+          >
+            <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
+              <SlidersHorizontal className="w-4 h-4 text-brand-header" />
+              <span>Filtros</span>
+              {activeFiltersCount > 0 && (
+                <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                  {activeFiltersCount}
+                </span>
+              )}
+            </div>
+            <span className="text-xs font-semibold text-blue-700">
+              {mobileFiltersOpen ? "Ocultar filtros" : "Mostrar filtros"}
+            </span>
+          </button>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Sidebar Filtros */}
-          <aside className="w-full lg:w-[260px] shrink-0 bg-white p-6 rounded-2xl shadow-sm h-fit space-y-6">
-            <div className="flex items-center gap-2 text-slate-800 font-bold mb-4">
-              <SlidersHorizontal className="w-4 h-4 text-slate-500" />
-              Filtros
+        {/* Sentinela invisível para detecção de scroll/sticky com IntersectionObserver */}
+        <div
+          ref={sentinelRef}
+          className="h-px w-full pointer-events-none opacity-0 -mb-px"
+          aria-hidden="true"
+        />
+
+        {/* ═══════════════════════════════════════════════════════════════
+         * ESTRUTURA PRINCIPAL: SIDEBAR DE FILTROS + CONTEÚDO PRINCIPAL
+         * ═══════════════════════════════════════════════════════════════ */}
+        <div className="flex flex-col lg:flex-row items-start gap-6">
+
+          {/* ═══════════════════════════════════════════════════════════════
+           * 3. SIDEBAR DE FILTROS
+           * Painel lateral branco com cantos arredondados contendo:
+           * - Busca & Ordenação (fixo no topo quando o card está stuck)
+           * - Categoria (Radio buttons estilizados com ponto ativo)
+           * - Fabricante (Dropdown com seleção de fabricantes)
+           * - Localização / Distância Máxima
+           * - Faixa de Preço (R$)
+           * - Botão Limpar Filtros
+           * Visível permanentemente no desktop e colapsável no mobile/tablet.
+           * ═══════════════════════════════════════════════════════════════ */}
+          <aside
+            style={{
+              top: "calc(var(--navbar-height, 64px) + var(--sticky-gap, 16px))",
+              maxHeight: "calc(100vh - var(--navbar-height, 64px) - var(--sticky-gap, 16px) * 2)",
+            }}
+            className={`w-full lg:w-64 xl:w-72 shrink-0 bg-white p-5 sm:p-6 rounded-2xl border transition-all duration-200 sticky z-30 overflow-y-auto ${mobileFiltersOpen ? "block" : "hidden lg:block"
+              } ${isStuck
+                ? "border-slate-300 shadow-md ring-1 ring-slate-900/5"
+                : "border-slate-200/80 shadow-xs"
+              }`}
+          >
+            {/* ── BARRA DE BUSCA E ORDENAÇÃO FIXA (Exibida apenas quando 'stuck') ── */}
+            <div
+              className={`transition-all duration-200 ease-out motion-reduce:transition-none overflow-hidden ${isStuck
+                ? "max-h-56 opacity-100 pb-4 mb-4 border-b border-slate-100"
+                : "max-h-0 opacity-0 pointer-events-none"
+                }`}
+              aria-hidden={!isStuck}
+            >
+              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                Busca &amp; Ordenação
+              </div>
+              <SearchAndSort
+                ref={stickySearchInputRef}
+                idPrefix="sticky"
+                search={search}
+                onSearchChange={handleSearchChange}
+                onClearSearch={() => {
+                  setSearch("")
+                  setAppliedSearch("")
+                  setCurrentPage(1)
+                }}
+                ordenacao={ordenacao}
+                onOrdenacaoChange={(val) => setOrdenacao(val || "Recentes")}
+                variant="compact"
+              />
+            </div>
+            {/* Cabeçalho dos Filtros */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-2 text-slate-800 font-bold text-sm">
+                <SlidersHorizontal className="w-4 h-4 text-slate-500" />
+                <span>Filtros</span>
+              </div>
+              {activeFiltersCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearFilters}
+                  className="flex items-center gap-1 text-[11px] font-bold text-red-500 hover:text-red-800 cursor-pointer transition-colors"
+                  title="Redefinir todos os filtros"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Limpar
+                </button>
+              )}
             </div>
 
-            {/* Categoria */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-bold text-slate-700">Categoria</h3>
-              <div className="space-y-3">
+            {/* Grupo de Filtro 1: Categoria */}
+            <div className="py-4 border-b border-slate-100 space-y-3">
+              <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Categoria
+              </h3>
+              <div className="space-y-2.5">
                 {["Todas", "Medicamentos", "Materiais Hospitalares"].map((cat) => (
-                  <label key={cat} className="flex items-center gap-3 cursor-pointer group">
+                  <label
+                    key={cat}
+                    className="flex items-center gap-3 cursor-pointer group select-none"
+                  >
                     <div className="relative flex items-center justify-center">
                       <input
                         type="radio"
                         name="categoria"
                         value={cat}
                         checked={categoria === cat}
-                        onChange={(e) => { setCategoria(e.target.value); setCurrentPage(1); }}
+                        onChange={(e) => {
+                          setCategoria(e.target.value)
+                          setCurrentPage(1)
+                        }}
                         className="peer sr-only"
                       />
                       <div className="w-4 h-4 rounded-full border border-slate-300 peer-checked:border-blue-600 flex items-center justify-center transition-colors bg-white">
-                        <div className={`w-2 h-2 rounded-full bg-blue-600 transition-transform ${categoria === cat ? 'scale-100' : 'scale-0'}`} />
+                        <div
+                          className={`w-2 h-2 rounded-full bg-blue-600 transition-transform ${categoria === cat ? "scale-100" : "scale-0"
+                            }`}
+                        />
                       </div>
                     </div>
-                    <span className="text-xs text-slate-600 font-medium group-hover:text-blue-700 transition-colors">
+                    <span
+                      className={`text-xs transition-colors ${categoria === cat
+                        ? "text-slate-900 font-semibold"
+                        : "text-slate-600 group-hover:text-slate-900"
+                        }`}
+                    >
                       {cat}
                     </span>
                   </label>
@@ -295,128 +535,175 @@ export default function Anuncios() {
               </div>
             </div>
 
-            {/* Fabricante */}
-            <div className="space-y-3 pt-4 border-t border-slate-100">
-              <label className="text-sm font-bold text-slate-700 block">Fabricante</label>
-              <Input
-                placeholder="Digite o fabricante..."
-                value={fabricanteFiltro}
-                onChange={(e) => { setFabricanteFiltro(e.target.value); setCurrentPage(1); }}
-                className="w-full bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-xl h-10 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500/30"
-              />
-            </div>
-
-            {/* Anunciante */}
-            <div className="space-y-3 pt-4 border-t border-slate-100">
-              <label className="text-sm font-bold text-slate-700 block">Anunciante</label>
-              <Input
-                placeholder="Digite o anunciante..."
-                value={anuncianteFiltro}
-                onChange={(e) => { setAnuncianteFiltro(e.target.value); setCurrentPage(1); }}
-                className="w-full bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-xl h-10 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500/30"
-              />
-            </div>
-
-            {/* Distância */}
-            <div className="space-y-3 pt-4 border-t border-slate-100">
-              <label className="text-sm font-bold text-slate-700 block">Distância Máxima</label>
-              <Select value={distanciaMax} onValueChange={(val) => { setDistanciaMax(val || "Todas"); setCurrentPage(1); }}>
-                <SelectTrigger className="w-full bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-xl h-10 shadow-sm">
-                  <SelectValue placeholder="Selecione a distância" />
+            {/* Grupo de Filtro 2: Fabricante */}
+            <div className="py-4 border-b border-slate-100 space-y-2">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                Fabricante
+              </label>
+              <Select
+                value={fabricanteFiltro || "Todos"}
+                onValueChange={(val) => {
+                  setFabricanteFiltro(!val || val === "Todos" ? "" : val)
+                  setCurrentPage(1)
+                }}
+              >
+                <SelectTrigger className="hover:cursor-pointer w-full bg-white border border-slate-200/90 text-slate-700 text-xs font-medium rounded-xl h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20">
+                  <SelectValue placeholder="Todos os fabricantes" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Todas">Qualquer distância</SelectItem>
-                  <SelectItem value="5">Até 5 km</SelectItem>
-                  <SelectItem value="10">Até 10 km</SelectItem>
-                  <SelectItem value="50">Até 50 km</SelectItem>
-                  <SelectItem value="100">Até 100 km</SelectItem>
-                  <SelectItem value="500">Até 500 km</SelectItem>
+                <SelectContent className="max-h-60">
+                  <SelectItem value="Todos">Todos os fabricantes</SelectItem>
+                  {fabricantesUnicos.map((fab) => (
+                    <SelectItem className="hover:cursor-pointer" key={fab} value={fab}>
+                      {fab}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Preço */}
-            <div className="space-y-3 pt-4 border-t border-slate-100">
-              <label className="text-sm font-bold text-slate-700 block">Faixa de Preço (R$)</label>
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  placeholder="Mínimo"
-                  value={precoMin}
-                  onChange={(e) => { setPrecoMin(e.target.value); setCurrentPage(1); }}
-                  className="w-full bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-xl h-10 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500/30"
-                  min={0}
-                />
-                <Input
-                  type="number"
-                  placeholder="Máximo"
-                  value={precoMax}
-                  onChange={(e) => { setPrecoMax(e.target.value); setCurrentPage(1); }}
-                  className="w-full bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-xl h-10 shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500/30"
-                  min={0}
-                />
-              </div>
+            {/* Grupo de Filtro 3: Localização / Distância */}
+            <div className="py-4 border-b border-slate-100 space-y-2">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                Distância Máxima
+              </label>
+              <Select
+                value={distanciaMax}
+                onValueChange={(val) => {
+                  setDistanciaMax(val || "Todas")
+                  setCurrentPage(1)
+                }}
+              >
+                <SelectTrigger className="hover:cursor-pointer w-full bg-white border border-slate-200/90 text-slate-700 text-xs font-medium rounded-xl h-10 shadow-xs focus:ring-2 focus:ring-blue-500/20">
+                  <SelectValue placeholder="Qualquer distância" />
+                </SelectTrigger>
+                <SelectContent className="hover:cursor-pointer max-h-60">
+                  <SelectItem className="hover:cursor-pointer" value="Todas">Qualquer distância</SelectItem>
+                  <SelectItem className="hover:cursor-pointer" value="5">Até 5 km</SelectItem>
+                  <SelectItem className="hover:cursor-pointer" value="10">Até 10 km</SelectItem>
+                  <SelectItem className="hover:cursor-pointer" value="50">Até 50 km</SelectItem>
+                  <SelectItem className="hover:cursor-pointer" value="100">Até 100 km</SelectItem>
+                  <SelectItem className="hover:cursor-pointer" value="500">Até 500 km</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Ordenação */}
-            <div className="space-y-3 pt-4 border-t border-slate-100">
-              <label className="text-sm font-bold text-slate-700 block">Ordenar por</label>
-              <div className="relative">
-                <Select value={ordenacao} onValueChange={(val) => setOrdenacao(val || "recentes")}>
-                  <SelectTrigger className="w-full bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-xl h-10 shadow-sm focus:ring-blue-500/30">
-                    <SelectValue placeholder="Mais recentes" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="recentes">Mais recentes</SelectItem>
-                    <SelectItem value="antigos">Mais antigos</SelectItem>
-                    <SelectItem value="preco_menor">Menor preço</SelectItem>
-                    <SelectItem value="preco_maior">Maior preço</SelectItem>
-                  </SelectContent>
-                </Select>
+            {/* Grupo de Filtro 4: Faixa de Preço */}
+            <div className="pt-4 space-y-2">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                Faixa de Preço (R$)
+              </label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  placeholder="Mín"
+                  value={precoMin}
+                  onChange={(e) => {
+                    setPrecoMin(e.target.value)
+                    setCurrentPage(1)
+                  }}
+                  className="w-full bg-white border border-slate-200/90 text-slate-700 text-xs font-medium rounded-xl h-10 shadow-xs focus-visible:ring-2 focus-visible:ring-blue-500/20"
+                  min={0}
+                />
+                <span className="text-slate-400 text-xs font-bold">-</span>
+                <Input
+                  type="number"
+                  placeholder="Máx"
+                  value={precoMax}
+                  onChange={(e) => {
+                    setPrecoMax(e.target.value)
+                    setCurrentPage(1)
+                  }}
+                  className="w-full bg-white border border-slate-200/90 text-slate-700 text-xs font-medium rounded-xl h-10 shadow-xs focus-visible:ring-2 focus-visible:ring-blue-500/20"
+                  min={0}
+                />
               </div>
             </div>
           </aside>
 
-          {/* Main Content Area */}
-          <div className="flex-1 w-full flex flex-col min-w-0">
+          {/* ═══════════════════════════════════════════════════════════════
+           * 4. ÁREA PRINCIPAL DE CONTEÚDO (Busca + Grid de Anúncios + Paginação)
+           * ═══════════════════════════════════════════════════════════════ */}
+          <main className="flex-1 w-full min-w-0 flex flex-col">
 
-            {/* Search bar */}
-            <div className="flex flex-col gap-3 mb-6">
-              <div className="relative w-full flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
-                  <Input
-                    placeholder="Buscar insumos, fabricantes..."
-                    className="pl-11 h-11 bg-white border-0 shadow-sm text-slate-800 placeholder:text-slate-400 rounded-2xl transition-all duration-300 text-sm focus-visible:ring-2 focus-visible:ring-blue-500/30"
-                    value={search}
-                    onChange={handleSearchChange}
-                    onKeyDown={handleSearchKeyDown}
-                  />
-                </div>
+            {/* ─────────────────────────────────────────────────────────────
+             * BARRA SUPERIOR: BUSCA E ORDENAÇÃO
+             * Posicionados lado a lado no desktop e tablet horizontal,
+             * e empilhados no mobile para máxima usabilidade.
+             * Quando o card lateral está 'stuck', reserva o espaço para evitar layout shift.
+             * ───────────────────────────────────────────────────────────── */}
+            <div className="w-full mb-6 min-h-[40px]">
+              <div
+                className={`transition-opacity duration-200 ${isStuck ? "opacity-0 pointer-events-none" : "opacity-100"
+                  }`}
+                aria-hidden={isStuck}
+              >
+                <SearchAndSort
+                  ref={mainSearchInputRef}
+                  idPrefix="main"
+                  search={search}
+                  onSearchChange={handleSearchChange}
+                  onClearSearch={() => {
+                    setSearch("")
+                    setAppliedSearch("")
+                    setCurrentPage(1)
+                  }}
+                  ordenacao={ordenacao}
+                  onOrdenacaoChange={(val) => setOrdenacao(val || "Recentes")}
+                  variant="standard"
+                />
               </div>
             </div>
 
-            {/* display dos anuncios */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {paginatedAnuncios.length > 0 ? (
-                paginatedAnuncios.map((anuncio) => {
+            {/* ─────────────────────────────────────────────────────────────
+             * 5. GRID DE CARDS DE ANÚNCIOS
+             * Layout responsivo:
+             * - Mobile (telas pequenas): 1 coluna
+             * - Tablet: 2 colunas
+             * - Desktop (lg/xl): 3 colunas
+             * ───────────────────────────────────────────────────────────── */}
+            {paginatedAnuncios.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+                {paginatedAnuncios.map((anuncio) => {
                   const materialObj = materiaisMap.get(anuncio.cd_mat)
                   const nomeMaterial = materialObj?.ds_mat ?? "Material não identificado"
-                  const fabricante = materialObj?.ds_marca || (anuncio as any).nm_fabricante || (anuncio as any).ds_marca_mat || "Fabricante não informado"
-                  const anunciante = (anuncio as any).anunciante_razao || (anuncio as any).nm_vendedor || (anuncio as any).ds_empresa || "Usuário"
+                  const fabricante =
+                    materialObj?.ds_marca ||
+                    (anuncio as any).nm_fabricante ||
+                    (anuncio as any).ds_marca_mat ||
+                    "Fabricante não informado"
+                  const anunciante =
+                    (anuncio as any).anunciante_razao ||
+                    (anuncio as any).nm_vendedor ||
+                    (anuncio as any).ds_empresa ||
+                    "Usuário"
                   const lote = anuncio.ds_lote || "Não informado"
+                  const valBase = Number((anuncio as any).val_base || 0)
 
+                  // Formatação de data de validade
                   let dataValidade = "Não informada"
-                  const rawValidade = anuncio.dt_validade
-
-                  if (rawValidade) {
-                    const dateObj = new Date(rawValidade)
+                  if (anuncio.dt_validade) {
+                    const dateObj = new Date(anuncio.dt_validade)
                     if (!isNaN(dateObj.getTime())) {
-                      dataValidade = dateObj.toLocaleDateString('pt-BR')
+                      dataValidade = dateObj.toLocaleDateString("pt-BR")
                     }
                   }
 
+                  // Distância calculada
+                  const distanciaKm =
+                    meuPerfil?.latitude &&
+                      meuPerfil?.longitude &&
+                      anuncio.anunciante_lat &&
+                      anuncio.anunciante_lon
+                      ? getDistance(
+                        Number(meuPerfil.latitude),
+                        Number(meuPerfil.longitude),
+                        Number(anuncio.anunciante_lat),
+                        Number(anuncio.anunciante_lon)
+                      )
+                      : null
+
                   return (
+                    /* CARD INDIVIDUAL DO PRODUTO */
                     <div
                       key={anuncio.nr_anuncio}
                       onClick={() => {
@@ -425,110 +712,142 @@ export default function Anuncios() {
                         }
                         router.push(`/anunciar/${anuncio.nr_anuncio}`)
                       }}
-                      className="bg-white rounded-[1.25rem] p-5 shadow-sm hover:shadow-2xl hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 ease-out flex flex-col cursor-pointer border border-transparent hover:border-blue-100 relative overflow-hidden group"
+                      className="bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col overflow-hidden group cursor-pointer"
                     >
-                      {/* Hover Top Bar */}
-                      <div className="absolute top-0 left-0 h-1.5 w-0 bg-blue-600 group-hover:w-full transition-all duration-500 ease-out z-10" />
+                      {/* Topo do Card: Imagem do Produto + Badge de Recomendação */}
+                      <div className="h-44 sm:h-48 bg-slate-50/70 p-4 flex items-center justify-center relative border-b border-slate-100 overflow-hidden">
+                        {/* Selo Recomendado */}
+                        {anuncio.is_recommended && (
+                          <div className="absolute top-3 left-3 z-10 bg-white/95 backdrop-blur-sm border border-slate-200 text-slate-700 text-[11px] font-semibold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-xs">
+                            <Sparkles className="w-3 h-3 text-amber-500 fill-amber-500" />
+                            <span>Recomendado</span>
+                          </div>
+                        )}
 
-                      {/* Badge Recomendado pela IA (Discreto) */}
-                      {anuncio.is_recommended && (
-                        <div className="absolute top-3 left-3 z-20 bg-white/90 backdrop-blur-md border border-slate-200/60 text-slate-500 text-[10px] font-semibold tracking-wide px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-sm transition-all duration-300 group-hover:bg-blue-600 group-hover:border-blue-600 group-hover:text-white">
-                          <Sparkles className="w-3 h-3 text-slate-400 transition-colors duration-300 group-hover:text-white" />
-                          Recomendado
-                        </div>
-                      )}
-
-                      {/* Image Area */}
-                      <div className="w-full aspect-square bg-slate-50/50 rounded-xl mb-4 flex items-center justify-center border border-slate-100 overflow-hidden relative">
                         {anuncio.imagem_anuncio ? (
                           <img
                             src={anuncio.imagem_anuncio}
                             alt={nomeMaterial}
-                            className="w-full h-full object-contain mix-blend-multiply p-2 group-hover:scale-105 transition-transform duration-500"
+                            className="max-h-full max-w-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300"
                           />
                         ) : (
-                          <div className="flex flex-col items-center justify-center text-slate-300 opacity-60">
-                            <PackageX className="w-10 h-10 mb-2" />
-                            <span className="text-[10px] font-bold uppercase tracking-widest">Sem foto</span>
+                          <div className="flex flex-col items-center justify-center text-slate-300">
+                            <PackageX className="w-9 h-9 mb-1" />
+                            <span className="text-[10px] font-semibold uppercase tracking-wider">
+                              Sem foto
+                            </span>
                           </div>
                         )}
                       </div>
 
-                      {/* Title & Subtitle */}
-                      <div className="mb-3">
-                        <h3 className="font-bold text-slate-800 group-hover:text-blue-700 transition-colors text-[17px] leading-tight mb-1 line-clamp-2" title={nomeMaterial}>
+                      {/* Corpo do Card: Informações do Produto */}
+                      <div className="p-4 flex-1 flex flex-col">
+                        {/* Nome do Produto */}
+                        <h3
+                          className="text-base font-bold text-slate-900 group-hover:text-blue-700 transition-colors line-clamp-1 mb-0.5"
+                          title={nomeMaterial}
+                        >
                           {nomeMaterial}
                         </h3>
-                        <p className="text-slate-500 text-sm truncate" title={fabricante}>
+
+                        {/* Fabricante */}
+                        <p
+                          className="text-xs text-slate-500 font-medium truncate mb-4"
+                          title={fabricante}
+                        >
                           {fabricante}
                         </p>
-                      </div>
 
-                      {/* Preço */}
-                      <div className="mb-5 flex items-baseline gap-1">
-                        <span className="text-sm font-bold text-blue-700">R$</span>
-                        <span className="text-[26px] font-extrabold text-blue-700 tracking-tight leading-none">
-                          {Number((anuncio as any).val_base || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                      </div>
-
-                      {/* Info Table */}
-                      <div className="space-y-3 text-xs text-slate-500 mt-auto mb-5">
-                        <div className="flex justify-between items-center">
-                          <span>Lote</span>
-                          <span className="font-medium text-slate-700">{lote}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span>Validade</span>
-                          <span className="font-medium text-slate-700">{dataValidade}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span>Qtd.</span>
-                          <span className="font-medium text-slate-700">{anuncio.qtd_mat} unidades</span>
-                        </div>
-                      </div>
-
-                      {/* Footer (Location / User) */}
-                      <div className="pt-4 border-t border-slate-100 flex items-center gap-2 text-xs font-bold text-slate-700 bg-white group-hover:text-blue-600 transition-colors duration-300">
-                        <MapPin className="w-4 h-4 text-slate-400 shrink-0 group-hover:text-blue-500 transition-colors duration-300" />
-                        <span className="truncate" title={anunciante}>{anunciante}</span>
-                        {meuPerfil?.latitude && anuncio.anunciante_lat && (
-                          <div className="flex items-center gap-1.5 ml-auto">
-                            <span className="text-blue-600 font-bold whitespace-nowrap">
-                              | {getDistance(Number(meuPerfil.latitude), Number(meuPerfil.longitude), Number(anuncio.anunciante_lat), Number(anuncio.anunciante_lon)).toFixed(1)} km
-                            </span>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedMapAnuncio(anuncio);
-                              }}
-                              className="p-1.5 rounded-full hover:bg-blue-50 text-blue-600 transition-colors"
-                              title="Ver no Mapa"
-                            >
-                              <MapIcon className="w-4 h-4" />
-                            </button>
+                        {/* Tabela de Detalhes Técnicos (Lote, Validade, Qtd.) */}
+                        <div className="space-y-2 text-xs mb-4 mt-auto">
+                          <div className="flex justify-between items-center text-slate-500">
+                            <span className="text-slate-400">Lote</span>
+                            <span className="font-semibold text-slate-700">{lote}</span>
                           </div>
-                        )}
+                          <div className="flex justify-between items-center text-slate-500">
+                            <span className="text-slate-400">Validade</span>
+                            <span className="font-semibold text-slate-700">{dataValidade}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-slate-500">
+                            <span className="text-slate-400">Qtd.</span>
+                            <span className="font-semibold text-slate-700">
+                              {anuncio.qtd_mat} unidades
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Rodapé do Card: Localização e Preço em Destaque */}
+                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between mt-auto">
+                          {/* Localização do Anunciante */}
+                          <div
+                            className="flex items-center gap-1.5 min-w-0 max-w-[60%] text-xs font-semibold text-slate-600 group-hover:text-blue-600 transition-colors cursor-pointer"
+                            onClick={(e) => {
+                              if (anuncio.anunciante_lat && anuncio.anunciante_lon) {
+                                e.stopPropagation()
+                                setSelectedMapAnuncio(anuncio)
+                              }
+                            }}
+                            title={
+                              anuncio.anunciante_lat && anuncio.anunciante_lon
+                                ? "Clique para ver no mapa"
+                                : anunciante
+                            }
+                          >
+                            <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 group-hover:text-blue-500" />
+                            <span className="truncate">{anunciante}</span>
+                            {distanciaKm !== null && (
+                              <span className="text-slate-400 text-[10px] shrink-0">
+                                ({distanciaKm.toFixed(0)} km)
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Preço */}
+                          <div className="text-right shrink-0">
+                            <span className="text-lg font-extrabold text-brand-header tracking-tight">
+                              R${" "}
+                              {valBase.toLocaleString("pt-BR", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )
-                })
-              ) : (
-                <div className="col-span-full flex flex-col items-center justify-center py-20 text-center bg-white rounded-2xl shadow-sm px-6">
-                  <div className="p-4 bg-slate-50 rounded-full mb-4">
-                    <PackageX className="w-10 h-10 text-slate-400" />
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-800">Nenhum anúncio encontrado</h3>
-                  <p className="text-slate-500 max-w-sm mt-2 text-sm">
-                    Não localizamos registros correspondentes para seus filtros de busca.
-                  </p>
+                })}
+              </div>
+            ) : (
+              /* ESTADO VAZIO (Nenhum anúncio encontrado) */
+              <div className="flex flex-col items-center justify-center py-16 px-6 text-center bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+                <div className="p-4 bg-slate-50 rounded-full mb-3 text-slate-400">
+                  <PackageX className="w-8 h-8" />
                 </div>
-              )}
-            </div>
+                <h3 className="text-lg font-bold text-slate-800">Nenhum anúncio encontrado</h3>
+                <p className="text-slate-500 text-xs sm:text-sm max-w-sm mt-1 mb-4">
+                  Não localizamos registros que correspondam aos filtros de busca aplicados.
+                </p>
+                {activeFiltersCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearFilters}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Limpar todos os filtros
+                  </button>
+                )}
+              </div>
+            )}
 
-            {/* paginacao no rodape da pagina */}
+            {/* ─────────────────────────────────────────────────────────────
+             * 6. PAGINAÇÃO INFERIOR
+             * Barra com navegação entre páginas (< Anterior, números, Próxima >)
+             * e indicador de total de anúncios exibidos.
+             * ───────────────────────────────────────────────────────────── */}
             {totalPages > 1 && (
-              <div className="mt-8 flex justify-center">
+              <div className="mt-8">
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
@@ -539,41 +858,54 @@ export default function Anuncios() {
               </div>
             )}
 
-          </div>
+          </main>
         </div>
-
       </div>
 
-      <Dialog open={!!selectedMapAnuncio} onOpenChange={(open) => !open && setSelectedMapAnuncio(null)}>
+      {/* ═══════════════════════════════════════════════════════════════
+       * 7. MODAL DE LOCALIZAÇÃO NO MAPA (Google Maps Embed)
+       * Exibido quando o usuário clica na localização com coordenadas válidas.
+       * ═══════════════════════════════════════════════════════════════ */}
+      <Dialog
+        open={!!selectedMapAnuncio}
+        onOpenChange={(open) => !open && setSelectedMapAnuncio(null)}
+      >
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-slate-800">
               <MapPin className="w-5 h-5 text-blue-600" />
-              Localização do Anunciante
+              Localização do Estabelecimento
             </DialogTitle>
           </DialogHeader>
-          {selectedMapAnuncio && selectedMapAnuncio.anunciante_lat && selectedMapAnuncio.anunciante_lon && (
-            <div className="mt-4 flex flex-col gap-4">
-              <div className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                <span className="font-semibold block mb-1">{selectedMapAnuncio.anunciante_razao || "Anunciante"}</span>
-                {selectedMapAnuncio.anunciante_logradouro && `${selectedMapAnuncio.anunciante_logradouro}, `}
-                {selectedMapAnuncio.anunciante_numero && `${selectedMapAnuncio.anunciante_numero} - `}
-                {selectedMapAnuncio.anunciante_bairro && `${selectedMapAnuncio.anunciante_bairro}, `}
-                {selectedMapAnuncio.anunciante_cidade} / {selectedMapAnuncio.anunciante_estado}
+          {selectedMapAnuncio &&
+            selectedMapAnuncio.anunciante_lat &&
+            selectedMapAnuncio.anunciante_lon && (
+              <div className="mt-3 flex flex-col gap-3">
+                <div className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <span className="font-bold text-slate-800 block mb-0.5">
+                    {selectedMapAnuncio.anunciante_razao || "Anunciante"}
+                  </span>
+                  {selectedMapAnuncio.anunciante_logradouro &&
+                    `${selectedMapAnuncio.anunciante_logradouro}, `}
+                  {selectedMapAnuncio.anunciante_numero &&
+                    `${selectedMapAnuncio.anunciante_numero} - `}
+                  {selectedMapAnuncio.anunciante_bairro &&
+                    `${selectedMapAnuncio.anunciante_bairro}, `}
+                  {selectedMapAnuncio.anunciante_cidade} / {selectedMapAnuncio.anunciante_estado}
+                </div>
+                <div className="w-full h-64 rounded-xl overflow-hidden border border-slate-200">
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0 }}
+                    loading="lazy"
+                    allowFullScreen
+                    referrerPolicy="no-referrer-when-downgrade"
+                    src={`https://maps.google.com/maps?q=${selectedMapAnuncio.anunciante_lat},${selectedMapAnuncio.anunciante_lon}&hl=pt-BR&z=15&output=embed`}
+                  />
+                </div>
               </div>
-              <div className="w-full h-64 rounded-xl overflow-hidden border border-slate-200">
-                <iframe
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  loading="lazy"
-                  allowFullScreen
-                  referrerPolicy="no-referrer-when-downgrade"
-                  src={`https://maps.google.com/maps?q=${selectedMapAnuncio.anunciante_lat},${selectedMapAnuncio.anunciante_lon}&hl=pt-BR&z=15&output=embed`}
-                ></iframe>
-              </div>
-            </div>
-          )}
+            )}
         </DialogContent>
       </Dialog>
     </div>

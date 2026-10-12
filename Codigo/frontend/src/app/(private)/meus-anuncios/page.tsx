@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react"
 import { Package } from "lucide-react"
 import { MeusAnuncios } from "@/components/anunciar/meus-anuncios"
-import AnimatedBackground from "@/components/ui/animated-background"
 import servicesGetMatMed from "@/server/(GET)-mat-med"
 import { MatMed } from "@/types"
 
@@ -22,9 +21,9 @@ export default function MeusAnunciosPage() {
 
   return (
     <div className="relative min-h-screen w-full antialiased bg-slate-50/50 selection:bg-blue-900/20">
-      <AnimatedBackground />
+
       <div className="max-w-7xl mx-auto py-8 px-4 relative z-10">
-        
+
         {/* Header da Página */}
         <div className="mb-8 md:mb-12">
           <div className="flex items-center gap-3 mb-2">

@@ -167,15 +167,15 @@ export function NegociacaoTab() {
                     <div className="flex items-center gap-1.5">
                       <button 
                         onClick={() => setSelectedNegociacao(negociacao)}
-                        className="p-2 text-slate-400 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-all"
+                        className="p-2 text-slate-400 hover:text-brand-header hover:bg-brand-subtle rounded-lg transition-all"
                         title="Analisar proposta"
                       >
                         <Eye className="w-5 h-5" />
                       </button>
-                      <button onClick={() => aceitarProposta(negociacao)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="Aceitar rapidamente">
+                      <button onClick={() => aceitarProposta(negociacao)} className="p-2 text-slate-400 hover:text-success hover:bg-success-subtle rounded-lg transition-all" title="Aceitar rapidamente">
                         <CheckCircle2 className="w-5 h-5" />
                       </button>
-                      <button onClick={() => recusarProposta(negociacao)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Recusar">
+                      <button onClick={() => recusarProposta(negociacao)} className="p-2 text-slate-400 hover:text-danger hover:bg-danger-subtle rounded-lg transition-all" title="Recusar">
                         <XCircle className="w-5 h-5" />
                       </button>
                     </div>
@@ -319,13 +319,13 @@ export function NegociacaoTab() {
               <div className="flex w-full sm:w-auto gap-3">
                 <button 
                   onClick={() => { recusarProposta(selectedNegociacao); setSelectedNegociacao(null) }} 
-                  className="flex-1 sm:flex-none px-5 py-2.5 bg-white text-rose-600 border border-rose-200 hover:border-rose-300 hover:bg-rose-50 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+                  className="flex-1 sm:flex-none px-5 py-2.5 bg-surface text-danger border border-danger-border hover:border-danger hover:bg-danger-subtle rounded-xl font-bold transition-all flex items-center justify-center gap-2"
                 >
                   <XCircle className="w-4 h-4" /> Recusar
                 </button>
                 <button 
                   onClick={() => { aceitarProposta(selectedNegociacao); setSelectedNegociacao(null) }} 
-                  className="flex-1 sm:flex-none px-6 py-2.5 bg-blue-900 text-white rounded-xl font-bold hover:bg-blue-950 transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 group"
+                  className="flex-1 sm:flex-none px-6 py-2.5 bg-brand text-white rounded-xl font-bold hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 flex items-center justify-center gap-2 group"
                 >
                   Aceitar Proposta <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </button>
@@ -337,7 +337,7 @@ export function NegociacaoTab() {
 
       <Dialog open={isSuccessOpen} onOpenChange={setIsSuccessOpen}>
         <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
-          <DialogHeader className={`m-0 px-6 py-5 rounded-t-xl border-b ${successAction === "ACEITO" ? "bg-emerald-600 border-emerald-700" : "bg-rose-600 border-rose-700"}`}>
+          <DialogHeader className={`m-0 px-6 py-5 rounded-t-xl border-b ${successAction === "ACEITO" ? "bg-success border-success" : "bg-danger border-danger"}`}>
             <DialogTitle className="flex items-center gap-2 text-white text-xl font-black">
               {successAction === "ACEITO" ? <CheckCircle2 className="w-6 h-6" /> : <XCircle className="w-6 h-6" />}
               {successAction === "ACEITO" ? "Proposta Aceita!" : "Proposta Recusada!"}
@@ -348,7 +348,7 @@ export function NegociacaoTab() {
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3 text-sm text-center">
               {successAction === "ACEITO" ? (
                 <p className="text-slate-600 text-base">
-                  O anúncio foi finalizado com o valor de <br/><strong className="text-2xl mt-2 block text-emerald-700">{successValue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong>
+                  O anúncio foi finalizado com o valor de <br/><strong className="text-2xl mt-2 block text-success">{successValue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong>
                 </p>
               ) : (
                 <p className="text-slate-600 text-base font-medium">
@@ -379,8 +379,8 @@ export function NegociacaoTab() {
                 }}
                 className={`flex-1 px-6 py-3 text-white rounded-xl font-bold transition-colors shadow-lg cursor-pointer ${
                   successAction === "ACEITO" 
-                    ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-900/20" 
-                    : "bg-rose-600 hover:bg-rose-700 shadow-rose-900/20"
+                    ? "bg-success hover:bg-success/90 shadow-success/20" 
+                    : "bg-danger hover:bg-danger/90 shadow-danger/20"
                 }`}
               >
                 {successAction === "ACEITO" ? "Ir para Finalizados" : "OK"}

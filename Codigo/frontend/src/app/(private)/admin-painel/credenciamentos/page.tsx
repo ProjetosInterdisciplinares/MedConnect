@@ -4,7 +4,7 @@ import React, { useEffect, useState, useMemo } from "react"
 import { Building2, CheckCircle2, XCircle, AlertCircle, RefreshCw, Eye, FileText, Inbox, Clock, Ban, ArrowRight, Mail, User, Search, Filter, Phone, MapPin } from "lucide-react"
 import { toast } from "sonner"
 import { Spinner } from "@/components/ui/spinner"
-import AnimatedBackground from "@/components/ui/animated-background"
+
 import { Pagination } from "@/components/ui/pagination"
 import {
   Select,
@@ -121,10 +121,10 @@ export default function AdminCredenciamentos() {
       })
 
       if (!res.ok) throw new Error("Erro ao atualizar")
-      
+
       toast.success(`Empresa ${novoStatus === "ATIVA" ? "aprovada" : "rejeitada"} com sucesso!`)
       fetchEmpresas() // recarrega a lista
-      
+
       // Atualiza o state do modal se ele estiver aberto
       setSelectedEmpresa(prev => {
         if (prev && prev.cd_pessoaj === id) {
@@ -142,9 +142,9 @@ export default function AdminCredenciamentos() {
   // Memoizando a filtragem
   const { pendentesGerais, itensFiltrados } = useMemo(() => {
     const pendentes = empresas.filter(e => e.status === "PENDENTE")
-    
-    let baseList = activeTab === "pendentes" 
-      ? pendentes 
+
+    let baseList = activeTab === "pendentes"
+      ? pendentes
       : empresas.filter(e => e.status !== "PENDENTE")
 
     // Aplicar Filtro de Status no Histórico
@@ -161,7 +161,7 @@ export default function AdminCredenciamentos() {
         baseList = baseList.filter(e => e.cd_pessoaj.toString().includes(idSearch))
       } else {
         // Filtra por Nome, Razão Social ou CNPJ
-        baseList = baseList.filter(e => 
+        baseList = baseList.filter(e =>
           e.nm_pessoaj.toLowerCase().includes(term) ||
           e.razao_social.toLowerCase().includes(term) ||
           e.nr_cnpj.includes(term)
@@ -182,18 +182,18 @@ export default function AdminCredenciamentos() {
   if (acessoNegado) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh]">
-        <AlertCircle className="w-16 h-16 text-red-500 mb-4" />
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Acesso Negado</h1>
-        <p className="text-gray-500">Você não tem permissão para acessar esta área.</p>
+        <AlertCircle className="w-16 h-16 text-danger mb-4" />
+        <h1 className="text-3xl font-bold text-heading mb-2">Acesso Negado</h1>
+        <p className="text-muted">Você não tem permissão para acessar esta área.</p>
       </div>
     )
   }
 
   return (
     <div className="relative min-h-screen w-full antialiased bg-slate-50/50 selection:bg-blue-500/20 pb-12">
-      <AnimatedBackground />
+
       <div className="max-w-[1200px] mx-auto py-8 md:py-12 px-4 sm:px-6 lg:px-8 font-sans relative z-10">
-        
+
         {/* Header da Página */}
         <div className="mb-8 md:mb-12 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -209,7 +209,7 @@ export default function AdminCredenciamentos() {
               Gerencie as solicitações de credenciamento e verifique o histórico das empresas parceiras.
             </p>
           </div>
-          <button 
+          <button
             onClick={fetchEmpresas}
             disabled={loading}
             className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm text-sm font-semibold text-slate-600 w-fit disabled:opacity-50"
@@ -221,29 +221,27 @@ export default function AdminCredenciamentos() {
 
         {/* Layout Master-Detail / Sidebar */}
         <div className="flex flex-col md:flex-row gap-8 items-start">
-          
+
           {/* Navegação Lateral */}
           <aside className="w-full md:w-72 shrink-0 flex flex-col gap-2">
             {TABS.map(({ id, label, description, icon: Icon }) => {
               const isActive = activeTab === id
-              
+
               return (
                 <button
                   key={id}
                   type="button"
                   onClick={() => setActiveTab(id)}
-                  className={`relative w-full text-left flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group ${
-                    isActive
+                  className={`relative w-full text-left flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group ${isActive
                       ? "bg-white shadow-sm ring-1 ring-slate-200/50"
                       : "hover:bg-white/50"
-                  }`}
+                    }`}
                 >
                   {isActive && (
                     <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-900 rounded-r-full" />
                   )}
-                  <div className={`shrink-0 rounded-xl p-2 transition-colors ${
-                    isActive ? "bg-blue-50 text-blue-900" : "bg-slate-100 text-slate-500 group-hover:text-blue-900 group-hover:bg-blue-50/50"
-                  }`}>
+                  <div className={`shrink-0 rounded-xl p-2 transition-colors ${isActive ? "bg-blue-50 text-blue-900" : "bg-slate-100 text-slate-500 group-hover:text-blue-900 group-hover:bg-blue-50/50"
+                    }`}>
                     <Icon size={20} />
                   </div>
                   <div className="flex-1">
@@ -267,7 +265,7 @@ export default function AdminCredenciamentos() {
           {/* Área de Conteúdo */}
           <div className="flex-1 w-full min-w-0">
             <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden flex flex-col mb-4">
-              
+
               {/* Cabeçalho Interno e Filtros */}
               <div className="px-6 md:px-8 py-5 border-b border-slate-100 flex flex-col xl:flex-row xl:items-center justify-between gap-4 sticky top-0 bg-white/80 backdrop-blur-md z-10">
                 <div>
@@ -275,7 +273,7 @@ export default function AdminCredenciamentos() {
                     {activeTab === "pendentes" ? "Solicitações Pendentes" : "Histórico de Avaliações"}
                   </h2>
                   <p className="text-sm text-slate-500 mt-1">
-                    {activeTab === "pendentes" 
+                    {activeTab === "pendentes"
                       ? "Novos perfis aguardando avaliação da equipe."
                       : "Empresas que já passaram por análise."}
                   </p>
@@ -285,15 +283,15 @@ export default function AdminCredenciamentos() {
                   {/* Busca */}
                   <div className="relative group min-w-[240px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-900 transition-colors" />
-                    <input 
-                      type="text" 
-                      placeholder="Buscar Nome, CNPJ ou use # para ID..." 
+                    <input
+                      type="text"
+                      placeholder="Buscar Nome, CNPJ ou use # para ID..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all placeholder:text-slate-400"
                     />
                   </div>
-                  
+
                   {/* Filtro de Status (Apenas Histórico) */}
                   {activeTab === "historico" && (
                     <div className="relative min-w-[160px]">
@@ -325,7 +323,7 @@ export default function AdminCredenciamentos() {
                   </div>
                   <h3 className="font-bold text-xl text-slate-700 mb-2">Lista Vazia</h3>
                   <p className="text-slate-500 text-base max-w-md">
-                    {searchTerm 
+                    {searchTerm
                       ? "Nenhuma empresa encontrada com os termos informados."
                       : "Todas as empresas já foram analisadas ou não há novas solicitações no momento."}
                   </p>
@@ -337,7 +335,7 @@ export default function AdminCredenciamentos() {
                       let badgeStyle = "bg-amber-50 text-amber-700 border-amber-200"
                       let badgeIcon = <Clock size={12} className="mr-1.5" />
                       let badgeText = "AGUARDANDO"
-                      
+
                       if (emp.status === "ATIVA") {
                         badgeStyle = "bg-emerald-50 text-emerald-700 border-emerald-200"
                         badgeIcon = <CheckCircle2 size={12} className="mr-1.5" />
@@ -349,8 +347,8 @@ export default function AdminCredenciamentos() {
                       }
 
                       return (
-                        <li 
-                          key={emp.cd_pessoaj} 
+                        <li
+                          key={emp.cd_pessoaj}
                           className="group relative flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 hover:bg-slate-50/80 transition-colors cursor-pointer"
                           onClick={() => setSelectedEmpresa(emp)}
                         >
@@ -369,7 +367,7 @@ export default function AdminCredenciamentos() {
                               <h3 className="font-semibold text-lg text-slate-800 truncate pr-4 group-hover:text-blue-900 transition-colors">
                                 {emp.nm_pessoaj}
                               </h3>
-                              
+
                               <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm mt-2 text-slate-500">
                                 <span>CNPJ: {emp.nr_cnpj}</span>
                                 <span className="hidden sm:inline">•</span>
@@ -425,7 +423,7 @@ export default function AdminCredenciamentos() {
               />
             )}
           </div>
-          
+
         </div>
       </div>
 
@@ -492,7 +490,7 @@ export default function AdminCredenciamentos() {
                   <p className="font-semibold text-slate-700 flex items-center gap-2">
                     <MapPin size={16} className="text-slate-400 shrink-0" />
                     <span>
-                      {selectedEmpresa.cep 
+                      {selectedEmpresa.cep
                         ? `${selectedEmpresa.logradouro || ""}, ${selectedEmpresa.numero || ""} - ${selectedEmpresa.bairro || ""}, ${selectedEmpresa.cidade || ""}/${selectedEmpresa.estado || ""} (CEP: ${selectedEmpresa.cep})`
                         : "Não informado"
                       }
@@ -502,35 +500,31 @@ export default function AdminCredenciamentos() {
               </div>
 
               {/* Status Section */}
-              <div className={`p-5 rounded-2xl border flex items-center justify-between ${
-                selectedEmpresa.status === "ATIVA" ? "bg-emerald-50 border-emerald-200" :
-                selectedEmpresa.status === "BLOQUEADA" ? "bg-rose-50 border-rose-200" :
-                "bg-amber-50 border-amber-200"
-              }`}>
+              <div className={`p-5 rounded-2xl border flex items-center justify-between ${selectedEmpresa.status === "ATIVA" ? "bg-emerald-50 border-emerald-200" :
+                  selectedEmpresa.status === "BLOQUEADA" ? "bg-rose-50 border-rose-200" :
+                    "bg-amber-50 border-amber-200"
+                }`}>
                 <div>
-                  <p className={`text-[10px] uppercase font-bold mb-1 ${
-                    selectedEmpresa.status === "ATIVA" ? "text-emerald-600" :
-                    selectedEmpresa.status === "BLOQUEADA" ? "text-rose-600" :
-                    "text-amber-600"
-                  }`}>
+                  <p className={`text-[10px] uppercase font-bold mb-1 ${selectedEmpresa.status === "ATIVA" ? "text-emerald-600" :
+                      selectedEmpresa.status === "BLOQUEADA" ? "text-rose-600" :
+                        "text-amber-600"
+                    }`}>
                     Status Atual da Empresa
                   </p>
-                  <p className={`font-black text-lg ${
-                    selectedEmpresa.status === "ATIVA" ? "text-emerald-800" :
-                    selectedEmpresa.status === "BLOQUEADA" ? "text-rose-800" :
-                    "text-amber-800"
-                  }`}>
+                  <p className={`font-black text-lg ${selectedEmpresa.status === "ATIVA" ? "text-emerald-800" :
+                      selectedEmpresa.status === "BLOQUEADA" ? "text-rose-800" :
+                        "text-amber-800"
+                    }`}>
                     {selectedEmpresa.status === "BLOQUEADA" ? "REJEITADA / BLOQUEADA" : selectedEmpresa.status}
                   </p>
                 </div>
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center bg-white shadow-sm border ${
-                  selectedEmpresa.status === "ATIVA" ? "border-emerald-200 text-emerald-600" :
-                  selectedEmpresa.status === "BLOQUEADA" ? "border-rose-200 text-rose-600" :
-                  "border-amber-200 text-amber-600"
-                }`}>
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center bg-white shadow-sm border ${selectedEmpresa.status === "ATIVA" ? "border-emerald-200 text-emerald-600" :
+                    selectedEmpresa.status === "BLOQUEADA" ? "border-rose-200 text-rose-600" :
+                      "border-amber-200 text-amber-600"
+                  }`}>
                   {selectedEmpresa.status === "ATIVA" ? <CheckCircle2 className="w-6 h-6" /> :
-                   selectedEmpresa.status === "BLOQUEADA" ? <Ban className="w-6 h-6" /> :
-                   <Clock className="w-6 h-6" />}
+                    selectedEmpresa.status === "BLOQUEADA" ? <Ban className="w-6 h-6" /> :
+                      <Clock className="w-6 h-6" />}
                 </div>
               </div>
             </div>
@@ -544,27 +538,27 @@ export default function AdminCredenciamentos() {
               >
                 Fechar
               </button>
-              
+
               <div className="flex w-full sm:w-auto gap-3">
                 {/* Se a empresa for a do próprio admin, não mostra ações */}
                 {selectedEmpresa.cd_pessoaj !== loggedUserId && (
                   <>
                     {/* Se a empresa estiver PENDENTE ou ATIVA, permite Bloquear */}
                     {(selectedEmpresa.status === "PENDENTE" || selectedEmpresa.status === "ATIVA") && (
-                      <button 
+                      <button
                         disabled={actionLoading === selectedEmpresa.cd_pessoaj}
-                        onClick={() => { updateStatus(selectedEmpresa.cd_pessoaj, "BLOQUEADA"); setSelectedEmpresa(null); }} 
+                        onClick={() => { updateStatus(selectedEmpresa.cd_pessoaj, "BLOQUEADA"); setSelectedEmpresa(null); }}
                         className="flex-1 sm:flex-none px-5 py-2.5 bg-white text-rose-600 border border-rose-200 hover:border-rose-300 hover:bg-rose-50 rounded-xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                       >
                         <XCircle className="w-4 h-4" /> {selectedEmpresa.status === "ATIVA" ? "Bloquear Cadastro" : "Rejeitar"}
                       </button>
                     )}
-                    
+
                     {/* Se a empresa estiver PENDENTE ou BLOQUEADA, permite Aprovar */}
                     {(selectedEmpresa.status === "PENDENTE" || selectedEmpresa.status === "BLOQUEADA") && (
-                      <button 
+                      <button
                         disabled={actionLoading === selectedEmpresa.cd_pessoaj}
-                        onClick={() => { updateStatus(selectedEmpresa.cd_pessoaj, "ATIVA"); setSelectedEmpresa(null); }} 
+                        onClick={() => { updateStatus(selectedEmpresa.cd_pessoaj, "ATIVA"); setSelectedEmpresa(null); }}
                         className="flex-1 sm:flex-none px-6 py-2.5 bg-blue-900 text-white rounded-xl font-bold hover:bg-blue-950 transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 group disabled:opacity-50"
                       >
                         {selectedEmpresa.status === "BLOQUEADA" ? "Reativar Cadastro" : "Aprovar"} <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

@@ -24,7 +24,7 @@ export default function Footer() {
 
       <div
         className="py-16 px-6 md:px-10"
-        style={{ background: "linear-gradient(180deg, #172554, #080f24)" }}
+        style={{ background: "linear-gradient(180deg, var(--brand-navy), #080f24)" }}
       >
         {/* Radial glow */}
         <div
@@ -50,17 +50,17 @@ export default function Footer() {
                 <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-105 transition-all duration-300"
                   style={{
-                    background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+                    background: "linear-gradient(135deg, var(--brand-accent), var(--brand))",
                     boxShadow: "0 4px 14px rgba(59,130,246,0.2)",
                   }}
                 >
                   <span className="text-white font-black text-lg">M</span>
                 </div>
                 <span className="font-extrabold text-2xl text-white tracking-wider">
-                  Med<span style={{ color: "#60a5fa" }}>Connect</span>
+                  Med<span style={{ color: "var(--brand-accent)" }}>Connect</span>
                 </span>
               </Link>
-              <p className="text-zinc-400 leading-relaxed text-sm max-w-md">
+              <p className="text-subtle leading-relaxed text-sm max-w-md">
                 Conectando quem possui excedentes hospitalares a quem precisa
                 deles, facilitando negociações e transformando recursos ociosos
                 em soluções para toda a rede de saúde.
@@ -79,7 +79,7 @@ export default function Footer() {
                       className="w-7 h-7 rounded-full flex items-center justify-center"
                       style={{
                         backgroundColor: item.bg,
-                        border: "2px solid #172554",
+                        border: "2px solid var(--brand-navy)",
                       }}
                     >
                       <span className="text-white text-[10px] font-bold">
@@ -88,7 +88,7 @@ export default function Footer() {
                     </div>
                   ))}
                 </div>
-                <span className="text-xs text-zinc-500">
+                <span className="text-xs text-muted">
                   +500 empresas já utilizam
                 </span>
               </div>
@@ -98,7 +98,7 @@ export default function Footer() {
             <div className="md:col-span-3 md:col-start-7">
               <h3
                 className="text-xs font-bold mb-5 uppercase tracking-[0.2em]"
-                style={{ color: "#60a5fa" }}
+                style={{ color: "var(--brand-accent)" }}
               >
                 Navegação
               </h3>
@@ -153,15 +153,15 @@ export default function Footer() {
 
           {/* Bottom bar */}
           <div className="mt-14 pt-6 flex flex-col md:flex-row items-center justify-between gap-4" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-            <p className="text-xs text-zinc-600">
+            <p className="text-xs text-subtle">
               © {new Date().getFullYear()} MedConnect. Todos os direitos reservados.
             </p>
             <div className="flex items-center gap-2">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: "#34d399" }} />
-                <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: "#10b981" }} />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: "var(--success-border)" }} />
+                <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: "var(--success)" }} />
               </span>
-              <span className="text-xs text-zinc-500">
+              <span className="text-xs text-muted">
                 Todos os sistemas operacionais
               </span>
             </div>

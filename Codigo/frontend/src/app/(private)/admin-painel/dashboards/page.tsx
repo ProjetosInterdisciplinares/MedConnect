@@ -5,7 +5,6 @@ import { Shield, TrendingUp, DollarSign, Package, Users, Activity, BarChart3, Ch
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area } from "recharts"
 import { StatisticsResponse } from "@/types"
 import servicesGetStatistics from "@/server/(GET)-statistics"
-import AnimatedBackground from "@/components/ui/animated-background"
 
 export default function DashboardsPage() {
   const [stats, setStats] = useState<StatisticsResponse | null>(null)
@@ -56,21 +55,21 @@ export default function DashboardsPage() {
   }
 
   // Calculate some derived metrics
-  const totalAnunciosCriados = 
-    (stats.anuncios_ativos || 0) + 
-    (stats.anuncios_negociacao || 0) + 
-    (stats.anuncios_finalizados || 0) + 
+  const totalAnunciosCriados =
+    (stats.anuncios_ativos || 0) +
+    (stats.anuncios_negociacao || 0) +
+    (stats.anuncios_finalizados || 0) +
     (stats.anuncios_inativos || 0)
 
-  const conversionRate = totalAnunciosCriados > 0 
+  const conversionRate = totalAnunciosCriados > 0
     ? ((stats.anuncios_finalizados || 0) / totalAnunciosCriados * 100).toFixed(1)
     : "0.0"
 
   return (
     <div className="min-h-screen bg-transparent w-full selection:bg-blue-500/20 antialiased relative">
-      <AnimatedBackground />
+
       <div className="w-full max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 relative z-10">
-        
+
         {/* Header no padrão MedConnect */}
         <div className="mb-8 md:mb-12 animate-in fade-in slide-in-from-top-4 duration-700">
           <div className="flex items-center gap-3 mb-2">
@@ -88,14 +87,14 @@ export default function DashboardsPage() {
 
         {/* Main Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8 lg:mb-10 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150 fill-mode-both">
-          
+
           {/* Card: Volume Financeiro */}
           <div className="bg-white rounded-[1.25rem] p-6 shadow-sm hover:shadow-2xl hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 ease-out flex flex-col relative overflow-hidden group border border-transparent hover:border-blue-100">
             <div className="absolute top-0 left-0 h-1.5 w-0 bg-blue-600 group-hover:w-full transition-all duration-500 ease-out z-10" />
             <div className="absolute -right-4 -top-4 p-4 opacity-[0.03] group-hover:opacity-10 group-hover:rotate-12 transition-all duration-500 group-hover:scale-110">
               <DollarSign size={120} />
             </div>
-            
+
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-bold text-slate-500 text-sm tracking-wide uppercase">Volume Transacionado</h3>
               <div className="bg-blue-50 text-blue-600 p-2.5 rounded-xl shadow-sm">
@@ -117,7 +116,7 @@ export default function DashboardsPage() {
             <div className="absolute -right-4 -top-4 p-4 opacity-[0.03] group-hover:opacity-10 group-hover:rotate-12 transition-all duration-500 group-hover:scale-110">
               <DollarSign size={120} />
             </div>
-            
+
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-bold text-slate-500 text-sm tracking-wide uppercase">Venda de Créditos</h3>
               <div className="bg-amber-50 text-amber-500 p-2.5 rounded-xl shadow-sm">
@@ -139,7 +138,7 @@ export default function DashboardsPage() {
             <div className="absolute -right-4 -top-4 p-4 opacity-[0.03] group-hover:opacity-10 group-hover:-rotate-12 transition-all duration-500 group-hover:scale-110">
               <Activity size={120} />
             </div>
-            
+
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-bold text-slate-500 text-sm tracking-wide uppercase">Créditos Utilizados</h3>
               <div className="bg-purple-50 text-purple-600 p-2.5 rounded-xl shadow-sm">
@@ -160,7 +159,7 @@ export default function DashboardsPage() {
             <div className="absolute -right-4 -top-4 p-4 opacity-[0.03] group-hover:opacity-10 group-hover:-rotate-12 transition-all duration-500 group-hover:scale-110">
               <Users size={120} />
             </div>
-            
+
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-bold text-slate-500 text-sm tracking-wide uppercase">Empresas na Rede</h3>
               <div className="bg-indigo-50 text-indigo-500 p-2.5 rounded-xl shadow-sm">
@@ -181,7 +180,7 @@ export default function DashboardsPage() {
             <div className="absolute -right-4 -top-4 p-4 opacity-[0.03] group-hover:opacity-10 group-hover:rotate-12 transition-all duration-500 group-hover:scale-110">
               <Clock size={120} />
             </div>
-            
+
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-bold text-slate-500 text-sm tracking-wide uppercase">Em Negociação</h3>
               <div className="bg-amber-50 text-amber-500 p-2.5 rounded-xl shadow-sm">
@@ -202,7 +201,7 @@ export default function DashboardsPage() {
             <div className="absolute -right-4 -top-4 p-4 opacity-[0.03] group-hover:opacity-10 group-hover:-rotate-12 transition-all duration-500 group-hover:scale-110">
               <CheckCircle size={120} />
             </div>
-            
+
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-bold text-slate-500 text-sm tracking-wide uppercase">Repassados</h3>
               <div className="bg-emerald-50 text-emerald-500 p-2.5 rounded-xl shadow-sm">
@@ -221,7 +220,7 @@ export default function DashboardsPage() {
 
         {/* Visual Charts section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-300 fill-mode-both">
-          
+
           {/* Gráfico de Pizza: Distribuição */}
           <div className="bg-white rounded-[1.25rem] p-6 lg:p-8 shadow-sm border border-slate-100 hover:shadow-xl transition-shadow duration-300 flex flex-col">
             <div className="flex items-center justify-between mb-2 pb-4 border-b border-slate-100">
@@ -233,7 +232,7 @@ export default function DashboardsPage() {
               </div>
               <span className="text-sm font-bold bg-slate-100 text-slate-500 px-3 py-1 rounded-full">{totalAnunciosCriados} Total</span>
             </div>
-            
+
             <div className="flex-1 min-h-[300px] w-full mt-4">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -266,11 +265,11 @@ export default function DashboardsPage() {
                       ))
                     }
                   </Pie>
-                  <RechartsTooltip 
+                  <RechartsTooltip
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
                     itemStyle={{ fontWeight: 'bold' }}
                   />
-                  <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontWeight: 600, fontSize: '13px', color: '#475569' }}/>
+                  <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontWeight: 600, fontSize: '13px', color: '#475569' }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -290,7 +289,7 @@ export default function DashboardsPage() {
                 <h2 className="text-xl font-extrabold text-slate-800">Crescimento da Plataforma</h2>
               </div>
             </div>
-            
+
             <div className="flex-1 min-h-[300px] w-full mt-4 relative z-10">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
@@ -305,15 +304,15 @@ export default function DashboardsPage() {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 13, fontWeight: 600 }} dy={10} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                  <RechartsTooltip 
+                  <RechartsTooltip
                     cursor={{ fill: '#f1f5f9' }}
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
                     itemStyle={{ fontWeight: 'bold', color: '#4f46e5' }}
                   />
-                  <Bar 
-                    dataKey="total" 
-                    fill="#4f46e5" 
-                    radius={[6, 6, 0, 0]} 
+                  <Bar
+                    dataKey="total"
+                    fill="#4f46e5"
+                    radius={[6, 6, 0, 0]}
                     animationDuration={1500}
                     animationBegin={400}
                   >
@@ -330,7 +329,7 @@ export default function DashboardsPage() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            
+
             <div className="mt-4 pt-4 border-t border-slate-100 relative z-10">
               <div className="flex items-center gap-3 bg-emerald-50 w-fit px-4 py-2 rounded-full border border-emerald-100">
                 <div className="relative flex h-2.5 w-2.5">
@@ -352,7 +351,7 @@ export default function DashboardsPage() {
             </div>
             <h2 className="text-xl font-extrabold text-slate-800">Evolução Mensal (Últimos 6 meses)</h2>
           </div>
-          
+
           <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
@@ -361,22 +360,22 @@ export default function DashboardsPage() {
               >
                 <defs>
                   <linearGradient id="colorAnuncios" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorPropostas" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 13, fontWeight: 600 }} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                <RechartsTooltip 
+                <RechartsTooltip
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
                   itemStyle={{ fontWeight: 'bold' }}
                 />
-                <Legend verticalAlign="top" height={36} wrapperStyle={{ fontWeight: 600, fontSize: '13px', color: '#475569' }}/>
+                <Legend verticalAlign="top" height={36} wrapperStyle={{ fontWeight: 600, fontSize: '13px', color: '#475569' }} />
                 <Area type="monotone" name="Novos Anúncios" dataKey="anuncios" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorAnuncios)" animationDuration={2000} />
                 <Area type="monotone" name="Novas Propostas" dataKey="propostas" stroke="#f59e0b" strokeWidth={3} fillOpacity={1} fill="url(#colorPropostas)" animationDuration={2000} />
               </AreaChart>
@@ -393,7 +392,7 @@ export default function DashboardsPage() {
               </div>
               <h2 className="text-xl font-extrabold text-slate-800">Receita da Plataforma (Venda de Créditos)</h2>
             </div>
-            
+
             <div className="flex items-center bg-slate-100 p-1 rounded-lg">
               {['diario', 'semanal', 'mensal', 'anual'].map((tf) => (
                 <button
@@ -406,7 +405,7 @@ export default function DashboardsPage() {
               ))}
             </div>
           </div>
-          
+
           <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
@@ -415,14 +414,14 @@ export default function DashboardsPage() {
               >
                 <defs>
                   <linearGradient id="colorRenda" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 13, fontWeight: 600 }} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} tickFormatter={(val) => `R$ ${val}`} />
-                <RechartsTooltip 
+                <RechartsTooltip
                   formatter={(value: any) => [formatCurrency(Number(value) || 0), 'Receita']}
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
                   itemStyle={{ fontWeight: 'bold' }}

@@ -55,17 +55,17 @@ const TABS = [
 function getStatusBadge(ie_status: 'A' | 'N' | 'F' | 'I' | 'S') {
   switch (ie_status) {
     case "A":
-      return { label: "ATIVO", className: "bg-sky-50 text-sky-700 border-sky-200" }
+      return { label: "ATIVO", className: "bg-brand-subtle text-brand border-brand-border" }
     case "N":
-      return { label: "EM NEGOCIAÇÃO", className: "bg-amber-50 text-amber-700 border-amber-200" }
+      return { label: "EM NEGOCIAÇÃO", className: "bg-warning-subtle text-warning border-warning-border" }
     case "F":
-      return { label: "FINALIZADO", className: "bg-sky-50 text-sky-700 border-sky-200" }
+      return { label: "FINALIZADO", className: "bg-success-subtle text-success border-success-border" }
     case "I":
-      return { label: "INATIVO", className: "bg-zinc-100 text-zinc-600 border-zinc-200" }
+      return { label: "INATIVO", className: "bg-surface-muted text-muted border-border" }
     case "S":
-      return { label: "SALDO DE VENDA", className: "bg-purple-50 text-purple-700 border-purple-200" }
+      return { label: "SALDO DE VENDA", className: "bg-brand-subtle text-brand border-brand-border" }
     default:
-      return { label: ie_status, className: "bg-zinc-100 text-zinc-600 border-zinc-200" }
+      return { label: ie_status, className: "bg-surface-muted text-muted border-border" }
   }
 }
 
@@ -134,29 +134,29 @@ export default function HistoricoPage() {
   return (
     <div className="max-w-5xl mx-auto py-10 px-4 md:px-0 font-sans">
       <div className="mb-8">
-        <h1 className="text-3xl font-black text-zinc-800 tracking-tight">
+        <h1 className="text-3xl font-black text-main tracking-tight">
           Histórico de Operações
         </h1>
-        <p className="text-zinc-500 mt-2">
+        <p className="text-muted mt-2">
           Acompanhe suas negociações, propostas aceitas e anúncios finalizados.
         </p>
       </div>
 
       {/* Navegação por Abas */}
-      <div className="flex flex-wrap items-center gap-3 mb-8 border-b border-red-700 pb-5  ">
+      <div className="flex flex-wrap items-center gap-3 mb-8 border-b border-border pb-5">
         {TABS.map(({ id, label, icon: Icon }) => {
           const isActive = activeTab === id
           return (
             <button
               key={id}
               onClick={() => setActiveTab(id)}
-              className={`hover:cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 border outline-none focus:ring-2 focus:ring-sky-500/20 ${
+              className={`hover:cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 border outline-none focus:ring-2 focus:ring-brand/20 ${
                 isActive
-                  ? "bg-sky-700 text-white border-sky-700 shadow-md shadow-sky-900/10"
-                  : "bg-white text-zinc-500 border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-800"
+                  ? "bg-brand text-white border-brand shadow-md shadow-brand/10"
+                  : "bg-surface text-muted border-border hover:border-slate-300 hover:bg-surface-subtle hover:text-main"
               }`}
             >
-              <Icon size={16} className={isActive ? "text-sky-100" : "text-zinc-400"} />
+              <Icon size={16} className={isActive ? "text-brand-border" : "text-subtle"} />
               {label}
             </button>
           )
@@ -167,15 +167,15 @@ export default function HistoricoPage() {
       <div className="space-y-4">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-sky-600 animate-spin" />
+            <Loader2 className="w-8 h-8 text-brand animate-spin" />
           </div>
         ) : itensFiltrados.length === 0 ? (
-          <div className="bg-white border border-dashed border-zinc-300 p-12 rounded-2xl flex flex-col items-center justify-center text-center">
-            <div className="w-16 h-16 bg-zinc-50 rounded-full flex items-center justify-center mb-4">
-              <Inbox className="w-8 h-8 text-zinc-400" />
+          <div className="bg-surface border border-dashed border-border p-12 rounded-2xl flex flex-col items-center justify-center text-center">
+            <div className="w-16 h-16 bg-surface-subtle rounded-full flex items-center justify-center mb-4">
+              <Inbox className="w-8 h-8 text-subtle" />
             </div>
-            <h3 className="font-bold text-lg text-zinc-800 mb-1">Nenhum registro encontrado</h3>
-            <p className="text-zinc-500 text-sm max-w-sm">
+            <h3 className="font-bold text-lg text-main mb-1">Nenhum registro encontrado</h3>
+            <p className="text-muted text-sm max-w-sm">
               Ainda não existem itens correspondentes a esta categoria no seu histórico.
             </p>
           </div>
@@ -196,36 +196,36 @@ export default function HistoricoPage() {
             return (
               <div
                 key={anuncio.nr_anuncio}
-                className="bg-white border border-zinc-200/80 p-5 md:p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm hover:shadow-md transition-shadow duration-200"
+                className="bg-surface border border-border/80 p-5 md:p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm hover:shadow-md transition-shadow duration-200"
               >
                 <div className="flex items-start gap-4">
-                  <div className="hidden md:flex w-12 h-12 rounded-full bg-sky-50 items-center justify-center shrink-0 border border-sky-100">
-                    <Package className="w-6 h-6 text-sky-700" />
+                  <div className="hidden md:flex w-12 h-12 rounded-full bg-brand-subtle items-center justify-center shrink-0 border border-brand-border">
+                    <Package className="w-6 h-6 text-brand-header" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[11px] font-bold uppercase tracking-widest text-sky-700">
+                      <span className="text-[11px] font-bold uppercase tracking-widest text-brand-header">
                         Anúncio #{anuncio.nr_anuncio}
                       </span>
                     </div>
-                    <h3 className="font-bold text-lg text-zinc-800 leading-tight">
+                    <h3 className="font-bold text-lg text-main leading-tight">
                       {nomeMaterial}
                     </h3>
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-zinc-500 mt-2">
-                      <span className="flex items-center gap-1.5 bg-zinc-50 px-2 py-1 rounded-md border border-zinc-100">
-                        <span className="font-semibold text-zinc-700">Qtd:</span>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted mt-2">
+                      <span className="flex items-center gap-1.5 bg-surface-subtle px-2 py-1 rounded-md border border-border-subtle">
+                        <span className="font-semibold text-main">Qtd:</span>
                         {anuncio.qtd_mat}
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <Calendar className="w-4 h-4 text-zinc-400" />
+                        <Calendar className="w-4 h-4 text-subtle" />
                         {anuncio.data_anuncio ?? "—"}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-t-0 border-zinc-100 pt-4 md:pt-0 mt-2 md:mt-0">
-                  <span className="text-sky-600 font-extrabold text-xl">
+                <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-t-0 border-border-subtle pt-4 md:pt-0 mt-2 md:mt-0">
+                  <span className="text-brand font-extrabold text-xl">
                     {Number(valorExibido).toLocaleString("pt-BR", {
                       style: "currency",
                       currency: "BRL",

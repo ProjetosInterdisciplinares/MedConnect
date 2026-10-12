@@ -147,7 +147,7 @@ export default function PerfilHeader({ empresa }: Props) {
                 {empresa?.razao_social ?? "Carregando..."}
               </h1>
 
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 mt-2 bg-sky-50 text-sky-700 text-[11px] font-bold uppercase tracking-wider rounded-full border border-sky-200">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 mt-2 bg-brand-subtle text-brand text-[11px] font-bold uppercase tracking-wider rounded-full border border-brand-border">
                 <CheckCircle className="w-3 h-3" /> Empresa Verificada
               </span>
 
@@ -360,8 +360,7 @@ export default function PerfilHeader({ empresa }: Props) {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="flex items-center justify-center gap-2 px-5 py-2.5 text-white rounded-xl font-bold hover:opacity-90 transition-opacity cursor-pointer shadow-md disabled:opacity-70"
-                style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)" }}
+                className="flex items-center justify-center gap-2 px-5 py-2.5 text-white rounded-xl font-bold hover:opacity-90 transition-opacity cursor-pointer shadow-md disabled:opacity-70 bg-gradient-to-r from-brand to-brand-hover"
               >
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                 Salvar Alterações

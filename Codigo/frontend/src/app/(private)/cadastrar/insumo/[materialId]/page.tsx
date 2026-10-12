@@ -6,7 +6,7 @@ import { ChevronLeft, Package, Tag, Building2, Layers } from "lucide-react"
 
 import { MatMed } from "@/types"
 import servicesGetMaterialDetails from "@/server/(GET)-material-details"
-import AnimatedBackground from "@/components/ui/animated-background"
+
 
 export default function MaterialDetails() {
   const params = useParams()
@@ -42,9 +42,9 @@ export default function MaterialDetails() {
 
   return (
     <div className="relative min-h-screen w-full antialiased selection:bg-blue-500/20">
-      <AnimatedBackground />
+
       <div className="max-w-4xl mx-auto py-8 px-4 relative z-10">
-        
+
         {/* Header e Voltar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
@@ -67,7 +67,7 @@ export default function MaterialDetails() {
 
         {/* Card de Detalhes */}
         <div className="bg-white border border-slate-200 border-t-[4px] border-t-blue-600 rounded-3xl p-6 md:p-8 shadow-sm">
-          
+
           <div className="mb-8">
             <h2 className="text-xl font-bold text-slate-800 mb-2">{material?.ds_mat ?? "Nome não disponível"}</h2>
             <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
@@ -76,7 +76,7 @@ export default function MaterialDetails() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
+
             <div className="flex items-start gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
               <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center shrink-0 border border-slate-200">
                 <Tag className="w-5 h-5 text-blue-600" />
@@ -96,7 +96,7 @@ export default function MaterialDetails() {
                 <p className="font-bold text-slate-800">{material?.ds_tipo ?? "Não categorizado"}</p>
               </div>
             </div>
-            
+
             {/* Outros atributos podem ser adicionados aqui no futuro */}
           </div>
 
