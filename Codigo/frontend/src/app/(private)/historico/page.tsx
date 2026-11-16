@@ -132,12 +132,10 @@ export default function HistoricoPage() {
   }, [anuncios, compras, activeTab, cdPessoa])
 
   return (
-    <div className="max-w-5xl mx-auto py-10 px-4 md:px-0 font-sans">
+    <div className="w-full font-sans">
       <div className="mb-8">
-        <h1 className="text-3xl font-black text-main tracking-tight">
-          Histórico de Operações
-        </h1>
-        <p className="text-muted mt-2">
+        <h1 className="sr-only">Histórico de Operações</h1>
+        <p className="text-sm text-slate-500">
           Acompanhe suas negociações, propostas aceitas e anúncios finalizados.
         </p>
       </div>

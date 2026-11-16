@@ -2,9 +2,11 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth.hashers import make_password, check_password
+from django.contrib.auth.hashers import check_password
 
+from pessoa_juridica.cnpj import limpar_cnpj
 from pessoa_juridica.models import PessoaJuridica
+from pessoa_juridica.serializers import CadastroEmpresaSerializer
 
 
 @api_view(['POST'])
@@ -18,11 +20,7 @@ def login(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # remove máscara do CNPJ
-    cnpj = cnpj.replace(".", "").replace("/", "").replace("-", "")
-
-    # busca no banco
-    user = PessoaJuridica.objects.filter(nr_cnpj=cnpj).first()
+    user = PessoaJuridica.objects.filter(nr_cnpj=limpar_cnpj(cnpj)).first()
 
     if not user:
         return Response(
@@ -51,10 +49,8 @@ def login(request):
             },
             status=status.HTTP_403_FORBIDDEN
         )
-    # ❌ NÃO usar for_user (não existe User padrão no seu model)
+    # A empresa não é um User do Django, por isso o token é montado à mão
     refresh = RefreshToken()
-    
-    # payload customizado
     refresh["cnpj"] = user.nr_cnpj
     refresh["id"] = user.cd_pessoaj
     refresh["name"] = user.nm_pessoaj
@@ -71,57 +67,24 @@ def login(request):
 @api_view(['POST'])
 def register(request):
 
-    nm_pessoaj = request.data.get('nm_pessoaj')
-    email_pj = request.data.get('email_pj')
-    senha_pj = request.data.get('senha_pj')
-    resp_tec = request.data.get('resp_tec')
-    nr_cnpj = request.data.get('nr_cnpj')
-    razao_social = request.data.get('razao_social')
+    obrigatorios = ('nm_pessoaj', 'email_pj', 'senha_pj', 'resp_tec', 'nr_cnpj', 'razao_social')
+    if not all(request.data.get(campo) for campo in obrigatorios):
+        return Response({"error": "Todos os campos são obrigatórios"}, status=status.HTTP_400_BAD_REQUEST)
 
-    if not all([
-        nm_pessoaj,
-        email_pj,
-        senha_pj,
-        resp_tec,
-        nr_cnpj,
-        razao_social
-    ]):
+    dados = {**request.data, 'nr_cnpj': limpar_cnpj(request.data.get('nr_cnpj'))}
+
+    if PessoaJuridica.objects.filter(nr_cnpj=dados['nr_cnpj']).exists():
+        return Response({"error": "CNPJ já cadastrado"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Grava todos os dados do formulário (inclusive telefone e endereço); a senha vai com hash
+    serializer = CadastroEmpresaSerializer(data=dados)
+    if not serializer.is_valid():
+        campo, mensagens = next(iter(serializer.errors.items()))
         return Response(
-            {
-                "error": "Todos os campos são obrigatórios"
-            },
-            status=status.HTTP_400_BAD_REQUEST
+            {"error": f"{campo}: {mensagens[0]}", "detalhes": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST,
         )
-
-    nr_cnpj = (
-        nr_cnpj
-        .replace(".", "")
-        .replace("/", "")
-        .replace("-", "")
-    )
-
-    if PessoaJuridica.objects.filter(
-        nr_cnpj=nr_cnpj
-    ).exists():
-        return Response(
-            {
-                "error": "CNPJ já cadastrado"
-            },
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    # Criptografa a senha antes de salvar
-    senha_criptografada = make_password(senha_pj)
-
-    empresa = PessoaJuridica.objects.create(
-        nm_pessoaj=nm_pessoaj,
-        email_pj=email_pj,
-        senha_pj=senha_criptografada,
-        resp_tec=resp_tec,
-        nr_cnpj=nr_cnpj,
-        razao_social=razao_social,
-        status="PENDENTE"
-    )
+    empresa = serializer.save()
 
     return Response(
         {

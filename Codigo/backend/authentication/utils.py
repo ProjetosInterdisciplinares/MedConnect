@@ -2,6 +2,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 
+from pessoa_juridica.cnpj import limpar_cnpj
 from pessoa_juridica.models import PessoaJuridica
 
 
@@ -11,7 +12,7 @@ def password_reset(request):
     Redefine a senha de uma PessoaJuridica 
     verificando CNPJ + email cadastrado.
     """
-    cnpj = request.data.get('cnpj', '').replace(".", "").replace("/", "").replace("-", "")
+    cnpj = limpar_cnpj(request.data.get('cnpj'))
     email = request.data.get('email', '').strip().lower()
     new_password = request.data.get('new_password', '')
     confirm_password = request.data.get('confirm_password', '')

@@ -50,7 +50,7 @@ export function Pagination({
           disabled={currentPage === 1}
           className="cursor-pointer text-[15px] font-bold text-brand-header disabled:opacity-50 disabled:cursor-not-allowed hover:text-brand-hover transition-colors"
         >
-          &lt; Anterior
+          Anterior
         </button>
 
         <div className="flex items-center gap-3 sm:gap-4">
@@ -81,7 +81,7 @@ export function Pagination({
           disabled={currentPage === totalPages}
           className="cursor-pointer text-[15px] font-bold text-brand-header disabled:opacity-50 disabled:cursor-not-allowed hover:text-brand-hover transition-colors"
         >
-          Próxima &gt;
+          Próxima
         </button>
       </div>
 

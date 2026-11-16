@@ -5,3 +5,8 @@ class CreditosConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'creditos'
     verbose_name = 'Créditos'
+
+    def ready(self):
+        from creditos.assinantes import ConcederBoasVindas
+
+        ConcederBoasVindas().assinar()

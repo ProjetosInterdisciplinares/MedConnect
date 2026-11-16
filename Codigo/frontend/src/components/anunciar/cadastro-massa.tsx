@@ -1,5 +1,6 @@
 "use client"
 
+import { ModalPadrao, BOTAO } from "@/components/ui/modal-padrao"
 import { useRouter } from "next/navigation"
 
 import React, { useState, useCallback } from "react"
@@ -35,6 +36,7 @@ import { buildUrl, getAuthHeaders } from "@/server/middleware"
 import { AuthManager } from "@/lib/AuthManager"
 import servicesGetCreditosSaldo from "@/server/(GET)-creditos-saldo"
 import { notificarCreditosAtualizados } from "@/lib/creditos"
+import { rotuloCreditos, useCustosCreditos } from "@/hooks/useCustosCreditos"
 
 // ── Types ────────────────────────────────────────────────────────────
 interface BulkInsumo {
@@ -92,6 +94,9 @@ interface PublishResponse {
 
 // ── Component ────────────────────────────────────────────────────────
 export default function CadastroMassa() {
+  const { publicacao: custoPorAnuncio } = useCustosCreditos()
+  const custoDoLote = (quantidade: number) =>
+    rotuloCreditos(custoPorAnuncio === null ? null : quantidade * custoPorAnuncio)
   const [dragActive, setDragActive] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [publishing, setPublishing] = useState(false)
@@ -666,32 +671,31 @@ export default function CadastroMassa() {
                 </p>
               </div>
 
+              <div className="flex flex-wrap items-center justify-center gap-4">
+              {totalToPublish > 0 && !publishing && (
+                <span className="text-sm text-slate-500 whitespace-nowrap">
+                  Custo: <span className="font-semibold text-slate-700 tabular-nums">{custoDoLote(totalToPublish)}</span>
+                </span>
+              )}
               <button
                 type="button"
                 onClick={() => setIsConfirmPublishOpen(true)}
                 disabled={publishing || totalToPublish === 0}
-                className="group px-8 py-3 bg-blue-900 text-white rounded-xl font-bold hover:bg-blue-950 transition-all shadow-lg shadow-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-4 whitespace-nowrap cursor-pointer"
+                className="h-11 px-6 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2 whitespace-nowrap cursor-pointer"
               >
                 {publishing ? (
                   <>
-                    <Loader2 size={18} className="animate-spin" />
-                    Publicando...
+                    <Loader2 size={16} className="animate-spin" />
+                    Publicando…
                   </>
                 ) : (
                   <>
-                    <div className="flex items-center gap-2">
-                      <Upload size={18} />
-                      Publicar Todos ({totalToPublish})
-                    </div>
-                    {totalToPublish > 0 && (
-                      <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1 rounded-lg border border-white/10 group-hover:bg-white/30 transition-colors shadow-inner text-sm">
-                        <Coins size={16} className="text-amber-300" />
-                        <span>{totalToPublish * 5} Créditos</span>
-                      </div>
-                    )}
+                    <Upload size={16} aria-hidden="true" />
+                    Publicar todos ({totalToPublish})
                   </>
                 )}
               </button>
+              </div>
             </div>
           </div>
           </div>
@@ -846,22 +850,17 @@ export default function CadastroMassa() {
 
       {/* ─── Tutorial Modal ─────────────────────────────────────────── */}
       <Dialog open={showTutorial} onOpenChange={setShowTutorial}>
-        <DialogContent className="sm:max-w-2xl p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl max-h-[80vh]">
-          <DialogHeader className="m-0 bg-blue-900 px-6 py-5 rounded-t-xl border-b border-blue-950">
-            <DialogTitle className="flex items-center gap-2 text-white text-xl font-black">
-              <HelpCircle className="w-5 h-5" />
-              Tutorial de Importação em Massa
-            </DialogTitle>
-            <DialogDescription className="text-blue-100">
-              Guia completo para preencher a planilha de importação.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-2xl p-6 gap-0 bg-white max-h-[85vh] overflow-y-auto">
+          <DialogTitle className="text-lg font-semibold text-slate-900">Como preencher a planilha</DialogTitle>
+          <DialogDescription className="mt-2 text-sm text-slate-600">
+            Campos da planilha de importação em massa e as regras aplicadas na publicação.
+          </DialogDescription>
 
-          <div className="p-6 overflow-y-auto max-h-[60vh] space-y-6">
+          <div className="mt-5 space-y-6">
             {/* Required Fields */}
             <div>
-              <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-                <span className="text-red-500">*</span> Campos Obrigatórios
+              <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                <span className="text-red-500">*</span> Campos obrigatórios
               </h3>
               <div className="space-y-2">
                 {[
@@ -877,10 +876,10 @@ export default function CadastroMassa() {
                   { field: "Valor Base R$", desc: "Use vírgula para decimais. Ex: 15,90" },
                   { field: "Observações", desc: "Descrição do anúncio" },
                 ].map((item) => (
-                  <div key={item.field} className="flex items-start gap-3 bg-white p-3 rounded-xl border border-slate-100">
+                  <div key={item.field} className="flex items-start gap-3 px-3 py-2.5 rounded-lg border border-slate-200">
                     <span className="text-red-500 font-bold text-sm mt-0.5">*</span>
                     <div>
-                      <p className="text-sm font-bold text-slate-800">{item.field}</p>
+                      <p className="text-sm font-medium text-slate-900">{item.field}</p>
                       <p className="text-xs text-slate-500">{item.desc}</p>
                     </div>
                   </div>
@@ -890,17 +889,17 @@ export default function CadastroMassa() {
 
             {/* Optional Fields */}
             <div>
-              <h3 className="text-sm font-bold text-slate-800 mb-3">Campos Opcionais</h3>
+              <h3 className="text-sm font-semibold text-slate-900 mb-3">Campos opcionais</h3>
               <div className="space-y-2">
                 {[
                   { field: "Tabela TISS", desc: "'19' (Brasíndice) ou '20' (TUSS)" },
                   { field: "Código SIMPRO", desc: "Código SIMPRO do insumo" },
                   { field: "Código Brasíndice", desc: "Código Brasíndice do insumo" },
                 ].map((item) => (
-                  <div key={item.field} className="flex items-start gap-3 bg-white p-3 rounded-xl border border-slate-100">
+                  <div key={item.field} className="flex items-start gap-3 px-3 py-2.5 rounded-lg border border-slate-200">
                     <span className="text-slate-400 font-bold text-sm mt-0.5">○</span>
                     <div>
-                      <p className="text-sm font-bold text-slate-800">{item.field}</p>
+                      <p className="text-sm font-medium text-slate-900">{item.field}</p>
                       <p className="text-xs text-slate-500">{item.desc}</p>
                     </div>
                   </div>
@@ -909,25 +908,25 @@ export default function CadastroMassa() {
             </div>
 
             {/* Rules */}
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-              <h3 className="text-sm font-bold text-amber-800 mb-2 flex items-center gap-2">
-                <AlertTriangle size={14} /> Regras Importantes
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                <AlertTriangle size={14} className="text-amber-600" aria-hidden="true" /> Regras importantes
               </h3>
-              <ul className="space-y-1.5 text-xs text-amber-800">
+              <ul className="space-y-1.5 text-xs text-slate-600">
                 <li className="flex items-start gap-2">
-                  <span className="text-amber-500 mt-0.5">•</span>
+                  <span className="text-slate-400 mt-0.5">•</span>
                   Se o insumo (mesmo nome + TUSS) já existir no seu cadastro, ele será reutilizado automaticamente.
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-amber-500 mt-0.5">•</span>
+                  <span className="text-slate-400 mt-0.5">•</span>
                   Caso contrário, o insumo será criado automaticamente junto com o anúncio.
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-amber-500 mt-0.5">•</span>
+                  <span className="text-slate-400 mt-0.5">•</span>
                   Linhas com erros não serão publicadas, mas não impedem as demais.
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-amber-500 mt-0.5">•</span>
+                  <span className="text-slate-400 mt-0.5">•</span>
                   Linhas completamente vazias são ignoradas.
                 </li>
               </ul>
@@ -938,149 +937,89 @@ export default function CadastroMassa() {
 
       {/* MODAL DE CONFIRMAÇÃO DE PUBLICAÇÃO */}
       <Dialog open={isConfirmPublishOpen} onOpenChange={setIsConfirmPublishOpen}>
-        <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
-          <DialogHeader className="m-0 bg-blue-900 px-6 py-5 rounded-t-xl border-b border-blue-950">
-            <DialogTitle className="flex items-center gap-2 text-white text-xl font-black">
-              <Megaphone className="w-6 h-6" />
-              Confirmar Publicação em Massa
-            </DialogTitle>
-            <DialogDescription className="text-blue-100">
-              Revise os dados antes de descontar seus créditos.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="p-6">
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3 text-sm mb-6">
-              <p className="flex justify-between border-b border-slate-100 pb-2">
-                <span className="font-semibold text-slate-500">Anúncios Selecionados</span> 
-                <span className="font-bold text-slate-800 text-right">{totalToPublish}</span>
-              </p>
-              <p className="flex justify-between border-b border-slate-100 pb-2">
-                <span className="font-semibold text-slate-500">Novos Insumos</span> 
-                <span className="font-bold text-amber-600 text-right">{totalNewInsumos}</span>
-              </p>
-              <p className="flex justify-between">
-                <span className="font-semibold text-slate-500">Custo Total</span> 
-                <span className="font-black text-amber-500 text-right flex items-center gap-1.5">
-                  <Coins size={16} />
-                  {totalToPublish * 5} Créditos
-                </span>
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-3 w-full">
-              <button
-                type="button"
-                onClick={handlePublishAll}
-                disabled={publishing}
-                className="w-full py-3 bg-blue-900 text-white rounded-xl font-black shadow-lg shadow-blue-900/20 hover:bg-blue-950 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {publishing ? (
-                  <>
-                    <Loader2 size={18} className="animate-spin" />
-                    Processando...
-                  </>
-                ) : (
-                  `Confirmar e Descontar (${totalToPublish * 5} Créditos)`
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsConfirmPublishOpen(false)}
-                disabled={publishing}
-                className="w-full py-2.5 bg-white text-slate-500 border border-slate-200 hover:bg-slate-100 rounded-xl font-bold transition-colors disabled:opacity-50"
-              >
-                Cancelar
-              </button>
-            </div>
+        <DialogContent showCloseButton={false} className="sm:max-w-md p-6 gap-0 bg-white">
+          <DialogTitle className="text-lg font-semibold text-slate-900">Publicar {totalToPublish} anúncios?</DialogTitle>
+          <DialogDescription className="mt-2 text-sm text-slate-600">
+            Os créditos são descontados do seu saldo na publicação.
+          </DialogDescription>
+          <dl className="mt-5 rounded-lg border border-slate-200 divide-y divide-slate-100 text-sm">
+            {[
+              ["Anúncios selecionados", String(totalToPublish)],
+              ["Novos insumos", String(totalNewInsumos)],
+              ["Custo total", custoDoLote(totalToPublish)],
+            ].map(([rotulo, valor]) => (
+              <div key={rotulo} className="flex justify-between gap-4 px-4 py-2.5">
+                <dt className="text-slate-500">{rotulo}</dt>
+                <dd className="font-medium text-slate-900 tabular-nums">{valor}</dd>
+              </div>
+            ))}
+          </dl>
+          <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setIsConfirmPublishOpen(false)}
+              disabled={publishing}
+              className="h-10 px-4 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handlePublishAll}
+              disabled={publishing}
+              className="h-10 px-4 rounded-lg bg-blue-700 hover:bg-blue-800 text-sm font-semibold text-white transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
+            >
+              {publishing ? (<><Loader2 size={16} className="animate-spin" /> Publicando…</>) : `Publicar (${custoDoLote(totalToPublish)})`}
+            </button>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* MODAL SEM CRÉDITOS */}
       <Dialog open={isInsufficientCreditsOpen} onOpenChange={setIsInsufficientCreditsOpen}>
-        <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
-          <DialogHeader className="m-0 bg-amber-500 px-6 py-5 rounded-t-xl border-b border-amber-600">
-            <DialogTitle className="flex items-center gap-2 text-white text-xl font-black">
-              <DollarSign className="w-6 h-6" />
-              Sem créditos!
-            </DialogTitle>
-            <DialogDescription className="text-amber-100">
-              Saldo Insuficiente
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="p-6 text-center flex flex-col items-center">
-            <p className="text-slate-600 mb-6 text-sm font-medium leading-relaxed">
-              Você não possui saldo suficiente para publicar esses anúncios. <br />
-              Adquira um pacote de créditos para continuar turbinando suas negociações.
-            </p>
-            
-            <div className="flex flex-col gap-3 w-full">
-              <button
-                type="button"
-                onClick={() => router.push("/creditos")}
-                className="w-full py-3 bg-gradient-to-r from-amber-400 to-amber-500 text-white rounded-xl font-black shadow-lg shadow-amber-500/30 hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-              >
-                <Coins size={18} /> Ir para a Central de Créditos
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsInsufficientCreditsOpen(false)}
-                className="w-full py-2.5 bg-white text-slate-500 border border-slate-200 hover:bg-slate-100 rounded-xl font-bold transition-colors"
-              >
-                Cancelar
-              </button>
-            </div>
+        <DialogContent showCloseButton={false} className="sm:max-w-md p-6 gap-0 bg-white">
+          <DialogTitle className="text-lg font-semibold text-slate-900">Saldo insuficiente</DialogTitle>
+          <DialogDescription className="mt-2 text-sm text-slate-600 leading-relaxed">
+            Você não tem créditos suficientes para publicar esses anúncios. Compre um pacote na Central de Créditos para continuar.
+          </DialogDescription>
+          <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setIsInsufficientCreditsOpen(false)}
+              disabled={publishing}
+              className="h-10 px-4 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
+            >
+              Agora não
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push("/creditos")}
+              disabled={publishing}
+              className="h-10 px-4 rounded-lg bg-blue-700 hover:bg-blue-800 text-sm font-semibold text-white transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
+            >
+              Ver pacotes de créditos
+            </button>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* MODAL SUCESSO PUBLICAÇÃO */}
-      <Dialog open={isSuccessModalOpen} onOpenChange={(open) => {
-        if (!open) {
-          setIsSuccessModalOpen(false)
-          handleReset()
+      <ModalPadrao
+        open={isSuccessModalOpen}
+        onOpenChange={(open) => { if (!open) { setIsSuccessModalOpen(false); handleReset() } }}
+        titulo="Anúncios publicados"
+        descricao={`${publishSuccess?.total_criados ?? 0} anúncios já estão visíveis no catálogo para as outras instituições.`}
+        acoes={
+          <>
+            <button type="button" onClick={() => { setIsSuccessModalOpen(false); handleReset() }} className={BOTAO.secundario}>
+              Importar outra planilha
+            </button>
+            <button type="button" onClick={() => router.push("/meus-anuncios")} className={BOTAO.primario}>
+              Ver meus anúncios
+            </button>
+          </>
         }
-      }}>
-        <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
-          <DialogHeader className="m-0 bg-emerald-500 px-6 py-5 rounded-t-xl border-b border-emerald-600">
-            <DialogTitle className="flex items-center gap-2 text-white text-xl font-black">
-              <CheckCircle className="w-6 h-6" />
-              Tudo Certo!
-            </DialogTitle>
-            <DialogDescription className="text-emerald-100">
-              {publishSuccess?.total_criados} anúncios foram publicados com sucesso.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="p-6 text-center flex flex-col items-center">
-            <p className="text-slate-600 mb-6 text-sm font-medium leading-relaxed">
-              Os anúncios já estão disponíveis no mercado para que outras empresas façam propostas. Você pode acompanhá-los no catálogo.
-            </p>
-            
-            <div className="flex flex-col gap-3 w-full">
-              <button
-                type="button"
-                onClick={() => router.push("/catalogo")}
-                className="w-full py-3 bg-emerald-600 text-white rounded-xl font-black hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-600/20"
-              >
-                Ir para o Catálogo
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSuccessModalOpen(false)
-                  handleReset()
-                }}
-                className="w-full py-2.5 bg-white text-slate-500 border border-slate-200 hover:bg-slate-100 rounded-xl font-bold transition-colors"
-              >
-                Publicar Mais
-              </button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      />
 
     </div>
   )

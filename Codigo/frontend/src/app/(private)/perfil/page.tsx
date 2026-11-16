@@ -1,56 +1,45 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import { Inbox } from "lucide-react"
 
 import servicesGetMinhaPessoaJuridica from "@/server/(GET)-minha-pessoa-juridica"
-
 import { PessoaJuridica } from "@/types"
 
 import PerfilHeader from "@/components/perfil/PerfilHeader"
 import MeusMateriais from "@/components/perfil/MeusMateriais"
-
 import CarteiraCreditos from "@/components/creditos/CarteiraCreditos"
+import AlertasInteresse from "@/components/perfil/AlertasInteresse"
 
 export default function PerfilPage() {
-  const [empresa, setEmpresa] =
-    useState<PessoaJuridica | null>(null)
+  const [empresa, setEmpresa] = useState<PessoaJuridica | null>(null)
 
   useEffect(() => {
     async function carregarPerfil() {
-      const result =
-        await servicesGetMinhaPessoaJuridica()
-
-      if (
-        result &&
-        typeof result === "object" &&
-        !("isError" in result)
-      ) {
-        setEmpresa(result)
-      }
+      const result = await servicesGetMinhaPessoaJuridica()
+      if (result && typeof result === "object" && !("isError" in result)) setEmpresa(result)
     }
-
     carregarPerfil()
   }, [])
 
   return (
-    <div className="relative min-h-screen w-full antialiased selection:bg-blue-500/20">
-      <div className="max-w-5xl mx-auto py-8 px-4 relative z-10">
+    <div className="w-full">
+      <header className="mb-6">
+        <h1 className="sr-only">Meu perfil</h1>
+        <p className="text-sm text-slate-500">Dados da instituição, créditos, alertas de interesse e materiais cadastrados.</p>
+      </header>
 
-        <PerfilHeader empresa={empresa} />
-
-        <div className="mt-8">
-          <CarteiraCreditos />
-        </div>
-
-        <div className="mt-8">
-          <div className="flex items-center gap-2 mb-6">
-            <Inbox size={24} className="text-blue-700" />
-            <h2 className="text-xl font-bold text-slate-800">Materiais Cadastrados</h2>
+      <div className="space-y-6">
+        {/* Dados da instituição ao lado do saldo; movimentações abaixo */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <div className="xl:col-span-2 min-w-0">
+            <PerfilHeader empresa={empresa} />
           </div>
-
-          <MeusMateriais />
+          <CarteiraCreditos emGrade />
         </div>
+
+        <AlertasInteresse />
+
+        <MeusMateriais />
       </div>
     </div>
   )

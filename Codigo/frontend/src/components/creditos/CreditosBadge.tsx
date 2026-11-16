@@ -1,63 +1,58 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useRef, useState } from "react"
-import { Plus } from "lucide-react"
-import CreditoCoin from "@/components/creditos/CreditoCoin"
+import { Coins, Plus } from "lucide-react"
 import { formatCreditos } from "@/lib/creditos"
 
 interface Props {
   saldo: number | null
   isActive?: boolean
+  /** Variante para fundo claro (barra branca). */
+  claro?: boolean
 }
 
 /**
- * Pílula de saldo exibida no header escuro.
- * Faz um "pop" sempre que o saldo muda.
+ * Saldo de créditos exibido no menu.
  */
-export default function CreditosBadge({ saldo, isActive = false }: Props) {
-  const [popKey, setPopKey] = useState(0)
-  const anterior = useRef<number | null>(null)
-
-  useEffect(() => {
-    if (saldo === null) return
-    if (anterior.current !== null && anterior.current !== saldo) {
-      setPopKey((k) => k + 1)
-    }
-    anterior.current = saldo
-  }, [saldo])
+export default function CreditosBadge({ saldo, isActive = false, claro = false }: Props) {
+  const t = claro
+    ? {
+        base: isActive ? "bg-blue-50 border-blue-200" : "bg-white border-slate-200 hover:bg-slate-50",
+        icone: "text-blue-700",
+        valor: "text-slate-900",
+        rotulo: "text-slate-500",
+        skeleton: "bg-slate-200",
+        mais: "bg-blue-700 text-white group-hover:bg-blue-800",
+      }
+    : {
+        base: isActive ? "bg-white/15 border-white/20" : "bg-white/5 border-white/10 hover:bg-white/10",
+        icone: "text-blue-200",
+        valor: "text-white",
+        rotulo: "text-blue-200/80",
+        skeleton: "bg-white/20",
+        mais: "bg-white/10 text-white group-hover:bg-white/20",
+      }
 
   return (
     <Link
       href="/creditos"
       id="header-creditos-badge"
-      title="Meus créditos — clique para comprar"
-      className={`group relative flex items-center gap-1 sm:gap-2 px-1 sm:px-1.5 py-1 sm:py-1.5 rounded-full border transition-all duration-300 active:scale-[0.97]
-        ${isActive
-          ? "bg-white/20 border-white/20"
-          : "bg-white/10 border-white/5 hover:bg-white/15 hover:border-white/10"
-        }`}
-      style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)" }}
+      title="Meus créditos: clique para comprar"
+      className={`group flex items-center gap-2 pl-2.5 pr-1.5 py-1.5 rounded-lg border transition-colors ${t.base}`}
     >
-      <span key={popKey} className="flex items-center justify-center animate-credit-pop">
-        <CreditoCoin size={24} className="drop-shadow-[0_0_6px_rgba(251,191,36,0.55)] group-hover:rotate-12 transition-transform duration-500 w-5 h-5 sm:w-6 sm:h-6" />
+      <Coins className={`w-4 h-4 shrink-0 ${t.icone}`} aria-hidden="true" />
+
+      <span className={`text-sm font-semibold tabular-nums ${t.valor}`}>
+        {saldo === null ? (
+          <span className={`inline-block w-6 h-3 rounded animate-pulse align-middle ${t.skeleton}`} />
+        ) : (
+          formatCreditos(saldo)
+        )}
+        <span className={`ml-1 font-normal ${t.rotulo}`}>créditos</span>
       </span>
 
-      <span className="flex flex-col leading-none pr-0.5">
-        <span className="text-[13px] font-extrabold tabular-nums tracking-tight text-white">
-          {saldo === null ? (
-            <span className="inline-block w-6 h-3 rounded animate-pulse align-middle bg-white/20" />
-          ) : (
-            formatCreditos(saldo)
-          )}
-        </span>
-        <span className="hidden sm:block text-[9px] font-bold uppercase tracking-[0.12em] mt-0.5 transition-colors text-blue-200/60 group-hover:text-amber-300/80">
-          créditos
-        </span>
-      </span>
-
-      <span className="flex items-center justify-center w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-amber-400 text-blue-950 group-hover:bg-amber-300 group-hover:rotate-90 transition-all duration-300 shadow-[0_0_10px_rgba(251,191,36,0.5)]">
-        <Plus className="w-3 h-3 sm:w-3 sm:h-3" strokeWidth={3.5} />
+      <span className={`flex items-center justify-center w-5 h-5 rounded-md transition-colors ${t.mais}`}>
+        <Plus className="w-3 h-3" strokeWidth={2.5} aria-hidden="true" />
       </span>
     </Link>
   )

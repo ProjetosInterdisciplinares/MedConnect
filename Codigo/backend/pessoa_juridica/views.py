@@ -1,39 +1,69 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
-from pessoa_juridica.models import PessoaJuridica
-from pessoa_juridica.serializers import PessoaJuridicaSerializer
-from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from pessoa_juridica.models import PessoaJuridica
+from pessoa_juridica.permissions import IsAdminUserPJ, IsPropriaEmpresaOuAdmin
+from pessoa_juridica.serializers import AdminEmpresaSerializer, PerfilEmpresaSerializer
+from pessoa_juridica.verificacao import VerificacaoCredenciamentoFacade
+
 
 class PessoaJuridicaCreateListView(generics.ListCreateAPIView):
-    permission_classes = (IsAuthenticated,)
-    queryset =  PessoaJuridica.objects.all()
-    serializer_class = PessoaJuridicaSerializer
-    
-class PessoaJuridicaRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (IsAuthenticated,)
+    """Cadastro direto e listagem de todas as empresas: somente admin."""
+    permission_classes = (IsAdminUserPJ,)
     queryset = PessoaJuridica.objects.all()
-    serializer_class = PessoaJuridicaSerializer
+    serializer_class = AdminEmpresaSerializer
+
+
+class PessoaJuridicaRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
+    """A empresa vê e edita o próprio cadastro; remover é exclusivo do admin."""
+    permission_classes = (IsAuthenticated, IsPropriaEmpresaOuAdmin)
+    queryset = PessoaJuridica.objects.all()
+
+    def get_permissions(self):
+        if self.request.method == 'DELETE':
+            return [IsAdminUserPJ()]
+        return super().get_permissions()
+
+    def get_serializer_class(self):
+        return AdminEmpresaSerializer if getattr(self.request.user, 'is_admin', False) else PerfilEmpresaSerializer
+
 
 class MinhaPessoaJuridicaView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
-        serializer = PessoaJuridicaSerializer(request.user)
-        return Response(serializer.data)
+        return Response(PerfilEmpresaSerializer(request.user).data)
 
-from rest_framework.permissions import BasePermission
-
-class IsAdminUserPJ(BasePermission):
-    def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and getattr(request.user, 'is_admin', False))
 
 class AdminPessoaJuridicaListView(generics.ListAPIView):
     queryset = PessoaJuridica.objects.all().order_by('-cd_pessoaj')
-    serializer_class = PessoaJuridicaSerializer
-    permission_classes = [IsAdminUserPJ]
+    serializer_class = AdminEmpresaSerializer
+    permission_classes = (IsAdminUserPJ,)
+
 
 class AdminPessoaJuridicaUpdateView(generics.UpdateAPIView):
     queryset = PessoaJuridica.objects.all()
-    serializer_class = PessoaJuridicaSerializer
-    permission_classes = [IsAdminUserPJ]
+    serializer_class = AdminEmpresaSerializer
+    permission_classes = (IsAdminUserPJ,)
+
+
+class VerificacaoCredenciamentoView(APIView):
+    """
+    GET: relatório de verificação do CNPJ da empresa (usa a última consulta guardada).
+    POST: consulta a Receita Federal de novo e devolve o relatório atualizado.
+    """
+    permission_classes = (IsAdminUserPJ,)
+
+    def get(self, request, pk):
+        return self._relatorio(pk, atualizar=False)
+
+    def post(self, request, pk):
+        return self._relatorio(pk, atualizar=True)
+
+    @staticmethod
+    def _relatorio(pk, atualizar):
+        empresa = get_object_or_404(PessoaJuridica, pk=pk)
+        return Response(VerificacaoCredenciamentoFacade().verificar(empresa, atualizar=atualizar).como_dict())

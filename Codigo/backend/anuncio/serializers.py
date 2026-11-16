@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.utils import timezone
 from rest_framework import serializers
 from anuncio.models import Anuncio, Negociacao
@@ -43,28 +45,28 @@ class AnuncioSerializer(serializers.ModelSerializer):
         source="cd_pessoa_anunciante.cep",
         read_only=True
     )
-    anunciante_email = serializers.CharField(
-        source="cd_pessoa_anunciante.email_pj",
-        read_only=True
-    )
-    anunciante_telefone = serializers.CharField(
-        source="cd_pessoa_anunciante.telefone",
-        read_only=True
-    )
+    # E-mail e telefone do anunciante não são públicos: só são liberados
+    # para o comprador depois que o vendedor aceita a proposta (NegociacaoSerializer).
     is_recommended = serializers.BooleanField(
         read_only=True,
         default=False
+    )
+    distancia_km = serializers.FloatField(
+        read_only=True,
+        default=None
     )
 
     class Meta:
         model = Anuncio
         fields = "__all__"
-        # Campos de negociação são controlados exclusivamente pelo fluxo de Negociacao
+        # Campos de negociação são controlados exclusivamente pelo fluxo de Negociacao.
+        # O anunciante é sempre a empresa logada (definido no servidor).
         read_only_fields = [
             "data_anuncio",
             "val_proposta",
             "val_aceito",
             "cd_pessoa_compradora",
+            "cd_pessoa_anunciante",
         ]
 
     def validate_ie_status(self, value):
@@ -102,26 +104,20 @@ class NegociacaoSerializer(serializers.ModelSerializer):
         source="vendedor.razao_social",
         read_only=True
     )
-    vendedor_email = serializers.CharField(
-        source="vendedor.email_pj",
-        read_only=True
-    )
-    vendedor_telefone = serializers.CharField(
-        source="vendedor.telefone",
-        read_only=True
-    )
     comprador_nome = serializers.CharField(
         source="comprador.razao_social",
         read_only=True
     )
-    comprador_email = serializers.CharField(
-        source="comprador.email_pj",
-        read_only=True
-    )
-    comprador_telefone = serializers.CharField(
-        source="comprador.telefone",
-        read_only=True
-    )
+    # Contatos: liberados para as duas partes só depois do aceite
+    vendedor_email = serializers.SerializerMethodField()
+    vendedor_telefone = serializers.SerializerMethodField()
+    vendedor_responsavel = serializers.SerializerMethodField()
+    comprador_email = serializers.SerializerMethodField()
+    comprador_telefone = serializers.SerializerMethodField()
+    comprador_responsavel = serializers.SerializerMethodField()
+
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    motivo_recusa_display = serializers.CharField(source="get_motivo_recusa_display", read_only=True, default=None)
     anuncio_val_base = serializers.DecimalField(
         source="anuncio.val_base",
         max_digits=10,
@@ -136,11 +132,57 @@ class NegociacaoSerializer(serializers.ModelSerializer):
         source="anuncio.ds_lote",
         read_only=True
     )
+    anuncio_descricao = serializers.CharField(
+        source="anuncio.ds_obs",
+        read_only=True
+    )
+    anuncio_unidade = serializers.CharField(
+        source="anuncio.cd_mat.unidade_med",
+        read_only=True,
+        default=None
+    )
+
+    # Opções do saldo restante, enviadas pelo vendedor ao aceitar uma venda parcial
+    CAMPOS_SALDO = ("reativar_saldo", "novo_val_base", "nova_descricao")
+    reativar_saldo = serializers.BooleanField(write_only=True, required=False)
+    novo_val_base = serializers.DecimalField(
+        write_only=True, required=False, max_digits=10, decimal_places=2, min_value=Decimal("0.01")
+    )
+    nova_descricao = serializers.CharField(write_only=True, required=False, max_length=2000)
 
     class Meta:
         model = Negociacao
         fields = "__all__"
-        read_only_fields = ["data_proposta", "data_resposta", "comprador", "vendedor"]
+        read_only_fields = [
+            "data_proposta", "data_resposta", "comprador", "vendedor",
+            "prazo_resposta", "entregue_em", "recebido_em",
+        ]
+
+    # ── Contatos ──────────────────────────────────────────────────────
+
+    @staticmethod
+    def _liberado(obj, valor):
+        return valor if obj.status in Negociacao.STATUS_COM_CONTATOS else None
+
+    def get_vendedor_email(self, obj):
+        return self._liberado(obj, obj.vendedor.email_pj)
+
+    def get_vendedor_telefone(self, obj):
+        return self._liberado(obj, obj.vendedor.telefone)
+
+    def get_vendedor_responsavel(self, obj):
+        return self._liberado(obj, obj.vendedor.resp_tec)
+
+    def get_comprador_email(self, obj):
+        return self._liberado(obj, obj.comprador.email_pj)
+
+    def get_comprador_telefone(self, obj):
+        return self._liberado(obj, obj.comprador.telefone)
+
+    def get_comprador_responsavel(self, obj):
+        return self._liberado(obj, obj.comprador.resp_tec)
+
+    # ── Validação ─────────────────────────────────────────────────────
 
     def validate(self, attrs):
         request = self.context.get("request")
@@ -148,12 +190,18 @@ class NegociacaoSerializer(serializers.ModelSerializer):
 
         # ── Atualização: apenas mudança de status por quem tem permissão ──
         if self.instance is not None:
-            extras = set(attrs) - {"status"}
+            extras = set(attrs) - {"status", "motivo_recusa", "detalhe_recusa", *self.CAMPOS_SALDO}
             if extras:
                 raise serializers.ValidationError(
                     "Somente o status da negociação pode ser alterado."
                 )
             novo = attrs.get("status")
+            if novo != "A" and any(campo in attrs for campo in self.CAMPOS_SALDO):
+                raise serializers.ValidationError(
+                    "As opções do saldo restante só valem ao aceitar a proposta."
+                )
+            if novo != "R" and ("motivo_recusa" in attrs or "detalhe_recusa" in attrs):
+                raise serializers.ValidationError("O motivo só pode ser informado ao recusar a proposta.")
             if novo not in ("A", "R", "C"):
                 raise serializers.ValidationError({"status": "Status inválido."})
             if self.instance.status != "P":
@@ -173,6 +221,8 @@ class NegociacaoSerializer(serializers.ModelSerializer):
         # ── Criação: abertura de negociação / envio de proposta ──
         # O status inicial é sempre Pendente; o cliente não pode defini-lo.
         attrs.pop("status", None)
+        for campo in (*self.CAMPOS_SALDO, "motivo_recusa", "detalhe_recusa"):
+            attrs.pop(campo, None)
         anuncio = attrs["anuncio"]
 
         if anuncio.cd_pessoa_anunciante_id == user.pk:
@@ -195,11 +245,5 @@ class NegociacaoSerializer(serializers.ModelSerializer):
         if qtd is not None and not (1 <= qtd <= anuncio.qtd_mat):
             raise serializers.ValidationError(
                 {"qtd_proposta": f"A quantidade deve estar entre 1 e {anuncio.qtd_mat}."}
-            )
-        # RF15: compra parcial obriga o comprador a sugerir um novo valor total
-        if qtd is not None and qtd < anuncio.qtd_mat and attrs["val_proposta"] == anuncio.val_base:
-            raise serializers.ValidationError(
-                {"val_proposta": "Ao comprar uma quantidade parcial, informe um novo valor "
-                                 "total diferente do valor do anúncio."}
             )
         return attrs

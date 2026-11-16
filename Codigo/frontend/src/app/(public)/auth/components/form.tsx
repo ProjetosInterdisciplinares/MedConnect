@@ -10,7 +10,7 @@ import {
 import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { authSchema, resetPasswordSchema } from "../schema"
-import { formatCNPJ } from "@/lib/format/format-document"
+import { formatCNPJ, formatNumeroEndereco, formatTelefone } from "@/lib/format/format-document"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { z } from "zod"
@@ -19,7 +19,9 @@ import { useRouter } from "next/navigation"
 import servicesAuth from "@/server/(POST)-auth"
 import servicesPasswordReset from "@/server/(POST)-password-reset"
 import {
+  ArrowLeft,
   ArrowRight,
+  MapPin,
   Building2,
   FileText,
   CreditCard,
@@ -74,6 +76,26 @@ function RequiredLabel({ children, htmlFor }: { children: React.ReactNode; htmlF
   )
 }
 
+/* ─── Mensagem de erro de campo ─────────────────────────────── */
+function MensagemErro({ msg }: { msg?: string }) {
+  if (!msg) return null
+  return (
+    <p className="text-xs text-red-500 flex items-center gap-1">
+      <AlertCircle className="w-3 h-3 shrink-0" />
+      {msg}
+    </p>
+  )
+}
+
+function inputCls(hasError: boolean, extra = "") {
+  return `${extra} h-10 bg-surface-subtle border rounded-xl transition-colors duration-200
+    ${hasError
+      ? "border-red-300 focus-visible:ring-red-400"
+      : "border-border focus-visible:ring-blue-500 hover:border-slate-300"}`
+}
+
+const CAMPOS_ETAPA_1 = ["nm_pessoaj", "razao_social", "nr_cnpj", "resp_tec"] as const
+
 
 export default function Form(): JSX.Element {
   const router = useRouter()
@@ -87,6 +109,11 @@ export default function Form(): JSX.Element {
   const [loginError, setLoginError] = useState<string | null>(null)
   const [resetError, setResetError] = useState<string | null>(null)
   const [addressFetched, setAddressFetched] = useState(false)
+  const [enderecoManual, setEnderecoManual] = useState(false)
+  const [enderecoResumo, setEnderecoResumo] = useState("")
+  const [registerStep, setRegisterStep] = useState<1 | 2>(1)
+  const [registerSent, setRegisterSent] = useState(false)
+  const [empresaEnviada, setEmpresaEnviada] = useState("")
 
   const form = useForm<z.infer<typeof authSchema>>({
     resolver: zodResolver(authSchema),
@@ -131,6 +158,12 @@ export default function Form(): JSX.Element {
 
   const watchPassword = registerForm.watch("senha_pj")
   const passwordStrength = getPasswordStrength(watchPassword || "")
+  const rErr = registerForm.formState.errors
+
+  const avancarEtapa = async () => {
+    const ok = await registerForm.trigger([...CAMPOS_ETAPA_1])
+    if (ok) setRegisterStep(2)
+  }
 
   const fetchAddressByCep = async (cep: string) => {
     const numericCep = cep.replace(/\D/g, "");
@@ -147,10 +180,16 @@ export default function Form(): JSX.Element {
       }
 
       setAddressFetched(true);
+      // CEP geral de cidade não traz rua/bairro: libera o logradouro para digitação
+      setEnderecoManual(!data.logradouro);
+      setEnderecoResumo(
+        [data.logradouro, data.bairro].filter(Boolean).join(", ") + ` · ${data.localidade}/${data.uf}`
+      );
       registerForm.setValue("logradouro", data.logradouro || "");
       registerForm.setValue("bairro", data.bairro || "");
       registerForm.setValue("cidade", data.localidade || "");
       registerForm.setValue("estado", data.uf || "");
+      registerForm.clearErrors(["cep", "logradouro", "bairro", "cidade", "estado"]);
 
       // Geocode via Nominatim
       const query = encodeURIComponent(`${data.logradouro}, ${data.localidade}, ${data.uf}, Brasil`);
@@ -193,7 +232,6 @@ export default function Form(): JSX.Element {
 
         AuthManager.getInstance().setAuth(response.id, response.access)
         localStorage.setItem("cnpj", response.cnpj)
-        toast.success("Login realizado com sucesso!")
         router.push("/catalogo")
       } catch {
         const msg = "Erro de conexão com o servidor. Tente novamente."
@@ -218,12 +256,12 @@ export default function Form(): JSX.Element {
           return
         }
 
-        toast.success("Solicitação enviada!", {
-          description: "Aguarde a aprovação do administrador para acessar sua conta."
-        })
-
+        setEmpresaEnviada(data.nm_pessoaj)
         registerForm.reset()
-        setIsRightPanelActive(false)
+        setAddressFetched(false)
+        setEnderecoManual(false)
+        setRegisterStep(1)
+        setRegisterSent(true)
       } catch {
         toast.error("Erro de conexão", {
           description: "Não foi possível conectar ao servidor. Tente novamente."
@@ -265,12 +303,12 @@ export default function Form(): JSX.Element {
 
   return (
     <TooltipProvider>
-      <div className="relative min-h-screen w-full flex items-start justify-center pt-16 md:pt-24 pb-0 font-sans text-heading overflow-hidden">
+      <div className="relative h-full w-full flex items-center justify-center px-4 py-6 font-sans text-heading overflow-hidden">
 
 
 
         {/* container principal da animação */}
-        <div className="relative overflow-hidden w-full max-w-[850px] h-[650px] max-h-[85vh] bg-white/85 backdrop-blur-md rounded-3xl z-10"
+        <div className="relative overflow-hidden w-full max-w-[850px] h-[620px] max-h-full bg-white/85 backdrop-blur-md rounded-3xl z-10"
           style={{ boxShadow: "0 25px 60px -12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.03)" }}
         >
 
@@ -281,377 +319,314 @@ export default function Form(): JSX.Element {
                 ? 'md:translate-x-full opacity-100 z-50 pointer-events-auto'
                 : 'opacity-0 z-10 pointer-events-none hidden md:block'}`}
           >
-            <div className="flex flex-col items-center justify-start h-full px-8 py-6 text-center bg-white overflow-y-auto">
-              <div className="w-full max-w-[340px]">
-                <div className="mb-5">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl mb-3"
-                    style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-hover))" }}
-                  >
-                    <Building2 className="w-6 h-6 text-white" />
+            <div className="flex flex-col h-full px-8 py-6 text-center bg-white overflow-y-auto">
+              <div className="w-full max-w-[360px] mx-auto my-auto">
+                {registerSent ? (
+                  /* ─── Confirmação da solicitação ─── */
+                  <div className="text-left animate-in fade-in duration-300">
+                    <div className="w-11 h-11 rounded-xl bg-brand-subtle text-brand flex items-center justify-center">
+                      <CheckCircle2 className="w-6 h-6" aria-hidden="true" />
+                    </div>
+                    <h1 className="mt-4 font-bold text-2xl text-heading">Solicitação enviada</h1>
+                    <p className="mt-2 text-sm text-slate-500 leading-relaxed">
+                      O cadastro de <span className="font-semibold text-main">{empresaEnviada}</span> foi recebido e será analisado pela equipe MedConnect.
+                    </p>
+                    <ul className="mt-4 space-y-2 text-sm text-main">
+                      <li className="flex gap-2"><span className="text-brand font-semibold">1.</span> Conferimos os dados e o CNPJ da instituição.</li>
+                      <li className="flex gap-2"><span className="text-brand font-semibold">2.</span> Após a aprovação, você entra com o CNPJ e a senha cadastrados.</li>
+                    </ul>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        setRegisterSent(false)
+                        setIsRightPanelActive(false)
+                      }}
+                      className="mt-6 w-full rounded-xl text-white font-semibold text-sm h-11 bg-brand hover:bg-brand-hover"
+                    >
+                      Voltar para o login
+                    </Button>
                   </div>
-                  <h1 className="font-bold text-2xl text-heading">Criar Conta</h1>
-                  <p className="text-sm text-muted mt-1">Preencha os dados para solicitar credenciamento</p>
-                </div>
-
-                <form
-                  onSubmit={registerForm.handleSubmit(onRegister)}
-                  className="w-full flex flex-col gap-2.5"
-                  noValidate
-                >
-                  {/* Nome da Empresa */}
-                  <div className="flex flex-col gap-1 text-left">
-                    <RequiredLabel htmlFor="reg-nome">Nome da Empresa</RequiredLabel>
-                    <div className="relative">
-                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
-                      <Input
-                        id="reg-nome"
-                        placeholder="Ex: MedTech Ltda"
-                        className={`pl-10 h-10 bg-surface-subtle border rounded-xl transition-all duration-200
-                          ${registerForm.formState.errors.nm_pessoaj
-                            ? "border-red-300 focus-visible:ring-red-400"
-                            : "border-border focus-visible:ring-blue-500 hover:border-slate-300"}`}
-                        {...registerForm.register("nm_pessoaj")}
-                      />
-                    </div>
-                    {registerForm.formState.errors.nm_pessoaj && (
-                      <p className="text-xs text-red-500 flex items-center gap-1 mt-0.5">
-                        <AlertCircle className="w-3 h-3 shrink-0" />
-                        {registerForm.formState.errors.nm_pessoaj.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Razão Social */}
-                  <div className="flex flex-col gap-1 text-left">
-                    <RequiredLabel htmlFor="reg-razao">Razão Social</RequiredLabel>
-                    <div className="relative">
-                      <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
-                      <Input
-                        id="reg-razao"
-                        placeholder="Ex: MedTech Comércio Ltda"
-                        className={`pl-10 h-10 bg-surface-subtle border rounded-xl transition-all duration-200
-                          ${registerForm.formState.errors.razao_social
-                            ? "border-red-300 focus-visible:ring-red-400"
-                            : "border-border focus-visible:ring-blue-500 hover:border-slate-300"}`}
-                        {...registerForm.register("razao_social")}
-                      />
-                    </div>
-                    {registerForm.formState.errors.razao_social && (
-                      <p className="text-xs text-red-500 flex items-center gap-1 mt-0.5">
-                        <AlertCircle className="w-3 h-3 shrink-0" />
-                        {registerForm.formState.errors.razao_social.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* CNPJ */}
-                  <div className="flex flex-col gap-1 text-left">
-                    <RequiredLabel htmlFor="reg-cnpj">CNPJ</RequiredLabel>
-                    <div className="relative">
-                      <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
-                      <Input
-                        id="reg-cnpj"
-                        placeholder="00.000.000/0000-00"
-                        maxLength={18}
-                        className={`pl-10 h-10 bg-surface-subtle border rounded-xl transition-all duration-200
-                          ${registerForm.formState.errors.nr_cnpj
-                            ? "border-red-300 focus-visible:ring-red-400"
-                            : "border-border focus-visible:ring-blue-500 hover:border-slate-300"}`}
-                        {...registerForm.register("nr_cnpj", {
-                          onChange: (e) => {
-                            e.target.value = formatCNPJ(e.target.value)
-                          }
-                        })}
-                      />
-                    </div>
-                    {registerForm.formState.errors.nr_cnpj && (
-                      <p className="text-xs text-red-500 flex items-center gap-1 mt-0.5">
-                        <AlertCircle className="w-3 h-3 shrink-0" />
-                        {registerForm.formState.errors.nr_cnpj.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* E-mail */}
-                  <div className="flex flex-col gap-1 text-left">
-                    <RequiredLabel htmlFor="reg-email">E-mail Corporativo</RequiredLabel>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
-                      <Input
-                        id="reg-email"
-                        type="email"
-                        placeholder="contato@empresa.com.br"
-                        className={`pl-10 h-10 bg-surface-subtle border rounded-xl transition-all duration-200
-                          ${registerForm.formState.errors.email_pj
-                            ? "border-red-300 focus-visible:ring-red-400"
-                            : "border-border focus-visible:ring-blue-500 hover:border-slate-300"}`}
-                        {...registerForm.register("email_pj")}
-                      />
-                    </div>
-                    {registerForm.formState.errors.email_pj && (
-                      <p className="text-xs text-red-500 flex items-center gap-1 mt-0.5">
-                        <AlertCircle className="w-3 h-3 shrink-0" />
-                        {registerForm.formState.errors.email_pj.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Responsável Técnico */}
-                  <div className="flex flex-col gap-1 text-left">
-                    <RequiredLabel htmlFor="reg-resp">Responsável Técnico</RequiredLabel>
-                    <div className="relative">
-                      <UserCog className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
-                      <Input
-                        id="reg-resp"
-                        placeholder="Nome completo"
-                        className={`pl-10 h-10 bg-surface-subtle border rounded-xl transition-all duration-200
-                          ${registerForm.formState.errors.resp_tec
-                            ? "border-red-300 focus-visible:ring-red-400"
-                            : "border-border focus-visible:ring-blue-500 hover:border-slate-300"}`}
-                        {...registerForm.register("resp_tec")}
-                      />
-                    </div>
-                    {registerForm.formState.errors.resp_tec && (
-                      <p className="text-xs text-red-500 flex items-center gap-1 mt-0.5">
-                        <AlertCircle className="w-3 h-3 shrink-0" />
-                        {registerForm.formState.errors.resp_tec.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Endereço e Telefone */}
-                  <div className="grid grid-cols-2 gap-3 text-left">
-                    {/* Telefone */}
-                    <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                      <RequiredLabel htmlFor="reg-telefone">Telefone</RequiredLabel>
-                      <Input
-                        id="reg-telefone"
-                        placeholder="(00) 00000-0000"
-                        className={`h-10 bg-surface-subtle border rounded-xl transition-all duration-200
-                          ${registerForm.formState.errors.telefone
-                            ? "border-red-300 focus-visible:ring-red-400"
-                            : "border-border focus-visible:ring-blue-500"}`}
-                        {...registerForm.register("telefone")}
-                      />
-                    </div>
-                    {/* CEP */}
-                    <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                      <RequiredLabel htmlFor="reg-cep">CEP</RequiredLabel>
-                      <Input
-                        id="reg-cep"
-                        placeholder="00000-000"
-                        maxLength={9}
-                        className={`h-10 bg-surface-subtle border rounded-xl transition-all duration-200
-                          ${registerForm.formState.errors.cep
-                            ? "border-red-300 focus-visible:ring-red-400"
-                            : "border-border focus-visible:ring-blue-500"}`}
-                        {...registerForm.register("cep", {
-                          onChange: (e) => {
-                            let val = e.target.value.replace(/\D/g, "")
-                            if (val.length > 5) val = val.substring(0, 5) + "-" + val.substring(5, 8)
-                            e.target.value = val
-                            if (val.length === 9) fetchAddressByCep(val)
-                          }
-                        })}
-                      />
-                    </div>
-                    {addressFetched && (
-                      <>
-                        {/* Logradouro */}
-                        <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                          <RequiredLabel htmlFor="reg-logradouro">Logradouro</RequiredLabel>
-                          <Input
-                            id="reg-logradouro"
-                            placeholder="Rua / Avenida"
-                            readOnly
-                            className={`h-10 bg-surface-muted border rounded-xl transition-all duration-200
-                              ${registerForm.formState.errors.logradouro
-                                ? "border-red-300 focus-visible:ring-red-400"
-                                : "border-border focus-visible:ring-blue-500"}`}
-                            {...registerForm.register("logradouro")}
-                          />
-                        </div>
-                        {/* Número */}
-                        <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                          <RequiredLabel htmlFor="reg-numero">Número</RequiredLabel>
-                          <Input
-                            id="reg-numero"
-                            placeholder="Nº"
-                            className={`h-10 bg-surface-subtle border rounded-xl transition-all duration-200
-                              ${registerForm.formState.errors.numero
-                                ? "border-red-300 focus-visible:ring-red-400"
-                                : "border-border focus-visible:ring-blue-500"}`}
-                            {...registerForm.register("numero")}
-                          />
-                        </div>
-                        {/* Bairro */}
-                        <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                          <RequiredLabel htmlFor="reg-bairro">Bairro</RequiredLabel>
-                          <Input
-                            id="reg-bairro"
-                            placeholder="Bairro"
-                            readOnly
-                            className={`h-10 bg-surface-muted border rounded-xl transition-all duration-200
-                              ${registerForm.formState.errors.bairro
-                                ? "border-red-300 focus-visible:ring-red-400"
-                                : "border-border focus-visible:ring-blue-500"}`}
-                            {...registerForm.register("bairro")}
-                          />
-                        </div>
-                        {/* Cidade */}
-                        <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                          <RequiredLabel htmlFor="reg-cidade">Cidade</RequiredLabel>
-                          <Input
-                            id="reg-cidade"
-                            placeholder="Cidade"
-                            readOnly
-                            className={`h-10 bg-surface-muted border rounded-xl transition-all duration-200
-                              ${registerForm.formState.errors.cidade
-                                ? "border-red-300 focus-visible:ring-red-400"
-                                : "border-border focus-visible:ring-blue-500"}`}
-                            {...registerForm.register("cidade")}
-                          />
-                        </div>
-                        {/* Estado */}
-                        <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                          <RequiredLabel htmlFor="reg-estado">UF</RequiredLabel>
-                          <Input
-                            id="reg-estado"
-                            placeholder="SP"
-                            maxLength={2}
-                            readOnly
-                            className={`h-10 bg-surface-muted border rounded-xl transition-all duration-200 uppercase
-                              ${registerForm.formState.errors.estado
-                                ? "border-red-300 focus-visible:ring-red-400"
-                                : "border-border focus-visible:ring-blue-500"}`}
-                            {...registerForm.register("estado")}
-                          />
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Senha com tooltip de requisitos */}
-                  <div className="flex flex-col gap-1 text-left">
-                    <div className="flex items-center gap-1.5">
-                      <RequiredLabel htmlFor="reg-senha">Senha</RequiredLabel>
-                      <Tooltip>
-                        <TooltipTrigger
-                          className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-200 hover:bg-blue-100 transition-colors cursor-help"
-                          type="button"
-                          aria-label="Requisitos de senha"
-                        >
-                          <HelpCircle className="w-3 h-3 text-muted" />
-                        </TooltipTrigger>
-                        <TooltipContent side="right" className="max-w-[260px] p-3 text-left">
-                          <p className="font-semibold text-xs mb-1.5">Requisitos de senha segura:</p>
-                          <ul className="text-xs space-y-1">
-                            <li className="flex items-center gap-1.5">
-                              {(watchPassword?.length || 0) >= 8
-                                ? <CheckCircle2 className="w-3 h-3 text-success shrink-0" />
-                                : <AlertCircle className="w-3 h-3 text-subtle shrink-0" />}
-                              Mínimo 8 caracteres
-                            </li>
-                            <li className="flex items-center gap-1.5">
-                              {/[A-Z]/.test(watchPassword || "")
-                                ? <CheckCircle2 className="w-3 h-3 text-success shrink-0" />
-                                : <AlertCircle className="w-3 h-3 text-subtle shrink-0" />}
-                              1 letra maiúscula (A-Z)
-                            </li>
-                            <li className="flex items-center gap-1.5">
-                              {/[a-z]/.test(watchPassword || "")
-                                ? <CheckCircle2 className="w-3 h-3 text-success shrink-0" />
-                                : <AlertCircle className="w-3 h-3 text-subtle shrink-0" />}
-                              1 letra minúscula (a-z)
-                            </li>
-                            <li className="flex items-center gap-1.5">
-                              {/[0-9]/.test(watchPassword || "")
-                                ? <CheckCircle2 className="w-3 h-3 text-success shrink-0" />
-                                : <AlertCircle className="w-3 h-3 text-subtle shrink-0" />}
-                              1 número (0-9)
-                            </li>
-                            <li className="flex items-center gap-1.5">
-                              {/[^A-Za-z0-9]/.test(watchPassword || "")
-                                ? <CheckCircle2 className="w-3 h-3 text-success shrink-0" />
-                                : <AlertCircle className="w-3 h-3 text-subtle shrink-0" />}
-                              1 caractere especial (!@#$%...)
-                            </li>
-                          </ul>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
-                      <Input
-                        id="reg-senha"
-                        type={showRegisterPassword ? "text" : "password"}
-                        placeholder="Crie uma senha segura"
-                        className={`pl-10 pr-10 h-10 bg-surface-subtle border rounded-xl transition-all duration-200
-                          ${registerForm.formState.errors.senha_pj
-                            ? "border-red-300 focus-visible:ring-red-400"
-                            : "border-border focus-visible:ring-blue-500 hover:border-slate-300"}`}
-                        {...registerForm.register("senha_pj")}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowRegisterPassword(!showRegisterPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-subtle hover:text-slate-600 transition-colors"
-                        aria-label={showRegisterPassword ? "Ocultar senha" : "Mostrar senha"}
-                      >
-                        {showRegisterPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-
-                    {/* Password strength bar */}
-                    {watchPassword && watchPassword.length > 0 && (
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <div className="flex-1 h-1.5 bg-surface-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all duration-500 ease-out"
-                            style={{
-                              width: `${(passwordStrength.score / 5) * 100}%`,
-                              backgroundColor: passwordStrength.color
-                            }}
-                          />
-                        </div>
-                        <span className="text-xs font-medium shrink-0" style={{ color: passwordStrength.color }}>
-                          {passwordStrength.label}
-                        </span>
+                ) : (
+                  <>
+                    <div className="mb-4 text-left">
+                      <h1 className="font-bold text-2xl text-heading">Criar Conta</h1>
+                      <p className="text-sm text-slate-500 mt-0.5">Solicite o credenciamento da sua instituição</p>
+                      <div className="mt-3 flex items-center gap-2" aria-label={`Etapa ${registerStep} de 2`}>
+                        <span className={`h-1 flex-1 rounded-full ${registerStep >= 1 ? "bg-brand" : "bg-slate-200"}`} />
+                        <span className={`h-1 flex-1 rounded-full ${registerStep >= 2 ? "bg-brand" : "bg-slate-200"}`} />
                       </div>
-                    )}
-
-                    {registerForm.formState.errors.senha_pj && (
-                      <p className="text-xs text-red-500 flex items-center gap-1 mt-0.5">
-                        <AlertCircle className="w-3 h-3 shrink-0" />
-                        {registerForm.formState.errors.senha_pj.message}
+                      <p className="mt-1.5 text-xs font-medium text-slate-500">
+                        Etapa {registerStep} de 2 · {registerStep === 1 ? "Dados da empresa" : "Contato, endereço e acesso"}
                       </p>
-                    )}
-                  </div>
+                    </div>
 
-                  <Button
-                    type="submit"
-                    disabled={isSubmit}
-                    className="rounded-xl text-white font-semibold text-sm py-2.5 h-11 mt-1 transition-all duration-300 hover:shadow-lg active:scale-[0.98]"
-                    style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-hover))" }}
-                  >
-                    {isSubmit ? (
-                      <span className="flex items-center gap-2">Enviando... <Spinner className="w-4 h-4" /></span>
-                    ) : (
-                      <span className="flex items-center gap-2">Solicitar Credenciamento <ArrowRight className="w-4 h-4" /></span>
-                    )}
-                  </Button>
+                    <form
+                      onSubmit={registerForm.handleSubmit(onRegister)}
+                      className="w-full flex flex-col gap-2.5 text-left"
+                      noValidate
+                    >
+                      {registerStep === 1 ? (
+                        <>
+                          {/* Nome da Empresa */}
+                          <div className="flex flex-col gap-1">
+                            <RequiredLabel htmlFor="reg-nome">Nome da Empresa</RequiredLabel>
+                            <div className="relative">
+                              <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
+                              <Input id="reg-nome" placeholder="Ex: MedTech Ltda" className={inputCls(!!rErr.nm_pessoaj, "pl-10")} {...registerForm.register("nm_pessoaj")} />
+                            </div>
+                            <MensagemErro msg={rErr.nm_pessoaj?.message} />
+                          </div>
 
-                  <p className="text-[11px] text-subtle mt-1">
-                    Todos os campos marcados com <span className="text-red-500">*</span> são obrigatórios
-                  </p>
-                </form>
+                          {/* Razão Social */}
+                          <div className="flex flex-col gap-1">
+                            <RequiredLabel htmlFor="reg-razao">Razão Social</RequiredLabel>
+                            <div className="relative">
+                              <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
+                              <Input id="reg-razao" placeholder="Ex: MedTech Comércio Ltda" className={inputCls(!!rErr.razao_social, "pl-10")} {...registerForm.register("razao_social")} />
+                            </div>
+                            <MensagemErro msg={rErr.razao_social?.message} />
+                          </div>
 
-                <button
-                  onClick={() => setIsRightPanelActive(false)}
-                  className="md:hidden mt-4 text-sm text-blue-700 font-semibold hover:underline transition-colors"
-                >
-                  Já tem uma conta? Entrar
-                </button>
+                          {/* CNPJ */}
+                          <div className="flex flex-col gap-1">
+                            <RequiredLabel htmlFor="reg-cnpj">CNPJ</RequiredLabel>
+                            <div className="relative">
+                              <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
+                              <Input
+                                id="reg-cnpj"
+                                placeholder="00.000.000/0000-00"
+                                maxLength={18}
+                                inputMode="numeric"
+                                className={inputCls(!!rErr.nr_cnpj, "pl-10")}
+                                {...registerForm.register("nr_cnpj", {
+                                  onChange: (e) => { e.target.value = formatCNPJ(e.target.value) }
+                                })}
+                              />
+                            </div>
+                            <MensagemErro msg={rErr.nr_cnpj?.message} />
+                          </div>
+
+                          {/* Responsável Técnico */}
+                          <div className="flex flex-col gap-1">
+                            <RequiredLabel htmlFor="reg-resp">Responsável Técnico</RequiredLabel>
+                            <div className="relative">
+                              <UserCog className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
+                              <Input id="reg-resp" placeholder="Nome completo" className={inputCls(!!rErr.resp_tec, "pl-10")} {...registerForm.register("resp_tec")} />
+                            </div>
+                            <MensagemErro msg={rErr.resp_tec?.message} />
+                          </div>
+
+                          <Button
+                            type="button"
+                            onClick={avancarEtapa}
+                            className="rounded-xl text-white font-semibold text-sm h-11 mt-2 bg-brand hover:bg-brand-hover"
+                          >
+                            <span className="flex items-center gap-2">Continuar <ArrowRight className="w-4 h-4" /></span>
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          {/* E-mail */}
+                          <div className="flex flex-col gap-1">
+                            <RequiredLabel htmlFor="reg-email">E-mail Corporativo</RequiredLabel>
+                            <div className="relative">
+                              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
+                              <Input id="reg-email" type="email" placeholder="contato@empresa.com.br" className={inputCls(!!rErr.email_pj, "pl-10")} {...registerForm.register("email_pj")} />
+                            </div>
+                            <MensagemErro msg={rErr.email_pj?.message} />
+                          </div>
+
+                          {/* Telefone e CEP */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="flex flex-col gap-1">
+                              <RequiredLabel htmlFor="reg-telefone">Telefone</RequiredLabel>
+                              <Input
+                                id="reg-telefone"
+                                type="tel"
+                                inputMode="numeric"
+                                placeholder="(00) 00000-0000"
+                                maxLength={15}
+                                className={inputCls(!!rErr.telefone)}
+                                {...registerForm.register("telefone", {
+                                  onChange: (e) => { e.target.value = formatTelefone(e.target.value) }
+                                })}
+                              />
+                              <MensagemErro msg={rErr.telefone?.message} />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <RequiredLabel htmlFor="reg-cep">CEP</RequiredLabel>
+                              <Input
+                                id="reg-cep"
+                                inputMode="numeric"
+                                placeholder="00000-000"
+                                maxLength={9}
+                                className={inputCls(!!rErr.cep || (!addressFetched && !!rErr.logradouro))}
+                                {...registerForm.register("cep", {
+                                  onChange: (e) => {
+                                    let val = e.target.value.replace(/\D/g, "")
+                                    if (val.length > 5) val = val.substring(0, 5) + "-" + val.substring(5, 8)
+                                    e.target.value = val
+                                    if (val.length === 9) fetchAddressByCep(val)
+                                    else setAddressFetched(false)
+                                  }
+                                })}
+                              />
+                              <MensagemErro msg={rErr.cep?.message ?? (!addressFetched && rErr.logradouro ? "Informe um CEP válido" : undefined)} />
+                            </div>
+                          </div>
+
+                          {/* Endereço + Número */}
+                          <div className="grid grid-cols-[1fr_6.5rem] gap-3">
+                            <div className="flex flex-col gap-1 min-w-0">
+                              <span className="text-sm font-medium text-slate-700">Endereço</span>
+                              {addressFetched && enderecoManual ? (
+                                <Input
+                                  id="reg-logradouro"
+                                  placeholder="Rua / Avenida"
+                                  className={inputCls(!!rErr.logradouro)}
+                                  {...registerForm.register("logradouro")}
+                                />
+                              ) : (
+                                <div className="h-10 px-3 flex items-center gap-2 rounded-xl border border-border bg-surface-muted text-sm min-w-0">
+                                  <MapPin className="w-4 h-4 shrink-0 text-subtle" aria-hidden="true" />
+                                  <span title={addressFetched ? enderecoResumo : undefined} className={`truncate ${addressFetched ? "text-main" : "text-slate-400"}`}>
+                                    {addressFetched ? enderecoResumo : "Preenchido pelo CEP"}
+                                  </span>
+                                </div>
+                              )}
+                              {addressFetched && enderecoManual && <MensagemErro msg={rErr.logradouro?.message} />}
+                              {addressFetched && enderecoManual && (
+                                <>
+                                  <Input
+                                    id="reg-bairro"
+                                    placeholder="Bairro"
+                                    className={inputCls(!!rErr.bairro, "mt-1.5")}
+                                    {...registerForm.register("bairro")}
+                                  />
+                                  <MensagemErro msg={rErr.bairro?.message} />
+                                </>
+                              )}
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <RequiredLabel htmlFor="reg-numero">Número</RequiredLabel>
+                              <Input
+                                id="reg-numero"
+                                placeholder="Nº ou S/N"
+                                maxLength={6}
+                                className={inputCls(!!rErr.numero)}
+                                {...registerForm.register("numero", {
+                                  onChange: (e) => { e.target.value = formatNumeroEndereco(e.target.value) }
+                                })}
+                              />
+                              <MensagemErro msg={rErr.numero?.message} />
+                            </div>
+                          </div>
+
+                          {/* Senha */}
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5">
+                              <RequiredLabel htmlFor="reg-senha">Senha</RequiredLabel>
+                              <Tooltip>
+                                <TooltipTrigger
+                                  className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-200 hover:bg-blue-100 transition-colors cursor-help"
+                                  type="button"
+                                  aria-label="Requisitos de senha"
+                                >
+                                  <HelpCircle className="w-3 h-3 text-slate-500" />
+                                </TooltipTrigger>
+                                <TooltipContent side="right" className="max-w-[260px] p-3 text-left">
+                                  <p className="font-semibold text-xs mb-1.5">Requisitos de senha segura:</p>
+                                  <ul className="text-xs space-y-1">
+                                    {[
+                                      [(watchPassword?.length || 0) >= 8, "Mínimo 8 caracteres"],
+                                      [/[A-Z]/.test(watchPassword || ""), "1 letra maiúscula (A-Z)"],
+                                      [/[a-z]/.test(watchPassword || ""), "1 letra minúscula (a-z)"],
+                                      [/[0-9]/.test(watchPassword || ""), "1 número (0-9)"],
+                                      [/[^A-Za-z0-9]/.test(watchPassword || ""), "1 caractere especial (!@#$%...)"],
+                                    ].map(([ok, label]) => (
+                                      <li key={label as string} className="flex items-center gap-1.5">
+                                        {ok
+                                          ? <CheckCircle2 className="w-3 h-3 text-success shrink-0" />
+                                          : <AlertCircle className="w-3 h-3 text-subtle shrink-0" />}
+                                        {label as string}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </TooltipContent>
+                              </Tooltip>
+                              {watchPassword && watchPassword.length > 0 && (
+                                <span className="ml-auto text-xs font-medium" style={{ color: passwordStrength.color }}>
+                                  {passwordStrength.label}
+                                </span>
+                              )}
+                            </div>
+                            <div className="relative">
+                              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle pointer-events-none" />
+                              <Input
+                                id="reg-senha"
+                                type={showRegisterPassword ? "text" : "password"}
+                                placeholder="Crie uma senha segura"
+                                className={inputCls(!!rErr.senha_pj, "pl-10 pr-10")}
+                                {...registerForm.register("senha_pj")}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowRegisterPassword(!showRegisterPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-subtle hover:text-slate-600 transition-colors"
+                                aria-label={showRegisterPassword ? "Ocultar senha" : "Mostrar senha"}
+                              >
+                                {showRegisterPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              </button>
+                            </div>
+                            {watchPassword && watchPassword.length > 0 && (
+                              <div className="h-1 bg-surface-muted rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full transition-all duration-500 ease-out"
+                                  style={{ width: `${(passwordStrength.score / 5) * 100}%`, backgroundColor: passwordStrength.color }}
+                                />
+                              </div>
+                            )}
+                            <MensagemErro msg={rErr.senha_pj?.message} />
+                          </div>
+
+                          <div className="mt-2 grid grid-cols-[auto_1fr] gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={isSubmit}
+                              onClick={() => setRegisterStep(1)}
+                              className="rounded-xl h-11 px-4 text-sm font-semibold"
+                            >
+                              <ArrowLeft className="w-4 h-4" /> Voltar
+                            </Button>
+                            <Button
+                              type="submit"
+                              disabled={isSubmit}
+                              className="rounded-xl text-white font-semibold text-sm h-11 bg-brand hover:bg-brand-hover"
+                            >
+                              {isSubmit ? (
+                                <span className="flex items-center gap-2">Enviando... <Spinner className="w-4 h-4" /></span>
+                              ) : (
+                                "Solicitar Credenciamento"
+                              )}
+                            </Button>
+                          </div>
+                        </>
+                      )}
+
+                      <p className="text-[11px] text-subtle text-center">
+                        Campos com <span className="text-red-500">*</span> são obrigatórios
+                      </p>
+                    </form>
+
+                    <button
+                      onClick={() => setIsRightPanelActive(false)}
+                      className="md:hidden mt-3 w-full text-sm text-blue-700 font-semibold hover:underline transition-colors"
+                    >
+                      Já tem uma conta? Entrar
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -674,7 +649,7 @@ export default function Form(): JSX.Element {
                         <Lock className="w-6 h-6 text-white" />
                       </div>
                       <h1 className="font-bold text-2xl text-heading">Bem-vindo</h1>
-                      <p className="text-sm text-muted mt-1">Acesse com suas credenciais corporativas</p>
+                      <p className="text-sm text-slate-500 mt-1">Acesse com suas credenciais corporativas</p>
                     </div>
 
                     {/* Login error banner */}
@@ -765,7 +740,7 @@ export default function Form(): JSX.Element {
                           setLoginError(null)
                           form.reset()
                         }}
-                        className="text-sm text-muted hover:text-blue-700 hover:underline transition-colors self-end -mt-1"
+                        className="text-sm text-slate-500 hover:text-blue-700 hover:underline transition-colors self-end -mt-1"
                       >
                         Esqueceu sua senha?
                       </button>
@@ -801,7 +776,7 @@ export default function Form(): JSX.Element {
                         <UserCog className="w-6 h-6 text-white" />
                       </div>
                       <h1 className="font-bold text-2xl text-heading">Recuperar Senha</h1>
-                      <p className="text-sm text-muted mt-1">Informe os dados da empresa para redefinir o acesso.</p>
+                      <p className="text-sm text-slate-500 mt-1">Informe os dados da empresa para redefinir o acesso.</p>
                     </div>
 
                     {/* Reset error banner */}
@@ -957,7 +932,7 @@ export default function Form(): JSX.Element {
                             resetPasswordForm.reset()
                             setResetError(null)
                           }}
-                          className="text-sm font-semibold text-muted hover:text-main py-2 transition-colors disabled:opacity-50"
+                          className="text-sm font-semibold text-slate-500 hover:text-main py-2 transition-colors disabled:opacity-50"
                         >
                           Voltar para Login
                         </Button>

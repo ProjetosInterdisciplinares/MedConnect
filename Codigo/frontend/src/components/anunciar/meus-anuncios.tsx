@@ -15,6 +15,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 import { Pagination } from "@/components/ui/pagination"
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 
 const TABS = [
   { id: "ALL", label: "Todos", description: "Todos os seus anúncios publicados", icon: Layers },
@@ -191,58 +192,19 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
         </div>
         <h3 className="text-xl font-bold text-slate-800 mb-2">Nenhum anúncio publicado</h3>
         <p className="text-slate-500 text-center max-w-sm">
-          Você ainda não publicou nenhum insumo no catálogo. Use a aba "Publicar Anúncio" para começar.
+          Você ainda não publicou nenhum insumo no catálogo. Use a aba "Publicar" para começar.
         </p>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col md:flex-row gap-8 items-start w-full">
-      {/* Sidebar de Filtros */}
-      <aside className="w-full md:w-72 shrink-0 flex flex-col gap-2">
-        {TABS.map(({ id, label, description, icon: Icon }) => {
-          const isActive = statusFilter === id
-          return (
-            <button
-              key={id}
-              type="button"
-              onClick={() => {
-                setStatusFilter(id)
-                setCurrentPage(1)
-              }}
-              className={`relative w-full text-left flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group ${
-                isActive
-                  ? "bg-white shadow-sm ring-1 ring-slate-200/50"
-                  : "hover:bg-white/50"
-              }`}
-            >
-              {isActive && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-900 rounded-r-full" />
-              )}
-              <div className={`shrink-0 rounded-xl p-2 transition-colors ${
-                isActive ? "bg-blue-50 text-blue-900" : "bg-slate-100 text-slate-500 group-hover:text-blue-900 group-hover:bg-blue-50/50"
-              }`}>
-                <Icon size={20} />
-              </div>
-              <div>
-                <h3 className={`font-bold text-sm ${isActive ? "text-slate-800" : "text-slate-600"}`}>
-                  {label}
-                </h3>
-                <p className="text-xs text-slate-400 mt-1 leading-snug">
-                  {description}
-                </p>
-              </div>
-            </button>
-          )
-        })}
-      </aside>
-
+    <div className="flex flex-col gap-8 items-start w-full">
       {/* Conteúdo */}
       <div className="flex-1 w-full min-w-0">
         <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden">
-          {/* Header Interno */}
-          <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white/80 backdrop-blur-md z-10">
+          {/* Header Interno com o filtro de status */}
+          <div className="px-8 py-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-0 bg-white/80 backdrop-blur-md z-10">
             <div>
               <h2 className="text-xl font-bold text-slate-800">
                 {TABS.find(t => t.id === statusFilter)?.label}
@@ -251,8 +213,37 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
                 {TABS.find(t => t.id === statusFilter)?.description}
               </p>
             </div>
-            <div className="bg-blue-50 text-blue-950 px-3 py-1 rounded-full text-xs font-bold border border-blue-100 shadow-inner">
-              {filteredAnuncios.length} Anúncio{filteredAnuncios.length !== 1 && 's'}
+            <div className="w-full sm:w-64">
+              <Select
+                value={statusFilter}
+                onValueChange={(v) => {
+                  setStatusFilter(String(v || "ALL"))
+                  setCurrentPage(1)
+                }}
+              >
+                <SelectTrigger
+                  aria-label="Filtrar por status"
+                  className="h-10 w-full px-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-700 hover:border-slate-300 transition-colors cursor-pointer"
+                >
+                  <span className="truncate">
+                    <span className="text-slate-500">Status:</span> {TABS.find(t => t.id === statusFilter)?.label}
+                    <span className="ml-1.5 text-slate-400 tabular-nums">({filteredAnuncios.length})</span>
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  {TABS.map(({ id, label, icon: Icon }) => (
+                    <SelectItem key={id} value={id}>
+                      <span className="flex w-full items-center gap-2">
+                        <Icon size={14} className="text-slate-400" aria-hidden="true" />
+                        <span className="flex-1">{label}</span>
+                        <span className="text-xs text-slate-400 tabular-nums">
+                          {id === "ALL" ? anuncios.length : anuncios.filter((a) => a.ie_status === id).length}
+                        </span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -388,21 +379,21 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
 
 
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="sm:max-w-xl p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
+        <DialogContent className="sm:max-w-xl p-0 overflow-hidden bg-white gap-0">
           {selectedAnuncio && (
             <>
-              <DialogHeader className="m-0 bg-blue-900 px-6 py-5 rounded-t-xl border-b border-blue-950">
-                <DialogTitle className="flex items-center gap-2 text-white text-xl font-black">
-                  Detalhes do Anúncio
+              <DialogHeader className="m-0 px-6 pt-6 pb-0 bg-white rounded-none border-0">
+                <DialogTitle className="flex items-center gap-2 text-slate-900 text-lg font-semibold">
+                  Detalhes do anúncio
                 </DialogTitle>
-                <DialogDescription className="text-blue-100">
-                  Visualize as informações completas ou exclua a oferta.
+                <DialogDescription className="text-sm text-slate-600">
+                  Dados do lote publicado. Você pode editar, pausar ou excluir o anúncio.
                 </DialogDescription>
               </DialogHeader>
 
               <div className="p-6 overflow-y-auto max-h-[70vh]">
                 {selectedAnuncio.ie_status === 'S' && confirmAction === "none" && (
-                  <div className="bg-amber-50 border border-amber-200 p-4 mb-6 rounded-xl flex gap-3">
+                  <div className="bg-amber-50 border border-amber-200 p-4 mb-6 rounded-lg flex gap-3">
                     <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
                     <div>
                       <h3 className="font-bold text-amber-800 text-sm">Este anúncio é uma Sobra</h3>
@@ -413,14 +404,11 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
                   </div>
                 )}
                 {confirmAction !== "none" ? (
-                  <div className="flex flex-col items-center justify-center py-6 text-center">
-                    <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${confirmAction === 'delete' ? 'bg-red-100 text-red-600' : confirmAction === 'activate' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-600'}`}>
-                      {confirmAction === 'delete' ? <Trash2 size={32} /> : confirmAction === 'activate' ? <Tag size={32} /> : <PackageX size={32} />}
-                    </div>
-                    <h3 className="text-xl font-bold text-slate-800 mb-2">
-                      {confirmAction === 'delete' ? 'Excluir Anúncio?' : confirmAction === 'activate' ? 'Ativar Anúncio?' : 'Pausar Anúncio?'}
+                  <div className="flex flex-col">
+                    <h3 className="text-base font-semibold text-slate-900">
+                      {confirmAction === 'delete' ? 'Excluir este anúncio?' : confirmAction === 'activate' ? 'Ativar este anúncio?' : 'Pausar este anúncio?'}
                     </h3>
-                    <p className="text-slate-500 mb-8 max-w-sm">
+                    <p className="mt-2 text-sm text-slate-600 leading-relaxed">
                       {confirmAction === 'delete' 
                         ? 'Esta ação é irreversível. O anúncio será permanentemente removido do catálogo e não poderá ser recuperado.' 
                         : confirmAction === 'activate' 
@@ -428,12 +416,12 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
                         : 'O anúncio será ocultado do catálogo e ficará na sua lista de Inativos.'}
                     </p>
                     
-                    <div className="flex gap-3 w-full">
+                    <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                       <button
                         type="button"
                         onClick={() => setConfirmAction("none")}
                         disabled={isDeleting || isSaving}
-                        className="flex-1 px-4 py-3 bg-white text-slate-600 border border-slate-200 rounded-xl font-bold hover:bg-slate-50 transition-colors cursor-pointer"
+                        className="h-10 px-4 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg text-sm font-semibold transition-colors cursor-pointer"
                       >
                         Cancelar
                       </button>
@@ -445,16 +433,16 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
                           else if (confirmAction === 'activate') { handleActivateAnuncio(); setConfirmAction("none"); }
                           else if (confirmAction === 'inactivate') { handleInativarAnuncio(); setConfirmAction("none"); }
                         }}
-                        className={`flex-1 px-4 py-3 text-white rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer ${confirmAction === 'delete' ? 'bg-red-600 hover:bg-red-700 shadow-red-600/20' : confirmAction === 'activate' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20' : 'bg-slate-600 hover:bg-slate-700 shadow-slate-600/20'}`}
+                        className={`h-10 px-4 text-white rounded-lg text-sm font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer ${confirmAction === 'delete' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-700 hover:bg-blue-800'}`}
                       >
                         {isDeleting || isSaving ? (
                           <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                         ) : confirmAction === 'delete' ? (
-                          "Sim, Excluir"
+                          "Excluir anúncio"
                         ) : confirmAction === 'activate' ? (
-                          "Sim, Ativar"
+                          "Ativar anúncio"
                         ) : (
-                          "Sim, Pausar"
+                          "Pausar anúncio"
                         )}
                       </button>
                     </div>
@@ -487,12 +475,12 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
 
                     <div>
                       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Observações</label>
-                      <textarea value={editForm.ds_obs} onChange={e => setEditForm(prev => ({...prev, ds_obs: e.target.value}))} className="w-full border border-slate-200 rounded-lg p-2.5 text-slate-800" rows={3}></textarea>
+                      <textarea value={editForm.ds_obs} onChange={e => setEditForm(prev => ({...prev, ds_obs: e.target.value}))} className="w-full h-24 resize-none border border-slate-200 rounded-lg p-2.5 text-slate-800" rows={3}></textarea>
                     </div>
 
                     <div className="mt-4 flex gap-3">
-                      <button type="button" onClick={() => setIsEditing(false)} className="flex-1 px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-colors">Cancelar</button>
-                      <button type="button" onClick={handleUpdateAnuncio} disabled={isSaving} className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors disabled:opacity-50">
+                      <button type="button" onClick={() => setIsEditing(false)} className="flex-1 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg font-semibold transition-colors">Cancelar</button>
+                      <button type="button" onClick={handleUpdateAnuncio} disabled={isSaving} className="flex-1 px-4 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-semibold transition-colors disabled:opacity-50">
                         {isSaving ? "Salvando..." : "Salvar Alterações"}
                       </button>
                     </div>
@@ -502,9 +490,9 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
                     <div className="flex flex-col gap-6">
                     {/* Foto e Titulo */}
                     <div className="flex flex-col md:flex-row gap-4 items-center md:items-start">
-                      <div className="w-32 h-32 shrink-0 bg-white rounded-xl border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden">
+                      <div className="w-32 h-32 shrink-0 bg-white rounded-lg border border-slate-200 flex items-center justify-center overflow-hidden">
                         {selectedAnuncio.imagem_anuncio ? (
-                          <img src={selectedAnuncio.imagem_anuncio} alt="Imagem" className="w-full h-full object-cover" />
+                          <img src={selectedAnuncio.imagem_anuncio} alt="Imagem" className="w-full h-full object-contain bg-white" />
                         ) : (
                           <PackageX className="w-8 h-8 text-slate-300" />
                         )}
@@ -515,7 +503,7 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
                         </h3>
                         <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-900 rounded-lg">
                           <span className="text-sm font-bold">R$</span>
-                          <span className="text-2xl font-black">{Number(selectedAnuncio.val_base || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          <span className="text-2xl font-semibold">{Number(selectedAnuncio.val_base || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                         <div className="flex gap-2 justify-center md:justify-start">
                           <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded text-xs font-bold">Lote: {selectedAnuncio.ds_lote || "Não informado"}</span>
@@ -526,7 +514,7 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
 
                     {/* Detalhes Secundários */}
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1">
+                      <div className="bg-white p-3 rounded-lg border border-slate-200 flex flex-col gap-1">
                         <div className="flex items-center gap-1.5 text-slate-500">
                           <Calendar size={14} />
                           <span className="text-xs font-semibold">Fabricação</span>
@@ -535,7 +523,7 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
                           {selectedAnuncio.dt_fabricacao ? new Date(selectedAnuncio.dt_fabricacao).toLocaleDateString("pt-BR") : "-"}
                         </span>
                       </div>
-                      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1">
+                      <div className="bg-white p-3 rounded-lg border border-slate-200 flex flex-col gap-1">
                         <div className="flex items-center gap-1.5 text-slate-500">
                           <AlertCircle size={14} />
                           <span className="text-xs font-semibold">Validade</span>
@@ -546,7 +534,7 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
                       </div>
                     </div>
 
-                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-2">
+                    <div className="bg-white p-4 rounded-lg border border-slate-200 flex flex-col gap-2">
                       <div className="flex items-center gap-1.5 text-slate-500 mb-1">
                         <FileText size={16} />
                         <span className="text-sm font-semibold">Observações</span>
@@ -561,7 +549,7 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
                     <button
                       type="button"
                       onClick={() => { setIsDetailsOpen(false); setConfirmAction("none"); setIsEditing(false); }}
-                      className="flex-1 px-4 py-2.5 bg-white text-slate-600 border border-slate-200 rounded-xl font-bold hover:bg-slate-50 transition-colors cursor-pointer"
+                      className="flex-1 h-10 px-3 text-sm whitespace-nowrap bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg font-semibold transition-colors cursor-pointer"
                     >
                       Fechar
                     </button>
@@ -569,17 +557,17 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
                       <button
                         type="button"
                         onClick={() => setIsEditing(true)}
-                        className="flex-1 px-4 py-2.5 bg-blue-50 text-blue-900 rounded-xl font-bold hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                        className="flex-1 h-10 px-3 text-sm whitespace-nowrap bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer"
                       >
                         <Pencil size={16} />
-                        Editar Anúncio
+                        Editar
                       </button>
                     )}
                     {selectedAnuncio.ie_status === 'N' && (
                       <button
                         type="button"
                         onClick={() => router.push("/caixa-de-propostas")}
-                        className="flex-1 px-4 py-2.5 bg-amber-600 text-white rounded-xl font-bold hover:bg-amber-700 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-amber-600/20"
+                        className="flex-1 h-10 px-3 text-sm whitespace-nowrap bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer"
                       >
                         <Handshake size={16} />
                         Propostas Recebidas
@@ -590,10 +578,10 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
                         type="button"
                         onClick={() => setConfirmAction("activate")}
                         disabled={isSaving}
-                        className="flex-1 px-4 py-2.5 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-600/20 disabled:opacity-50"
+                        className="flex-1 h-10 px-3 text-sm whitespace-nowrap bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                       >
                         {isSaving ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Tag size={16} />}
-                        Ativar Anúncio
+                        Ativar
                       </button>
                     )}
                     {selectedAnuncio.ie_status === 'A' && (
@@ -601,20 +589,20 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
                         type="button"
                         onClick={() => setConfirmAction("inactivate")}
                         disabled={isSaving}
-                        className="flex-1 px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                        className="flex-1 h-10 px-3 text-sm whitespace-nowrap bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                       >
                         {isSaving ? <span className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" /> : <PackageX size={16} />}
-                        Pausar Anúncio
+                        Pausar
                       </button>
                     )}
                     {selectedAnuncio.ie_status !== 'F' && selectedAnuncio.ie_status !== 'N' && (
                       <button
                         type="button"
                         onClick={() => setConfirmAction("delete")}
-                        className="flex-1 px-4 py-2.5 bg-red-50 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                        className="flex-1 h-10 px-3 text-sm whitespace-nowrap bg-white border border-red-200 text-red-700 hover:bg-red-50 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer"
                       >
                         <Trash2 size={16} />
-                        Excluir Anúncio
+                        Excluir
                       </button>
                     )}
                   </div>

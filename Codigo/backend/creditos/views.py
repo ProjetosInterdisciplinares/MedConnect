@@ -1,20 +1,20 @@
-from django.db.models import Sum
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from creditos.models import PacoteCredito, TransacaoCredito
+from creditos.acoes import tabela_de_custos
+from creditos.carteira import LIMITE_EXTRATO_PADRAO, CarteiraCreditos, PagamentoRecusadoError
+from creditos.models import PacoteCredito
 from creditos.serializers import (
+    ComprarCreditosSerializer,
     PacoteCreditoSerializer,
     TransacaoCreditoSerializer,
-    ComprarCreditosSerializer,
 )
-from creditos.services import processar_compra_pacote
 
 
 class PacotesCreditoListView(APIView):
-    """GET — Lista os pacotes de créditos ativos (RN05)."""
+    """GET: pacotes de créditos ativos (RN05)."""
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
@@ -22,58 +22,41 @@ class PacotesCreditoListView(APIView):
         return Response(PacoteCreditoSerializer(pacotes, many=True).data)
 
 
-class SaldoCreditosView(APIView):
-    """GET — Saldo atual e totais acumulados da empresa logada (RF14 / RF16)."""
+class CustosCreditosView(APIView):
+    """GET: custo, em créditos, de cada funcionalidade paga. Fonte única para o front."""
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
-        empresa = request.user
-        transacoes = TransacaoCredito.objects.filter(
-            pessoa_juridica=empresa,
-            status=TransacaoCredito.STATUS_APROVADA,
-        )
-        total_adquirido = transacoes.exclude(
-            tipo=TransacaoCredito.TIPO_CONSUMO
-        ).aggregate(t=Sum('quantidade'))['t'] or 0
-        total_consumido = transacoes.filter(
-            tipo=TransacaoCredito.TIPO_CONSUMO
-        ).aggregate(t=Sum('quantidade'))['t'] or 0
+        return Response(tabela_de_custos())
 
-        return Response({
-            'saldo': empresa.saldo_creditos,
-            'total_adquirido': total_adquirido,
-            'total_consumido': total_consumido,
-        })
+
+class SaldoCreditosView(APIView):
+    """GET: saldo atual e totais acumulados da empresa logada (RF14 / RF16)."""
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        return Response(CarteiraCreditos(request.user).resumo())
 
 
 class ExtratoCreditosView(APIView):
     """
-    GET — Histórico de movimentações (RF16).
-    Query params opcionais:
-      ?tipo=C|D|E|B   filtra pelo tipo
-      ?limite=N       limita a quantidade de registros (máx. 500)
+    GET: histórico de movimentações (RF16).
+    Parâmetros opcionais: ?tipo=C|D|E|B|X e ?limite=N (máx. 500).
     """
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
-        qs = TransacaoCredito.objects.filter(
-            pessoa_juridica=request.user
-        ).select_related('pacote')
-
-        tipo = request.query_params.get('tipo')
-        if tipo in dict(TransacaoCredito.TIPO_CHOICES):
-            qs = qs.filter(tipo=tipo)
-
         try:
-            limite = min(int(request.query_params.get('limite', 200)), 500)
+            limite = int(request.query_params.get('limite', LIMITE_EXTRATO_PADRAO))
         except ValueError:
-            limite = 200
+            limite = LIMITE_EXTRATO_PADRAO
 
-        return Response(TransacaoCreditoSerializer(qs[:limite], many=True).data)
+        transacoes = CarteiraCreditos(request.user).extrato(request.query_params.get('tipo'), limite)
+        return Response(TransacaoCreditoSerializer(transacoes, many=True).data)
 
 
 class ComprarCreditosView(APIView):
-    """POST — Compra um pacote de créditos (RF13). Pagamento simulado."""
+    """POST: compra de um pacote de créditos (RF13)."""
     permission_classes = (IsAuthenticated,)
 
     def post(self, request):
@@ -86,9 +69,12 @@ class ComprarCreditosView(APIView):
             )
 
         pacote = serializer.validated_data['pacote_id']
-        metodo = serializer.validated_data['metodo_pagamento']
-
-        transacao = processar_compra_pacote(request.user, pacote, metodo)
+        try:
+            transacao = CarteiraCreditos(request.user).comprar_pacote(
+                pacote, serializer.validated_data['metodo_pagamento'],
+            )
+        except PagamentoRecusadoError as e:
+            return Response({'erro': str(e)}, status=status.HTTP_402_PAYMENT_REQUIRED)
 
         return Response({
             'mensagem': f'{pacote.total_creditos} créditos adicionados com sucesso!',

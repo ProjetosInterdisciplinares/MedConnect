@@ -4,7 +4,7 @@ import FormInsumo from "@/components/cadastro/FormInsumo"
 
 export default function CadastroInsumoPage() {
   return (
-    <div className="max-w-4xl mx-auto py-8">
+    <div className="max-w-4xl">
       <div className="mb-8">
         <h1 className="text-2xl font-bold">
           Cadastro de Insumos

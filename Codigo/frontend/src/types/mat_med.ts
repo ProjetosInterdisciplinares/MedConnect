@@ -11,6 +11,7 @@ export interface MatMed {
   cd_tuss: string
   cd_simpro?: string | null
   cd_brasindice?: string | null
+  cd_catmat?: string | null
 }
 
 export interface CreateMatMedForm {
@@ -25,6 +26,25 @@ export interface CreateMatMedForm {
   cd_tuss: string
   cd_simpro?: string
   cd_brasindice?: string
+  cd_catmat?: string
+}
+
+export interface SugestaoCatmat {
+  codigo: string
+  descricao: string
+}
+
+export interface PrecoReferencia {
+  encontrado: boolean
+  periodo_inicio: string
+  fonte: string
+  aviso: string
+  unidade?: string
+  total_compras?: number
+  menor?: string
+  mediana?: string
+  maior?: string
+  exemplos?: { orgao: string; uf: string; data: string; preco_unitario: string }[]
 }
 
 export type UpdateMatMedForm = Partial<CreateMatMedForm>

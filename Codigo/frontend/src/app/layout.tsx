@@ -28,6 +28,7 @@ export default function RootLayout({
   return (
     <html
       lang="pt-br"
+      data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased  scroll-smooth`}
       suppressHydrationWarning
     >
@@ -36,7 +37,8 @@ export default function RootLayout({
         suppressHydrationWarning={true}
       >
         {children}
-        <Toaster position="top-right" richColors closeButton />
+        {/* Abaixo da barra superior, para não cobrir sino, créditos e conta */}
+        <Toaster position="top-right" offset={{ top: 76, right: 24 }} mobileOffset={{ top: 64 }} />
       </body>
     </html>
   );

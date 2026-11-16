@@ -31,4 +31,10 @@ urlpatterns = [
         views.AdminPessoaJuridicaUpdateView.as_view(),
         name='admin-pessoa_juridica-update'
     ),
+
+    path(
+        'admin/pessoas/<int:pk>/verificacao/',
+        views.VerificacaoCredenciamentoView.as_view(),
+        name='admin-pessoa_juridica-verificacao'
+    ),
 ]

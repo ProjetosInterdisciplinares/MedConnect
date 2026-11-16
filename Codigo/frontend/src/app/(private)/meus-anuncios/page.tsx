@@ -5,6 +5,7 @@ import { Package } from "lucide-react"
 import { MeusAnuncios } from "@/components/anunciar/meus-anuncios"
 import servicesGetMatMed from "@/server/(GET)-mat-med"
 import { MatMed } from "@/types"
+import SecaoTabs from "@/components/layout/SecaoTabs"
 
 export default function MeusAnunciosPage() {
   const [materiais, setMateriais] = useState<MatMed[]>([])
@@ -20,22 +21,16 @@ export default function MeusAnunciosPage() {
   }, [])
 
   return (
-    <div className="relative min-h-screen w-full antialiased bg-slate-50/50 selection:bg-blue-900/20">
+    <div className="relative w-full antialiased">
 
-      <div className="max-w-7xl mx-auto py-8 px-4 relative z-10">
+      <div className="w-full relative z-10">
+        <SecaoTabs secao="anuncios" />
 
         {/* Header da Página */}
-        <div className="mb-8 md:mb-12">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-blue-900 flex items-center justify-center text-white shadow-lg shadow-blue-900/20">
-              <Package size={20} />
-            </div>
-            <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">
-              Meus Anúncios
-            </h1>
-          </div>
-          <p className="text-slate-500 text-sm md:text-base font-medium max-w-2xl">
-            Visualize e gerencie as suas publicações no catálogo B2B.
+        <div className="mb-6">
+          <h1 className="sr-only">Meus anúncios</h1>
+          <p className="text-sm text-slate-500 max-w-2xl">
+            Acompanhe e gerencie os insumos que sua instituição publicou no catálogo.
           </p>
         </div>
 

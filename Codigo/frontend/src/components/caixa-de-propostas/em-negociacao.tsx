@@ -5,8 +5,11 @@ import { useRouter } from "next/navigation"
 import { Package, Inbox, Loader2, Eye, TrendingDown, CheckCircle2, XCircle, Building2, Tag, Info, ArrowRight } from "lucide-react"
 import servicesGetNegociacoes from "@/server/(GET)-negociacoes"
 import servicesUpdateNegociacao from "@/server/(PUT)-negociacao"
-import { Negociacao } from "@/types"
+import { MotivoRecusa, Negociacao } from "@/types"
 import { AuthManager } from "@/lib/AuthManager"
+import { unidadeDeVenda } from "@/lib/format/unidade"
+import { formatarPrazo, MOTIVOS_RECUSA } from "@/lib/whatsapp"
+import { BOTAO, ModalPadrao } from "@/components/ui/modal-padrao"
 import {
   Dialog,
   DialogContent,
@@ -24,6 +27,15 @@ export function NegociacaoTab() {
   const [isSuccessOpen, setIsSuccessOpen] = useState(false)
   const [successAction, setSuccessAction] = useState<"ACEITO" | "RECUSADO" | null>(null)
   const [successValue, setSuccessValue] = useState<number>(0)
+  const [successSaldo, setSuccessSaldo] = useState<{ restante: number; reativado: boolean; unidade: string } | null>(null)
+
+  /* ─── Confirmação do aceite (e do saldo restante, na venda parcial) ─── */
+  const [aceitando, setAceitando] = useState<Negociacao | null>(null)
+  const [reativarSaldo, setReativarSaldo] = useState(true)
+  const [valorSaldo, setValorSaldo] = useState("")
+  const [descricaoSaldo, setDescricaoSaldo] = useState("")
+  const [descricaoAjustada, setDescricaoAjustada] = useState(false)
+  const [enviando, setEnviando] = useState(false)
   
   const [currentPage, setCurrentPage] = useState(1)
   const ITEMS_PER_PAGE = 5
@@ -51,22 +63,76 @@ export function NegociacaoTab() {
     return itensFiltrados.slice(start, start + ITEMS_PER_PAGE)
   }, [itensFiltrados, currentPage])
 
-  async function aceitarProposta(negociacao: Negociacao) {
-    const result = await servicesUpdateNegociacao(negociacao.id, { status: "A" })
+  function saldoDa(n: Negociacao) {
+    const total = Number(n.anuncio_qtd || 0)
+    const vendida = Number(n.qtd_proposta || total)
+    return { total, vendida, restante: Math.max(0, total - vendida) }
+  }
+
+  function abrirAceite(negociacao: Negociacao) {
+    const { total, restante } = saldoDa(negociacao)
+    const valorBase = Number(negociacao.anuncio_val_base || 0)
+    const descricao = negociacao.anuncio_descricao || ""
+    // Sugere a descrição com a quantidade antiga trocada pela restante
+    const ajustada = total > 0 && restante > 0 ? descricao.replace(new RegExp(`\\b${total}\\b`, "g"), String(restante)) : descricao
+
+    setReativarSaldo(true)
+    setValorSaldo(total > 0 ? ((valorBase * restante) / total).toFixed(2).replace(".", ",") : "")
+    setDescricaoSaldo(ajustada)
+    setDescricaoAjustada(ajustada !== descricao)
+    setAceitando(negociacao)
+  }
+
+  async function confirmarAceite() {
+    if (!aceitando) return
+    const { restante } = saldoDa(aceitando)
+    const parcial = restante > 0
+    const valor = valorSaldo.replace(/\./g, "").replace(",", ".")
+
+    if (parcial && (!valor || Number(valor) <= 0)) return
+
+    setEnviando(true)
+    const result = await servicesUpdateNegociacao(aceitando.id, parcial
+      ? { status: "A", reativar_saldo: reativarSaldo, novo_val_base: Number(valor).toFixed(2), ...(descricaoSaldo.trim() ? { nova_descricao: descricaoSaldo.trim() } : {}) }
+      : { status: "A" })
+    setEnviando(false)
+
     if (!(result as any)?.isError) {
+      const { plural } = unidadeDeVenda(aceitando.anuncio_unidade)
       setSuccessAction("ACEITO")
-      setSuccessValue(Number(negociacao.val_proposta || negociacao.anuncio_val_base || 0))
+      setSuccessValue(Number(aceitando.val_proposta || aceitando.anuncio_val_base || 0))
+      setSuccessSaldo(parcial ? { restante, reativado: reativarSaldo, unidade: plural } : null)
       setIsSuccessOpen(true)
-      setNegociacoes(prev => prev.filter(n => n.id !== negociacao.id))
+      setNegociacoes(prev => prev.filter(n => n.id !== aceitando.id))
+      setAceitando(null)
     }
   }
 
-  async function recusarProposta(negociacao: Negociacao) {
-    const result = await servicesUpdateNegociacao(negociacao.id, { status: "R" })
+  /* ─── Recusa com motivo ─── */
+  const [recusando, setRecusando] = useState<Negociacao | null>(null)
+  const [motivo, setMotivo] = useState<MotivoRecusa>("VALOR")
+  const [detalheMotivo, setDetalheMotivo] = useState("")
+
+  function abrirRecusa(negociacao: Negociacao) {
+    setMotivo("VALOR")
+    setDetalheMotivo("")
+    setRecusando(negociacao)
+  }
+
+  async function confirmarRecusa() {
+    if (!recusando) return
+    setEnviando(true)
+    const result = await servicesUpdateNegociacao(recusando.id, {
+      status: "R",
+      motivo_recusa: motivo,
+      ...(detalheMotivo.trim() ? { detalhe_recusa: detalheMotivo.trim() } : {}),
+    })
+    setEnviando(false)
     if (!(result as any)?.isError) {
       setSuccessAction("RECUSADO")
       setIsSuccessOpen(true)
-      setNegociacoes(prev => prev.filter(n => n.id !== negociacao.id))
+      setNegociacoes(prev => prev.filter(n => n.id !== recusando.id))
+      setRecusando(null)
     }
   }
 
@@ -128,7 +194,12 @@ export function NegociacaoTab() {
                         )}
                       </div>
                       <h3 className="font-semibold text-lg text-slate-800 truncate pr-4">{nomeMaterial}</h3>
-                      
+                      {formatarPrazo(negociacao.prazo_resposta) && (
+                        <p className="mt-0.5 text-xs font-medium text-amber-700">
+                          Responda até {formatarPrazo(negociacao.prazo_resposta)}. Depois disso, a proposta expira.
+                        </p>
+                      )}
+
                       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm mt-2">
                         <span className="flex items-center gap-2 text-slate-600">
                           <Tag size={14} className="text-slate-400" />
@@ -172,10 +243,10 @@ export function NegociacaoTab() {
                       >
                         <Eye className="w-5 h-5" />
                       </button>
-                      <button onClick={() => aceitarProposta(negociacao)} className="p-2 text-slate-400 hover:text-success hover:bg-success-subtle rounded-lg transition-all" title="Aceitar rapidamente">
+                      <button onClick={() => abrirAceite(negociacao)} className="p-2 text-slate-400 hover:text-success hover:bg-success-subtle rounded-lg transition-all" title="Aceitar proposta">
                         <CheckCircle2 className="w-5 h-5" />
                       </button>
-                      <button onClick={() => recusarProposta(negociacao)} className="p-2 text-slate-400 hover:text-danger hover:bg-danger-subtle rounded-lg transition-all" title="Recusar">
+                      <button onClick={() => abrirRecusa(negociacao)} className="p-2 text-slate-400 hover:text-danger hover:bg-danger-subtle rounded-lg transition-all" title="Recusar">
                         <XCircle className="w-5 h-5" />
                       </button>
                     </div>
@@ -215,24 +286,24 @@ export function NegociacaoTab() {
       {/* Detalhes da Proposta Dialog */}
       <Dialog open={!!selectedNegociacao} onOpenChange={(open) => !open && setSelectedNegociacao(null)}>
         {selectedNegociacao && (
-          <DialogContent className="sm:max-w-2xl p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
-            <DialogHeader className="m-0 bg-blue-900 px-6 py-5 rounded-t-xl border-b border-blue-950">
-              <DialogTitle className="flex items-center justify-between text-xl font-black text-white">
+          <DialogContent className="sm:max-w-2xl p-0 overflow-hidden bg-white gap-0">
+            <DialogHeader className="m-0 px-6 pt-6 pb-0 bg-white rounded-none border-0">
+              <DialogTitle className="flex items-center justify-between text-slate-900 text-lg font-semibold">
                 Análise de Proposta
                 <span className="text-xs font-bold text-blue-900 bg-blue-50 px-3 py-1 rounded-full uppercase tracking-widest border border-blue-100">
                   Anúncio #{selectedNegociacao.anuncio}
                 </span>
               </DialogTitle>
-              <DialogDescription className="text-blue-100 mt-2">
+              <DialogDescription className="text-sm text-slate-600 mt-2">
                 Confira as condições propostas pelo comprador antes de tomar sua decisão.
               </DialogDescription>
             </DialogHeader>
 
             <div className="p-6 space-y-6">
               {/* Resumo do Pedido */}
-              <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm">
+              <div className="bg-white p-5 rounded-lg border border-slate-200/60">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center shrink-0 border border-blue-100 text-blue-900">
+                  <div className="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center shrink-0 border border-blue-100 text-blue-900">
                     <Package className="w-6 h-6" />
                   </div>
                   <div>
@@ -245,7 +316,7 @@ export function NegociacaoTab() {
                         </div>
                         <div>
                           <span className="text-blue-900 mr-1 text-[11px] uppercase font-bold">Qtd. Solicitada:</span>
-                          <span className="font-black text-blue-900">{selectedNegociacao.qtd_proposta || selectedNegociacao.anuncio_qtd} un.</span>
+                          <span className="font-semibold text-blue-900">{selectedNegociacao.qtd_proposta || selectedNegociacao.anuncio_qtd} un.</span>
                         </div>
                       </div>
                       {selectedNegociacao.anuncio_lote && (
@@ -258,7 +329,7 @@ export function NegociacaoTab() {
 
               {/* Valores Comparativos */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm relative overflow-hidden">
+                <div className="bg-white p-5 rounded-lg border border-slate-200/60 relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-1 h-full bg-slate-200" />
                   <p className="text-xs uppercase font-bold text-slate-400 mb-1 pl-2">Valor Base</p>
                   <p className="font-semibold text-xl text-slate-500 line-through pl-2">
@@ -266,15 +337,14 @@ export function NegociacaoTab() {
                   </p>
                 </div>
                 
-                <div className="bg-blue-900 p-5 rounded-2xl shadow-lg relative overflow-hidden">
-                  <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-800 rounded-full blur-2xl opacity-50 pointer-events-none" />
-                  <p className="text-xs uppercase font-bold text-blue-100 mb-1 relative z-10">
+                <div className="bg-blue-50 p-5 rounded-lg border border-blue-200 relative overflow-hidden">
+                  <p className="text-xs uppercase font-bold text-blue-800 mb-1 relative z-10">
                     Proposta Total (p/ {selectedNegociacao.qtd_proposta || selectedNegociacao.anuncio_qtd} un.)
                   </p>
-                  <p className="font-black text-3xl text-white tracking-tight relative z-10 flex items-center justify-between">
+                  <p className="font-semibold text-3xl text-slate-900 tabular-nums tracking-tight relative z-10 flex items-center justify-between">
                     {Number(selectedNegociacao.val_proposta || selectedNegociacao.anuncio_val_base).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                     {(Number(selectedNegociacao.val_proposta) < Number(selectedNegociacao.anuncio_val_base)) && (
-                      <TrendingDown className="w-6 h-6 text-emerald-300" />
+                      <TrendingDown className="w-6 h-6 text-emerald-700" />
                     )}
                   </p>
                 </div>
@@ -282,7 +352,7 @@ export function NegociacaoTab() {
 
               {/* Info do Comprador */}
               {(selectedNegociacao.ds_obs || selectedNegociacao.comprador) && (
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col gap-4">
+                <div className="bg-white p-5 rounded-lg border border-slate-200/60 flex flex-col gap-4">
                   {selectedNegociacao.comprador && (
                     <div className="flex items-start gap-3">
                       <Building2 className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
@@ -312,20 +382,20 @@ export function NegociacaoTab() {
               <button
                 type="button"
                 onClick={() => setSelectedNegociacao(null)}
-                className="w-full sm:w-auto px-5 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-all"
+                className="w-full sm:w-auto px-5 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-all"
               >
                 Voltar
               </button>
               <div className="flex w-full sm:w-auto gap-3">
                 <button 
-                  onClick={() => { recusarProposta(selectedNegociacao); setSelectedNegociacao(null) }} 
-                  className="flex-1 sm:flex-none px-5 py-2.5 bg-surface text-danger border border-danger-border hover:border-danger hover:bg-danger-subtle rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+                  onClick={() => { abrirRecusa(selectedNegociacao); setSelectedNegociacao(null) }} 
+                  className="flex-1 sm:flex-none px-5 py-2.5 bg-surface text-danger border border-danger-border hover:border-danger hover:bg-danger-subtle rounded-lg font-bold transition-all flex items-center justify-center gap-2"
                 >
                   <XCircle className="w-4 h-4" /> Recusar
                 </button>
                 <button 
-                  onClick={() => { aceitarProposta(selectedNegociacao); setSelectedNegociacao(null) }} 
-                  className="flex-1 sm:flex-none px-6 py-2.5 bg-brand text-white rounded-xl font-bold hover:bg-brand-hover transition-all shadow-lg shadow-brand/20 flex items-center justify-center gap-2 group"
+                  onClick={() => { abrirAceite(selectedNegociacao); setSelectedNegociacao(null) }}
+                  className="flex-1 sm:flex-none px-6 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-semibold transition-all flex items-center justify-center gap-2 group"
                 >
                   Aceitar Proposta <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </button>
@@ -335,21 +405,187 @@ export function NegociacaoTab() {
         )}
       </Dialog>
 
+      {/* Recusa com motivo */}
+      <ModalPadrao
+        open={!!recusando}
+        onOpenChange={(open) => !open && !enviando && setRecusando(null)}
+        titulo="Recusar proposta?"
+        descricao="O motivo é enviado ao comprador, para ele decidir se faz uma nova proposta. O anúncio volta ao catálogo."
+        acoes={
+          <>
+            <button type="button" disabled={enviando} onClick={() => setRecusando(null)} className={BOTAO.secundario}>Cancelar</button>
+            <button type="button" disabled={enviando} onClick={confirmarRecusa} className={BOTAO.perigo}>
+              {enviando && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />} Recusar proposta
+            </button>
+          </>
+        }
+      >
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-medium text-slate-700 mb-2">Motivo</legend>
+          {MOTIVOS_RECUSA.map((m) => (
+            <label key={m.valor} className="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-700 cursor-pointer has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50/50">
+              <input
+                type="radio"
+                name="motivo-recusa"
+                value={m.valor}
+                checked={motivo === m.valor}
+                onChange={() => setMotivo(m.valor)}
+                className="accent-blue-700"
+              />
+              {m.rotulo}
+            </label>
+          ))}
+        </fieldset>
+        <label htmlFor="detalhe-recusa" className="block mt-4 text-sm font-medium text-slate-700 mb-1.5">
+          Complemento <span className="font-normal text-slate-500">(opcional)</span>
+        </label>
+        <input
+          id="detalhe-recusa"
+          value={detalheMotivo}
+          maxLength={255}
+          onChange={(e) => setDetalheMotivo(e.target.value)}
+          placeholder="Ex.: aceitaria a partir de R$ 35,00"
+          className="w-full h-10 px-3 rounded-lg border border-slate-200 text-sm text-slate-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/15"
+        />
+      </ModalPadrao>
+
+      {/* Confirmação do aceite */}
+      <Dialog open={!!aceitando} onOpenChange={(open) => !open && !enviando && setAceitando(null)}>
+        {aceitando && (() => {
+          const { total, vendida, restante } = saldoDa(aceitando)
+          const parcial = restante > 0
+          const { plural } = unidadeDeVenda(aceitando.anuncio_unidade)
+          const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+          const valorInvalido = parcial && !(Number(valorSaldo.replace(/\./g, "").replace(",", ".")) > 0)
+          return (
+            <DialogContent className="sm:max-w-lg p-6 gap-0 bg-white">
+              <DialogTitle className="text-lg font-semibold text-slate-900">Aceitar proposta?</DialogTitle>
+              <DialogDescription className="mt-2 text-sm text-slate-600">
+                {parcial
+                  ? `Venda parcial: ${vendida} de ${total} ${plural}. Defina o que acontece com o saldo restante.`
+                  : "O comprador leva o lote inteiro e o anúncio é finalizado."}
+              </DialogDescription>
+
+              <dl className="mt-5 rounded-lg border border-slate-200 divide-y divide-slate-100 text-sm">
+                {[
+                  ["Insumo", aceitando.anuncio_nome || "—"],
+                  ["Comprador", aceitando.comprador_nome || "—"],
+                  ["Quantidade vendida", `${vendida} ${plural}`],
+                  ["Valor proposto", brl(Number(aceitando.val_proposta || 0))],
+                ].map(([rotulo, valor]) => (
+                  <div key={rotulo} className="flex justify-between gap-4 px-4 py-2.5">
+                    <dt className="text-slate-500 shrink-0">{rotulo}</dt>
+                    <dd className="text-right font-medium text-slate-800 tabular-nums">{valor}</dd>
+                  </div>
+                ))}
+              </dl>
+
+              {parcial && (
+                <div className="mt-5 rounded-lg border border-slate-200 p-4 space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-slate-900">Saldo restante</p>
+                    <span className="text-sm font-semibold text-blue-800 tabular-nums">{restante} {plural}</span>
+                  </div>
+
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={reativarSaldo}
+                      onChange={(e) => setReativarSaldo(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 accent-blue-700"
+                    />
+                    <span className="text-sm text-slate-700">
+                      <span className="font-medium text-slate-900">Recolocar o saldo restante no catálogo</span>
+                      <span className="block text-xs text-slate-500">
+                        Se desmarcar, o saldo fica em &quot;Saldo de vendas&quot; e você pode reativá-lo depois.
+                      </span>
+                    </span>
+                  </label>
+
+                  <div>
+                    <label htmlFor="valor-saldo" className="block text-sm font-medium text-slate-700 mb-1.5">
+                      Valor total do saldo ({restante} {plural})
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">R$</span>
+                      <input
+                        id="valor-saldo"
+                        inputMode="decimal"
+                        value={valorSaldo}
+                        onChange={(e) => setValorSaldo(e.target.value)}
+                        className={`w-full h-10 pl-9 pr-3 rounded-lg border text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-600/15 tabular-nums ${valorInvalido ? "border-red-300" : "border-slate-200 focus:border-blue-600"}`}
+                      />
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Sugerido proporcional ao valor anunciado. {valorInvalido && <span className="text-red-600">Informe um valor maior que zero.</span>}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="descricao-saldo" className="block text-sm font-medium text-slate-700 mb-1.5">Descrição do saldo</label>
+                    <textarea
+                      id="descricao-saldo"
+                      value={descricaoSaldo}
+                      onChange={(e) => setDescricaoSaldo(e.target.value)}
+                      maxLength={2000}
+                      className="w-full h-28 resize-none rounded-lg border border-slate-200 p-3 text-sm text-slate-800 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/15"
+                    />
+                    <p className="mt-1 text-xs text-slate-500">
+                      {descricaoAjustada
+                        ? `Trocamos a quantidade citada (${total} → ${restante}). Revise antes de confirmar.`
+                        : "Revise se a descrição ainda cita a quantidade antiga."}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                <button
+                  type="button"
+                  disabled={enviando}
+                  onClick={() => setAceitando(null)}
+                  className="h-10 px-4 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={enviando || valorInvalido}
+                  onClick={confirmarAceite}
+                  className="h-10 px-4 inline-flex items-center justify-center gap-2 rounded-lg bg-blue-700 hover:bg-blue-800 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {enviando && <Loader2 className="w-4 h-4 animate-spin" />} Confirmar aceite
+                </button>
+              </div>
+            </DialogContent>
+          )
+        })()}
+      </Dialog>
+
       <Dialog open={isSuccessOpen} onOpenChange={setIsSuccessOpen}>
-        <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
-          <DialogHeader className={`m-0 px-6 py-5 rounded-t-xl border-b ${successAction === "ACEITO" ? "bg-success border-success" : "bg-danger border-danger"}`}>
-            <DialogTitle className="flex items-center gap-2 text-white text-xl font-black">
-              {successAction === "ACEITO" ? <CheckCircle2 className="w-6 h-6" /> : <XCircle className="w-6 h-6" />}
-              {successAction === "ACEITO" ? "Proposta Aceita!" : "Proposta Recusada!"}
+        <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-white gap-0">
+          <DialogHeader className="m-0 px-6 pt-6 pb-0 bg-white rounded-none border-0">
+            <DialogTitle className="flex items-center gap-2 text-slate-900 text-lg font-semibold">
+              {successAction === "ACEITO" ? "Proposta aceita" : "Proposta recusada"}
             </DialogTitle>
           </DialogHeader>
           
           <div className="p-6">
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3 text-sm text-center">
+            <div className="bg-white p-5 rounded-lg border border-slate-200 space-y-3 text-sm text-center">
               {successAction === "ACEITO" ? (
-                <p className="text-slate-600 text-base">
-                  O anúncio foi finalizado com o valor de <br/><strong className="text-2xl mt-2 block text-success">{successValue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong>
-                </p>
+                <>
+                  <p className="text-slate-600 text-base">
+                    {successSaldo ? "Venda parcial aceita no valor de" : "Proposta aceita no valor de"} <br/>
+                    <strong className="text-2xl mt-2 block text-slate-900 tabular-nums">{successValue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong>
+                  </p>
+                  {successSaldo && (
+                    <p className="text-slate-600">
+                      {successSaldo.reativado
+                        ? `O saldo de ${successSaldo.restante} ${successSaldo.unidade} voltou ao catálogo.`
+                        : `O saldo de ${successSaldo.restante} ${successSaldo.unidade} ficou em "Saldo de vendas", fora do catálogo.`}
+                    </p>
+                  )}
+                </>
               ) : (
                 <p className="text-slate-600 text-base font-medium">
                   A negociação foi recusada e o anúncio voltou ao catálogo.
@@ -357,16 +593,16 @@ export function NegociacaoTab() {
               )}
             </div>
             <div className="mt-6 flex flex-col sm:flex-row gap-3">
-              {successAction === "ACEITO" && (
+              {successAction === "ACEITO" && successSaldo && (
                 <button
                   type="button"
                   onClick={() => {
                     setIsSuccessOpen(false)
                     router.push("/meus-anuncios")
                   }}
-                  className="flex-1 px-6 py-3 text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl font-bold transition-colors shadow-sm cursor-pointer"
+                  className="flex-1 px-6 py-3 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg font-semibold transition-colors cursor-pointer"
                 >
-                  Alterar Anúncio Restante
+                  Ver meus anúncios
                 </button>
               )}
               <button
@@ -377,13 +613,9 @@ export function NegociacaoTab() {
                     router.push("/caixa-de-propostas?tab=finalizados")
                   }
                 }}
-                className={`flex-1 px-6 py-3 text-white rounded-xl font-bold transition-colors shadow-lg cursor-pointer ${
-                  successAction === "ACEITO" 
-                    ? "bg-success hover:bg-success/90 shadow-success/20" 
-                    : "bg-danger hover:bg-danger/90 shadow-danger/20"
-                }`}
+                className="flex-1 px-6 py-3 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-semibold transition-colors cursor-pointer"
               >
-                {successAction === "ACEITO" ? "Ir para Finalizados" : "OK"}
+                {successAction === "ACEITO" ? "Falar com o comprador" : "Fechar"}
               </button>
             </div>
           </div>

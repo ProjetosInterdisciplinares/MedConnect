@@ -1,28 +1,31 @@
 """
-Camada de serviço de créditos.
+Livro-razão de créditos: operações de baixo nível sobre o saldo.
 
-TODA alteração de saldo deve passar por aqui — nunca altere
+TODA alteração de saldo passa por aqui; nunca altere
 PessoaJuridica.saldo_creditos diretamente. As funções travam a linha da
 empresa (select_for_update) para evitar condições de corrida quando duas
 requisições tentam gastar créditos ao mesmo tempo.
+
+O código da aplicação usa a fachada creditos.carteira.CarteiraCreditos,
+que combina estas operações com as ações pagas (creditos.acoes) e o
+gateway de pagamento (creditos.pagamento).
 """
-import uuid
+from datetime import timedelta
+
 from django.db import transaction
+from django.db.models import Sum
+from django.utils import timezone
 
 from pessoa_juridica.models import PessoaJuridica
-from creditos.models import TransacaoCredito, PacoteCredito
+from creditos.models import TransacaoCredito
 
 
-# ──────────────────────────────────────────────────────────────────────
-# Tabela de custos por funcionalidade (RF15).
-# Será preenchida quando os custos forem definidos, ex:
-#   'IA_DESCRICAO': 2,
-#   'COMPARATIVO_PRECO': 10,   # RN04
-# ──────────────────────────────────────────────────────────────────────
-CUSTOS_FUNCIONALIDADES: dict[str, int] = {
-    'IA_DESCRICAO': 1,
-    'PUBLICAR_ANUNCIO': 5,
-}
+# Créditos de boas-vindas (5W2H, R2): concedidos uma única vez, quando o
+# cadastro da empresa é aprovado. O que não for usado dentro da validade
+# é retirado do saldo (transação do tipo Expiração).
+CREDITOS_BOAS_VINDAS = 50
+VALIDADE_BOAS_VINDAS_DIAS = 90
+REFERENCIA_BOAS_VINDAS = 'BOAS_VINDAS'
 
 
 class SaldoInsuficienteError(Exception):
@@ -36,6 +39,80 @@ class SaldoInsuficienteError(Exception):
 
 def _travar_empresa(pessoa_juridica_id: int) -> PessoaJuridica:
     return PessoaJuridica.objects.select_for_update().get(pk=pessoa_juridica_id)
+
+
+def _expirar_creditos_vencidos(empresa: PessoaJuridica) -> None:
+    """
+    Retira do saldo os créditos de boas-vindas vencidos e não utilizados.
+    Deve ser chamada com a linha da empresa já travada.
+
+    Regra: o consumo feito depois da concessão usa primeiro os créditos de
+    boas-vindas. Na expiração sai apenas o que sobrou deles.
+    """
+    vencidas = TransacaoCredito.objects.filter(
+        pessoa_juridica=empresa,
+        tipo=TransacaoCredito.TIPO_BONUS,
+        referencia=REFERENCIA_BOAS_VINDAS,
+        expira_em__lte=timezone.now(),
+    )
+    for concessao in vencidas:
+        ref_expiracao = f'EXP-{concessao.pk}'
+        if TransacaoCredito.objects.filter(
+            pessoa_juridica=empresa,
+            tipo=TransacaoCredito.TIPO_EXPIRACAO,
+            referencia=ref_expiracao,
+        ).exists():
+            continue
+
+        consumido_depois = TransacaoCredito.objects.filter(
+            pessoa_juridica=empresa,
+            tipo=TransacaoCredito.TIPO_CONSUMO,
+            status=TransacaoCredito.STATUS_APROVADA,
+            pk__gt=concessao.pk,
+        ).aggregate(t=Sum('quantidade'))['t'] or 0
+
+        restante = min(max(concessao.quantidade - consumido_depois, 0), empresa.saldo_creditos)
+        if restante <= 0:
+            continue
+
+        empresa.saldo_creditos -= restante
+        empresa.save(update_fields=['saldo_creditos'])
+        TransacaoCredito.objects.create(
+            pessoa_juridica=empresa,
+            tipo=TransacaoCredito.TIPO_EXPIRACAO,
+            quantidade=restante,
+            saldo_apos=empresa.saldo_creditos,
+            descricao='Expiração dos créditos de boas-vindas não utilizados',
+            referencia=ref_expiracao,
+        )
+
+
+@transaction.atomic
+def atualizar_validades(pessoa_juridica: PessoaJuridica) -> None:
+    """Aplica as expirações pendentes e sincroniza o saldo da instância."""
+    empresa = _travar_empresa(pessoa_juridica.pk)
+    _expirar_creditos_vencidos(empresa)
+    pessoa_juridica.saldo_creditos = empresa.saldo_creditos
+
+
+def conceder_boas_vindas(pessoa_juridica: PessoaJuridica) -> TransacaoCredito | None:
+    """Concede os créditos de boas-vindas uma única vez por empresa."""
+    ja_recebeu = TransacaoCredito.objects.filter(
+        pessoa_juridica_id=pessoa_juridica.pk,
+        tipo=TransacaoCredito.TIPO_BONUS,
+        referencia=REFERENCIA_BOAS_VINDAS,
+    ).exists()
+    if ja_recebeu:
+        return None
+
+    return adicionar_creditos(
+        pessoa_juridica,
+        CREDITOS_BOAS_VINDAS,
+        f'Créditos de boas-vindas (válidos por {VALIDADE_BOAS_VINDAS_DIAS} dias)',
+        tipo=TransacaoCredito.TIPO_BONUS,
+        referencia=REFERENCIA_BOAS_VINDAS,
+        expira_em=timezone.now() + timedelta(days=VALIDADE_BOAS_VINDAS_DIAS),
+    )
 
 
 @transaction.atomic
@@ -79,6 +156,9 @@ def debitar_creditos(
         raise ValueError('A quantidade de créditos deve ser positiva.')
 
     empresa = _travar_empresa(pessoa_juridica.pk)
+    # Se faltar saldo, a exceção desfaz esta expiração; ela é reaplicada
+    # na próxima consulta de saldo/extrato (atualizar_validades).
+    _expirar_creditos_vencidos(empresa)
     if empresa.saldo_creditos < quantidade:
         raise SaldoInsuficienteError(empresa.saldo_creditos, quantidade)
 
@@ -97,49 +177,3 @@ def debitar_creditos(
     )
 
 
-def consumir_funcionalidade(
-    pessoa_juridica: PessoaJuridica,
-    funcionalidade: str,
-    descricao: str,
-    referencia: str | None = None,
-) -> TransacaoCredito | None:
-    """
-    Debita o custo configurado em CUSTOS_FUNCIONALIDADES.
-    Se a funcionalidade não tiver custo definido (ou custo 0), não debita nada.
-    """
-    custo = CUSTOS_FUNCIONALIDADES.get(funcionalidade, 0)
-    if custo <= 0:
-        return None
-    return debitar_creditos(pessoa_juridica, custo, descricao, funcionalidade, referencia)
-
-
-def processar_compra_pacote(
-    pessoa_juridica: PessoaJuridica,
-    pacote: PacoteCredito,
-    metodo_pagamento: str,
-) -> TransacaoCredito:
-    """
-    Processa a compra de um pacote.
-
-    ⚠️ PAGAMENTO SIMULADO: a compra é aprovada imediatamente.
-    Para integrar um gateway real (Mercado Pago, Stripe, Pagar.me...),
-    crie a transação como PENDENTE aqui e só credite o saldo no webhook
-    de confirmação do pagamento.
-    """
-    codigo = f'SIM-{uuid.uuid4().hex[:12].upper()}'
-
-    descricao = f'Compra do pacote {pacote.nome}'
-    if pacote.bonus_creditos:
-        descricao += f' (+{pacote.bonus_creditos} bônus)'
-
-    return adicionar_creditos(
-        pessoa_juridica,
-        pacote.total_creditos,
-        descricao,
-        tipo=TransacaoCredito.TIPO_COMPRA,
-        status=TransacaoCredito.STATUS_APROVADA,
-        pacote=pacote,
-        valor_pago=pacote.preco,
-        metodo_pagamento=metodo_pagamento,
-        codigo_pagamento=codigo,
-    )

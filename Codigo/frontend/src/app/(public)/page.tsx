@@ -9,10 +9,6 @@ import {
   Search,
   CheckCircle2,
   ArrowRight,
-  Sparkles,
-  Shield,
-  Zap,
-  TrendingUp,
   Play,
 } from "lucide-react"
 import Footer from "@/components/ui/Footer"
@@ -55,18 +51,13 @@ const HOW_IT_WORKS_STEPS = [
   },
 ]
 
-const PLAN_FEATURES = [
-  "Acesso completo ao catálogo",
-  "Publicação ilimitada de insumos",
-  "Painel de gerenciamento de lotes",
-  "Sem comissões por negócio",
-  "Suporte prioritário",
-]
+// Pacote inicial definido em backend/creditos/migrations/0002_pacotes_iniciais.py.
+// O preço pode ser alterado no Django Admin; manter este texto sincronizado.
+const PACOTE_INICIAL = { creditos: 50, preco: "R$ 25,00" }
 
-const STATS = [
-  { value: "500+", label: "Empresas conectadas", Icon: TrendingUp },
-  { value: "99.9%", label: "Uptime garantido", Icon: Zap },
-  { value: "100%", label: "Seguro e confiável", Icon: Shield },
+const CREDIT_USES = [
+  "Publicar anúncios de materiais e medicamentos",
+  "Gerar descrições de materiais com IA",
 ]
 
 // ─── HOOKS ───────────────────────────────────────────────────────────────
@@ -263,18 +254,17 @@ export default function MedConnectLanding() {
           }}
         />
 
-        <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center z-10 py-24 lg:py-32">
+        <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center z-10 py-16 lg:py-24">
           {/* Text */}
-          <div className="space-y-8 text-center lg:text-left">
+          <div className="space-y-6 text-center lg:text-left">
             <AnimatedSection>
               <div
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-sm"
+                className="inline-flex items-center px-4 py-1.5 rounded-full backdrop-blur-sm"
                 style={{
                   background: "rgba(219,234,254,0.6)",
                   border: "1px solid rgba(59,130,246,0.2)",
                 }}
               >
-                <Sparkles className="w-4 h-4 text-blue-600" />
                 <span className="text-sm font-semibold text-blue-700">
                   Plataforma B2B para Saúde
                 </span>
@@ -282,34 +272,15 @@ export default function MedConnectLanding() {
             </AnimatedSection>
 
             <AnimatedSection delay={100}>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-800 tracking-tight leading-[1.08]">
-                A plataforma definitiva para suas{" "}
-                <span className="relative inline-block">
-                  <span
-                    className="relative z-10"
-                    style={{
-                      backgroundImage: "linear-gradient(135deg, #2563eb, #1d4ed8)",
-                      WebkitBackgroundClip: "text",
-                      WebkitTextFillColor: "transparent",
-                      backgroundClip: "text",
-                    }}
-                  >
-                    negociações médicas.
-                  </span>
-                  <span
-                    className="absolute bottom-1 left-0 w-full h-3 rounded-sm -z-0"
-                    style={{ backgroundColor: "rgba(191,219,254,0.35)" }}
-                  />
-                </span>
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-800 tracking-tight leading-[1.1] max-w-xl mx-auto lg:mx-0">
+                A plataforma que conecta instituições de saúde.
               </h1>
             </AnimatedSection>
 
             <AnimatedSection delay={200}>
               <p className="text-lg text-slate-600 leading-relaxed max-w-xl mx-auto lg:mx-0">
-                Nascemos com um propósito claro: evitar o desperdício na saúde. O
-                MedConnect conecta clínicas e profissionais que possuem insumos
-                parados àqueles que realmente precisam, de forma rápida, segura e
-                inteligente.
+                Negocie materiais e medicamentos hospitalares com outras
+                instituições.
               </p>
             </AnimatedSection>
 
@@ -346,31 +317,6 @@ export default function MedConnectLanding() {
                   Saiba mais
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300 text-blue-600" />
                 </Link>
-              </div>
-            </AnimatedSection>
-
-            {/* Stats */}
-            <AnimatedSection delay={400}>
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-8 pt-4">
-                {STATS.map(({ value, label, Icon }, i) => (
-                  <div key={i} className="flex items-center gap-3 group">
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-105 transition-all duration-300"
-                      style={{
-                        background: "rgba(240,253,250,0.8)",
-                        border: "1px solid rgba(59,130,246,0.15)",
-                      }}
-                    >
-                      <Icon className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <div className="text-lg font-black text-slate-800">
-                        {value}
-                      </div>
-                      <div className="text-xs text-slate-500">{label}</div>
-                    </div>
-                  </div>
-                ))}
               </div>
             </AnimatedSection>
           </div>
@@ -521,10 +467,10 @@ export default function MedConnectLanding() {
         </div>
       </section>
 
-      {/* ══════════════════════ PRICING ══════════════════════ */}
+      {/* ══════════════════════ CRÉDITOS ══════════════════════ */}
       <section
-        id="planos"
-        className="scroll-mt-24 relative py-28 px-6 lg:px-8 overflow-hidden"
+        id="creditos"
+        className="scroll-mt-24 relative pt-28 pb-16 px-6 lg:px-8 overflow-hidden"
         style={{
           background: "linear-gradient(180deg, #ffffff 0%, #eff6ff 50%, #ffffff 100%)",
         }}
@@ -545,14 +491,14 @@ export default function MedConnectLanding() {
                   color: "#1d4ed8",
                 }}
               >
-                Planos
+                Créditos
               </span>
               <h2 className="text-3xl lg:text-4xl font-black text-slate-800 tracking-tight mb-4">
-                Um preço único, acesso completo.
+                Créditos sob demanda, sem mensalidade.
               </h2>
               <p className="text-lg text-slate-500">
-                Sem taxas escondidas. Assine e tenha liberdade total para
-                gerenciar e conectar seus estoques.
+                Compre créditos quando precisar e use-os para publicar anúncios
+                e gerar descrições de materiais com IA.
               </p>
             </div>
           </AnimatedSection>
@@ -583,27 +529,24 @@ export default function MedConnectLanding() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
 
-                  <h3 className="text-lg font-semibold text-blue-200 mb-3 relative z-10">
-                    Plano Profissional
-                  </h3>
-                  <div className="flex items-start justify-center gap-1 relative z-10">
-                    <span className="text-xl font-bold text-blue-100 mt-3">R$</span>
+                  <div className="flex items-baseline justify-center gap-2 relative z-10">
                     <span className="text-6xl font-black text-white tracking-tighter">
-                      15,99
+                      {PACOTE_INICIAL.creditos}
                     </span>
+                    <span className="text-xl font-bold text-blue-100">créditos</span>
                   </div>
-                  <span className="text-blue-300/70 font-medium mt-2 text-sm relative z-10">
-                    por mês (R$191,98 anualmente)
+                  <span className="text-blue-200 font-semibold mt-3 text-lg relative z-10">
+                    por {PACOTE_INICIAL.preco}
                   </span>
                 </div>
 
-                {/* Features panel */}
+                {/* Uses panel */}
                 <CardContent className="p-10 md:col-span-3 flex flex-col justify-center bg-white border-none m-0">
                   <h4 className="text-lg font-bold text-slate-800 mb-6">
-                    Tudo o que está incluído:
+                    Onde os créditos são usados:
                   </h4>
-                  <ul className="grid sm:grid-cols-2 gap-x-4 gap-y-4 mb-8">
-                    {PLAN_FEATURES.map((feature, i) => (
+                  <ul className="grid gap-y-4 mb-8">
+                    {CREDIT_USES.map((feature, i) => (
                       <li key={i} className="flex items-center gap-3 group/item">
                         <div
                           className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 group-hover/item:scale-110 transition-all duration-300"
@@ -632,15 +575,15 @@ export default function MedConnectLanding() {
                       >
                         <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700 ease-in-out" />
                         <span className="relative flex items-center justify-center gap-2">
-                          Criar conta e Assinar
+                          Acessar a Central de Créditos
                           <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform duration-300" />
                         </span>
                       </button>
                     </Link>
                     <p className="text-xs text-slate-400 text-center sm:text-left">
-                      Cancele quando quiser.
+                      Entre ou crie sua conta para ver
                       <br />
-                      Pagamento seguro.
+                      os pacotes disponíveis.
                     </p>
                   </div>
                 </CardContent>
@@ -651,51 +594,27 @@ export default function MedConnectLanding() {
       </section>
 
       {/* ══════════════════════ CTA FINAL ══════════════════════ */}
-      <section
-        className="relative py-24 px-6 lg:px-8 overflow-hidden"
-        style={{
-          background: "linear-gradient(135deg, #1e3a8a, #172554, #0b1735)",
-        }}
-      >
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: `
-              linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)
-            `,
-            backgroundSize: "80px 80px",
-          }}
-        />
-        <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full pointer-events-none"
-          style={{ background: "rgba(59,130,246,0.08)", filter: "blur(80px)" }}
-        />
-
+      <section className="px-6 lg:px-8 pb-20 bg-white">
         <AnimatedSection>
-          <div className="max-w-3xl mx-auto text-center relative z-10">
-            <h2 className="text-3xl lg:text-4xl font-black text-white tracking-tight mb-6">
-              Pronto para transformar a gestão dos seus insumos?
-            </h2>
-            <p className="text-lg mb-10 max-w-2xl mx-auto" style={{ color: "rgba(191,219,254,0.6)" }}>
-              Junte-se a centenas de empresas que já estão reduzindo desperdícios
-              e conectando seus estoques de forma inteligente.
-            </p>
-            <Link href="/auth">
-              <button
-                className="group relative h-14 px-10 font-bold rounded-xl text-base transition-all duration-300 hover:-translate-y-1 overflow-hidden"
-                style={{
-                  background: "#ffffff",
-                  color: "#1e3a8a",
-                  boxShadow: "0 8px 30px rgba(4,47,46,0.3)",
-                }}
-              >
-                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-100/50 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
-                <span className="relative flex items-center gap-2">
-                  Comece Gratuitamente
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
-                </span>
-              </button>
+          <div
+            className="relative max-w-5xl mx-auto overflow-hidden rounded-2xl px-8 py-10 md:px-12 md:py-12 flex flex-col md:flex-row md:items-center gap-8 md:gap-12"
+            style={{ background: "linear-gradient(135deg, #1e40af, #1e3a8a 55%, #172554)" }}
+          >
+            <div className="flex-1 min-w-0 text-center md:text-left">
+              <h2 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">
+                Pronto para transformar a gestão dos seus insumos?
+              </h2>
+              <p className="mt-3 text-base text-blue-100/80 max-w-xl mx-auto md:mx-0">
+                Cadastre sua instituição para anunciar excedentes, encontrar
+                materiais e negociar diretamente com outras instituições.
+              </p>
+            </div>
+            <Link
+              href="/auth"
+              className="group shrink-0 self-center h-12 px-7 inline-flex items-center justify-center gap-2 rounded-xl bg-white text-blue-900 text-sm font-semibold hover:bg-blue-50 transition-colors"
+            >
+              Comece Gratuitamente
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />
             </Link>
           </div>
         </AnimatedSection>

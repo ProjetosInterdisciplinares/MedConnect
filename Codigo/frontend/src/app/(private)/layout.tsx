@@ -1,6 +1,6 @@
 "use client"
 
-import React, { ReactNode, useEffect, useRef, useState } from "react"
+import React, { ReactNode, useEffect, useState } from "react"
 import servicesGetMinhaPessoaJuridica from "@/server/(GET)-minha-pessoa-juridica"
 import servicesGetMeusAnuncios from "@/server/(GET)-meus-anuncios"
 import servicesGetNegociacoes from "@/server/(GET)-negociacoes"
@@ -11,58 +11,79 @@ import { useRouter, usePathname } from "next/navigation"
 import {
   LogOut,
   Store,
-  FileText,
-  SquarePlus,
-  ChevronDown,
-  Inbox,
   Menu,
   X,
-  ArrowRight,
-  Shield,
+  ClipboardCheck,
   Handshake,
   Megaphone,
-  Package,
-  BarChart
+  PackagePlus,
+  BarChart,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ChevronDown,
+  UserRound,
 } from "lucide-react"
-import Footer from "@/components/ui/Footer"
+import AppFooter from "@/components/layout/AppFooter"
 import { withAuth } from "@/lib/withAuth"
 import CreditosBadge from "@/components/creditos/CreditosBadge"
+import SinoNotificacoes from "@/components/layout/SinoNotificacoes"
 import { onCreditosAtualizados } from "@/lib/creditos"
-
+import { NotificacoesContext } from "@/components/layout/SecaoTabs"
+import { toast } from "sonner"
+import { buscarSolicitacoesPendentes, onSolicitacoesAtualizadas, SolicitacaoPendente } from "@/lib/solicitacoes"
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-// Array de links para manter o código limpo (DRY)
-const NAV_LINKS = [
-  { name: "Catálogo", href: "/catalogo", icon: Store },
-  { name: "Cadastrar Materiais", href: "/cadastrar", icon: FileText },
-  {
-    name: "Anunciar",
-    href: "#",
-    icon: SquarePlus,
-    subLinks: [
-      { name: "Publicar Anúncio", href: "/anunciar", icon: Megaphone },
-      { name: "Meus Anúncios", href: "/meus-anuncios", icon: Package }
-    ]
-  },
-  {
-    name: "Negociações",
-    href: "#",
-    icon: Handshake,
-    subLinks: [
-      { name: "Minhas Negociações", href: "/minhas-negociacoes", icon: Handshake },
-      { name: "Propostas Recebidas", href: "/caixa-de-propostas", icon: Inbox }
-    ]
-  },
-  { name: "Painel Administrativo", href: "/admin-painel/credenciamentos", icon: Shield, isAdminOnly: true },
-  { name: "DashBoards", href: "/admin-painel/dashboards", icon: BarChart, isAdminOnly: true },
+type NavLink = {
+  name: string
+  href: string
+  icon: React.ElementType
+  /** Rotas que também deixam o item ativo (abas da seção). */
+  match: string[]
+  notificacao?: boolean
+  /** Mostra o total de solicitações de credenciamento pendentes (admin). */
+  solicitacoes?: boolean
+  adminOnly?: boolean
+}
+
+const NAV_LINKS: NavLink[] = [
+  { name: "Catálogo", href: "/catalogo", icon: Store, match: ["/catalogo"] },
+  { name: "Ofertar insumos", href: "/cadastrar", icon: PackagePlus, match: ["/cadastrar"] },
+  { name: "Anúncios", href: "/anunciar", icon: Megaphone, match: ["=/anunciar", "/meus-anuncios"] },
+  { name: "Negociações", href: "/caixa-de-propostas", icon: Handshake, match: ["/caixa-de-propostas", "/minhas-negociacoes"], notificacao: true },
+  { name: "Solicitações", href: "/admin-painel/credenciamentos", icon: ClipboardCheck, match: ["/admin-painel/credenciamentos"], solicitacoes: true, adminOnly: true },
+  { name: "Controle", href: "/admin-painel/dashboards", icon: BarChart, match: ["/admin-painel/dashboards"], adminOnly: true },
 ]
+
+const SIDEBAR_KEY = "sidebar_collapsed"
+/** Aviso de solicitações pendentes: mostrado uma vez por sessão de login. */
+const AVISO_SOLICITACOES_KEY = "aviso_solicitacoes_exibido"
+
+/** Título exibido na barra superior, pelo início da rota. */
+const TITULOS: [string, string][] = [
+  ["/catalogo", "Catálogo"],
+  ["/anunciar/", "Catálogo"], // detalhe do anúncio (/anunciar/123)
+  ["/cadastrar", "Ofertar insumos"],
+  ["/meus-anuncios", "Anúncios"],
+  ["/anunciar", "Anúncios"],
+  ["/caixa-de-propostas", "Negociações"],
+  ["/minhas-negociacoes", "Negociações"],
+  ["/creditos", "Créditos"],
+  ["/perfil", "Meu perfil"],
+  ["/historico", "Histórico de operações"],
+  ["/admin-painel/credenciamentos", "Solicitações de credenciamento"],
+  ["/admin-painel/dashboards", "Controle"],
+]
+
+function tituloDaRota(pathname: string | null) {
+  if (!pathname) return ""
+  return TITULOS.find(([rota]) => pathname === rota || pathname.startsWith(rota.endsWith("/") ? rota : rota + "/") || (rota.endsWith("/") && pathname.startsWith(rota)))?.[1] ?? ""
+}
 
 interface LayoutProps {
   children: ReactNode
@@ -71,7 +92,6 @@ interface LayoutProps {
 function Layout({ children }: LayoutProps) {
   const router = useRouter()
   const pathname = usePathname()
-  const isCatalogo = pathname?.startsWith("/catalogo")
 
   const [empresa, setEmpresa] = useState<PessoaJuridica | null>(null)
   const [newPendingCount, setNewPendingCount] = useState(0)
@@ -79,34 +99,35 @@ function Layout({ children }: LayoutProps) {
   const [newRefusedCount, setNewRefusedCount] = useState(0)
   const [newSoldAnunciosCount, setNewSoldAnunciosCount] = useState(0)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
-  const [openMobileDropdown, setOpenMobileDropdown] = useState<string | null>(null)
-  const [openDesktopDropdown, setOpenDesktopDropdown] = useState<string | null>(null)
-  const desktopDropdownRef = useRef<HTMLDivElement>(null)
+  const [collapsed, setCollapsed] = useState(false)
+  const [solicitacoes, setSolicitacoes] = useState<SolicitacaoPendente[]>([])
 
   // Limpa resquício de tema salvo caso tenha sido gravado anteriormente
   useEffect(() => {
-    localStorage.removeItem("navbar_theme")
+    try {
+      localStorage.removeItem("navbar_theme")
+      setCollapsed(localStorage.getItem(SIDEBAR_KEY) === "1")
+    } catch { /* storage indisponível */ }
   }, [])
 
-  // Click outside handler for desktop dropdown
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev
+      try { localStorage.setItem(SIDEBAR_KEY, next ? "1" : "0") } catch { /* ignore */ }
+      return next
+    })
+  }
+
+  // Atalho Ctrl/Cmd + B para recolher/expandir o menu
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (desktopDropdownRef.current && !desktopDropdownRef.current.contains(e.target as Node)) {
-        setOpenDesktopDropdown(null)
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault()
+        toggleCollapsed()
       }
     }
-    if (openDesktopDropdown) {
-      document.addEventListener("mousedown", handleClickOutside)
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [openDesktopDropdown])
-
-  // Scroll listener para efeito da navbar
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20)
-    window.addEventListener("scroll", handleScroll, { passive: true })
-    return () => window.removeEventListener("scroll", handleScroll)
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
   }, [])
 
   // Listener para sincronização de saldo
@@ -207,339 +228,283 @@ function Layout({ children }: LayoutProps) {
     carregarDados()
   }, [router, pathname]) // reload on pathname change to keep notification fresh
 
+  // Solicitações de credenciamento pendentes (somente admin)
+  const isAdmin = !!empresa?.is_admin
+  useEffect(() => {
+    if (!isAdmin) { setSolicitacoes([]); return }
+    let ativo = true
+    const carregar = async () => {
+      const lista = await buscarSolicitacoesPendentes()
+      if (ativo && lista) setSolicitacoes(lista)
+      return lista
+    }
+    carregar().then((lista) => {
+      if (!ativo || !lista || lista.length === 0) return
+      try {
+        if (sessionStorage.getItem(AVISO_SOLICITACOES_KEY)) return
+        sessionStorage.setItem(AVISO_SOLICITACOES_KEY, "1")
+      } catch { /* storage indisponível */ }
+      if (window.location.pathname.startsWith("/admin-painel/credenciamentos")) return
+      const n = lista.length
+      toast(n === 1 ? "1 solicitação de credenciamento" : `${n} solicitações de credenciamento`, {
+        description: n === 1 ? "Uma instituição aguarda sua análise." : "Instituições aguardam sua análise.",
+        id: "aviso-solicitacoes",
+        action: { label: "Ver", onClick: () => router.push("/admin-painel/credenciamentos") },
+        duration: 8000,
+      })
+    })
+    const intervalo = window.setInterval(carregar, 60_000)
+    const desligar = onSolicitacoesAtualizadas(() => { carregar() })
+    return () => { ativo = false; window.clearInterval(intervalo); desligar() }
+  }, [isAdmin, pathname, router])
+
+  // Ao abrir a tela de solicitações, o aviso já cumpriu seu papel
+  useEffect(() => {
+    if (pathname?.startsWith("/admin-painel/credenciamentos")) toast.dismiss("aviso-solicitacoes")
+  }, [pathname])
+
   // Fecha o menu mobile automaticamente ao trocar de rota
   useEffect(() => {
     setIsMobileMenuOpen(false)
   }, [pathname])
 
-  const getSubLinkNotificationCount = (subName: string) => {
-    if (subName === "Minhas Negociações") return newAcceptedCount + newRefusedCount
-    if (subName === "Propostas Recebidas") return newPendingCount + newSoldAnunciosCount
-    return 0
-  }
-
-  const getLinkNotificationCount = (link: (typeof NAV_LINKS)[number]) => {
-    if (link.subLinks) {
-      return link.subLinks.reduce((acc, sub) => acc + getSubLinkNotificationCount(sub.name), 0)
+  // Menu mobile: Esc fecha e trava a rolagem do fundo
+  useEffect(() => {
+    if (!isMobileMenuOpen) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setIsMobileMenuOpen(false) }
+    document.addEventListener("keydown", onKey)
+    const overflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.removeEventListener("keydown", onKey)
+      document.body.style.overflow = overflow
     }
-    return 0
+  }, [isMobileMenuOpen])
+
+  const notificacoes = {
+    recebidas: newPendingCount + newSoldAnunciosCount,
+    enviadas: newAcceptedCount + newRefusedCount,
   }
+  const totalNegociacoesCount = notificacoes.recebidas + notificacoes.enviadas
 
-  const totalNegociacoesCount =
-    newAcceptedCount + newRefusedCount + newPendingCount + newSoldAnunciosCount
-
-  const renderNotificationBadge = (count: number, className = "") => {
-    if (count <= 0) return null
-    return (
-      <span
-        className={`inline-flex items-center justify-center min-w-[20px] h-[20px] px-1.5 text-[11px] font-black leading-none text-white bg-red-600 rounded-full shadow-sm shadow-red-950/40 select-none ${className}`}
-      >
-        {count > 99 ? "99+" : count}
-      </span>
+  // "=/rota" casa só a rota exata; as demais também casam sub-rotas
+  const isLinkActive = (link: NavLink) =>
+    link.match.some((rota) =>
+      rota.startsWith("=") ? pathname === rota.slice(1) : pathname === rota || !!pathname?.startsWith(rota + "/")
     )
+
+  const linksVisiveis = NAV_LINKS.filter((l) => !l.adminOnly || empresa?.is_admin)
+
+  const logout = () => {
+    AuthManager.getInstance().logout()
+    localStorage.removeItem("cnpj")
+    try { sessionStorage.removeItem(AVISO_SOLICITACOES_KEY) } catch { /* ignore */ }
+    // Recarrega direto no login: as telas abertas não chegam a chamar a API sem token
+    window.location.replace("/auth")
   }
+
+  const tituloPagina = tituloDaRota(pathname)
+  const iniciais = empresa?.nm_pessoaj?.substring(0, 2).toUpperCase() ?? "PJ"
+
+  /* ─── Menu da conta (barra superior): perfil, créditos, sair ─── */
+  const renderConta = (compacto: boolean) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className={`flex items-center gap-2.5 rounded-lg text-left transition-colors hover:bg-slate-100 outline-none focus-visible:ring-2 focus-visible:ring-blue-600
+          ${compacto ? "p-1" : "py-1.5 pl-1.5 pr-2"}`}
+        aria-label="Menu da conta"
+      >
+        <span className="w-8 h-8 shrink-0 rounded-full bg-blue-50 ring-1 ring-blue-100 flex items-center justify-center text-xs font-bold text-blue-800 overflow-hidden">
+          {empresa?.imagem_perfil
+            ? <img src={empresa.imagem_perfil} alt="" className="w-full h-full object-cover" />
+            : iniciais}
+        </span>
+        {!compacto && (
+          <>
+            <span className="max-w-[200px] text-sm font-medium text-slate-800 truncate">{empresa?.nm_pessoaj ?? "Conta"}</span>
+            <ChevronDown size={16} className="shrink-0 text-slate-400" aria-hidden="true" />
+          </>
+        )}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="bottom" align="end" sideOffset={6} className="w-60 p-1">
+        <div className="px-3 py-2">
+          <p className="text-sm font-semibold text-slate-900 truncate">{empresa?.nm_pessoaj ?? "Conta"}</p>
+          {empresa?.email_pj && <p className="text-xs text-slate-500 truncate">{empresa.email_pj}</p>}
+        </div>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => router.push("/perfil")} className="gap-2 px-3 py-2 cursor-pointer">
+          <UserRound size={16} /> Meu perfil
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={logout} className="gap-2 px-3 py-2 cursor-pointer text-red-600 focus:text-red-700">
+          <LogOut size={16} /> Sair
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+
+  /* ─── Sininho: notificações da empresa (e solicitações pendentes, para o admin) ─── */
+  const renderSino = () => {
+    if (!empresa) return null
+    return <SinoNotificacoes isAdmin={isAdmin} solicitacoes={solicitacoes} />
+  }
+
+  const linksComuns = linksVisiveis.filter((l) => !l.adminOnly)
+  const linksAdmin = linksVisiveis.filter((l) => l.adminOnly)
+
+  /* ─── Grupo de links ("Menu", "Administração") ─── */
+  const renderGrupo = (titulo: string, links: NavLink[], isCollapsed: boolean, separador: boolean) => (
+    <div className="px-3">
+      {isCollapsed
+        ? separador && <div className="mx-2 mb-3 border-t border-slate-200" aria-hidden="true" />
+        : <p className="px-3 mb-2 text-xs font-medium text-slate-400">{titulo}</p>}
+      <ul className="flex flex-col gap-1">
+        {links.map((link) => {
+          const Icon = link.icon
+          const active = isLinkActive(link)
+          const count = link.notificacao ? totalNegociacoesCount : link.solicitacoes ? solicitacoes.length : 0
+          return (
+            <li key={link.href}>
+              <Link
+                href={link.href}
+                title={isCollapsed ? link.name : undefined}
+                aria-current={active ? "page" : undefined}
+                className={`relative flex items-center gap-3 rounded-lg text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1
+                  ${isCollapsed ? "justify-center h-11" : "px-3 h-11"}
+                  ${active
+                    ? "bg-blue-700 text-white font-semibold shadow-[0_4px_12px_-4px_rgba(29,78,216,0.55)]"
+                    : "text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900"}`}
+              >
+                <Icon size={19} strokeWidth={active ? 2.25 : 1.9} className={`shrink-0 ${active ? "text-white" : "text-slate-500"}`} aria-hidden="true" />
+                {!isCollapsed && <span className="flex-1 truncate">{link.name}</span>}
+                {count > 0 && (
+                  isCollapsed
+                    ? <span className={`absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-red-500 ring-2 ${active ? "ring-blue-700" : "ring-white"}`} aria-label={`${count} novidades`} />
+                    : <span className={`min-w-[20px] h-5 px-1.5 inline-flex items-center justify-center rounded-full text-[11px] font-bold tabular-nums
+                        ${active ? "bg-white text-blue-800" : "bg-red-600 text-white"}`}>
+                        {count > 99 ? "99+" : count}
+                      </span>
+                )}
+              </Link>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+
+  /* ─── Conteúdo do menu (desktop e gaveta mobile) ─── */
+  const renderSidebar = (isCollapsed: boolean, isMobile: boolean) => (
+    <div className="h-full flex flex-col bg-white text-slate-700">
+      {/* Logo + recolher */}
+      <div className={`h-16 shrink-0 flex items-center border-b border-slate-200 ${isCollapsed ? "justify-center" : "justify-between pl-5 pr-2"}`}>
+        {!isCollapsed && (
+          <Link href="/catalogo" className="flex items-center gap-2.5 min-w-0">
+            <span className="flex items-center justify-center w-8 h-8 shrink-0 rounded-lg bg-blue-700">
+              <img src="/med-icon.svg" alt="" className="w-5 h-5 invert" />
+            </span>
+            <span className="font-bold text-lg text-slate-900 tracking-tight truncate">
+              Med<span className="text-blue-700">Connect</span>
+            </span>
+          </Link>
+        )}
+        {isMobile ? (
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="p-2 rounded-md text-slate-500 hover:bg-slate-100"
+            aria-label="Fechar menu"
+          >
+            <X size={20} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            className="p-2 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            aria-label={isCollapsed ? "Expandir menu" : "Recolher menu"}
+            title={`${isCollapsed ? "Expandir" : "Recolher"} menu (Ctrl+B)`}
+          >
+            {isCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
+          </button>
+        )}
+      </div>
+
+      {/* Navegação */}
+      <nav className="flex-1 overflow-y-auto py-4 space-y-6" aria-label="Menu principal">
+        {renderGrupo("Menu", linksComuns, isCollapsed, false)}
+        {linksAdmin.length > 0 && renderGrupo("Administração", linksAdmin, isCollapsed, true)}
+      </nav>
+
+    </div>
+  )
 
   return (
     <div
-      className={`w-full min-h-screen flex flex-col items-center text-main font-sans antialiased scroll-smooth ${isCatalogo
-        ? "bg-canvas"
-        : ""
-        }`}
-      style={
-        isCatalogo
-          ? undefined
-          : { background: "linear-gradient(160deg, #ffffff 0%, #eff6ff 25%, #eff6ff 50%, #ecfdf5 75%, #ffffff 100%)" }
-      }
+      className="w-full min-h-screen bg-canvas text-main font-sans antialiased"
     >
-
-      {/* ═══════════════ NAVBAR ═══════════════ */}
-      <nav
-        style={{
-          height: "64px",
-          backgroundColor: scrolled ? "rgba(23, 37, 84, 0.95)" : "var(--brand-navy)",
-          backdropFilter: scrolled ? "blur(20px)" : "none",
-          boxShadow: scrolled ? "0 4px 30px rgba(23, 37, 84, 0.25)" : "none",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-          transition: "height 0.4s cubic-bezier(0.4,0,0.2,1), background-color 0.4s cubic-bezier(0.4,0,0.2,1), box-shadow 0.4s cubic-bezier(0.4,0,0.2,1), border-bottom 0.4s ease",
-        }}
-        className="w-full flex items-center justify-between px-3 sm:px-6 md:px-10 sticky top-0 z-50"
+      {/* ═══════════════ MENU LATERAL (DESKTOP) ═══════════════ */}
+      <aside
+        className={`hidden lg:block fixed inset-y-0 left-0 z-40 border-r border-slate-200 transition-[width] duration-200 ${collapsed ? "w-[72px]" : "w-64"}`}
       >
+        {renderSidebar(collapsed, false)}
+      </aside>
 
-        {/* LOGO */}
-        <Link href="/catalogo" className="flex items-center gap-2.5 group z-50">
-          <div
-            className="flex items-center justify-center rounded-xl shadow-lg group-hover:scale-105 transition-all duration-500"
-            style={{
-              width: "34px",
-              height: "34px",
-              background: "linear-gradient(135deg, #3b82f6, #2563eb)",
-              boxShadow: "0 4px 14px rgba(20, 184, 166, 0.25)",
-              transition: "width 0.4s cubic-bezier(0.4,0,0.2,1), height 0.4s cubic-bezier(0.4,0,0.2,1)",
-            }}
-          >
-            <img
-              src="../med-icon.svg"
-              alt="MedConnect Logo"
-              className="w-5 h-5 filter invert"
-            />
-          </div>
-          <span className="font-extrabold text-lg sm:text-xl tracking-wider transition-colors duration-300 text-white">
-            Med<span className="text-brand-accent">Connect</span>
-          </span>
-        </Link>
-
-        {/* MENU PRINCIPAL (DESKTOP) */}
-        <div className="hidden xl:flex items-center gap-1">
-          {NAV_LINKS.filter(link => !link.isAdminOnly || empresa?.is_admin).map((link) => {
-            const Icon = link.icon
-            const isActive = pathname === link.href || link.subLinks?.some(sub => pathname === sub.href.split('?')[0])
-
-            if (link.subLinks) {
-              const isDropdownOpen = openDesktopDropdown === link.name
-              return (
-                <div key={link.name} className="relative" ref={isDropdownOpen ? desktopDropdownRef : undefined}>
-                  <button
-                    type="button"
-                    onClick={() => setOpenDesktopDropdown(isDropdownOpen ? null : link.name)}
-                    className={`group relative flex items-center gap-1.5 2xl:gap-2 px-2.5 2xl:px-4 py-2 text-sm font-semibold rounded-full transition-all duration-300 overflow-hidden outline-none cursor-pointer whitespace-nowrap ${isActive || isDropdownOpen
-                      ? "text-white bg-white/10"
-                      : "text-blue-200/70 hover:text-white"
-                      }`}
-                  >
-                    <span className="absolute inset-0 rounded-full scale-75 group-hover:scale-100 opacity-0 group-hover:opacity-100 transition-all duration-300 bg-white/10" />
-                    <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-0.5 rounded-full transition-all duration-300 bg-blue-400" style={{ width: isActive ? "24px" : "0px" }} />
-                    <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-0 group-hover:w-6 h-0.5 rounded-full transition-all duration-300 bg-blue-400" />
-
-                    <Icon size={15} className={`relative z-10 shrink-0 group-hover:scale-110 transition-all duration-300 ${isActive || isDropdownOpen ? "text-white" : "group-hover:text-blue-300"}`} />
-                    <span className="relative z-10 transition-colors duration-300 flex items-center gap-1.5">
-                      <span>{link.name}</span>
-                      {renderNotificationBadge(getLinkNotificationCount(link))}
-                      <ChevronDown size={14} className={`ml-0.5 shrink-0 transition-all duration-300 ${isDropdownOpen ? "rotate-180 text-blue-400" : "opacity-70 group-hover:opacity-100"}`} />
-                    </span>
-                  </button>
-
-                  {/* Expanding panel */}
-                  <div
-                    className="absolute top-full left-0 mt-1.5 min-w-full w-auto z-50 transition-all duration-200 origin-top"
-                    style={{
-                      opacity: isDropdownOpen ? 1 : 0,
-                      transform: `scaleY(${isDropdownOpen ? 1 : 0.95})`,
-                      pointerEvents: isDropdownOpen ? "auto" : "none",
-                    }}
-                  >
-                    <div className="rounded-xl border border-white/10 p-1 overflow-hidden bg-brand-navy shadow-[0_6px_20px_rgba(15,23,42,0.4)]">
-                      {link.subLinks.map(sub => {
-                        const SubIcon = sub.icon
-                        const subCount = getSubLinkNotificationCount(sub.name)
-                        return (
-                          <Link
-                            key={sub.name}
-                            href={sub.href}
-                            onClick={() => setOpenDesktopDropdown(null)}
-                            className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg transition-colors duration-200 whitespace-nowrap text-white/90 hover:bg-white/10"
-                          >
-                            <div className="flex items-center gap-2.5">
-                              <SubIcon size={15} className="shrink-0 text-blue-300" strokeWidth={2} />
-                              <span className="text-[13px] font-semibold leading-tight">
-                                {sub.name}
-                              </span>
-                            </div>
-                            {renderNotificationBadge(subCount, "ml-2")}
-                          </Link>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )
-            }
-
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`group relative flex items-center gap-1.5 2xl:gap-2 px-2.5 2xl:px-4 py-2 text-sm font-semibold rounded-full transition-all duration-300 overflow-hidden whitespace-nowrap ${isActive
-                  ? "text-white bg-white/10"
-                  : "text-blue-200/70 hover:text-white"
-                  }`}
-              >
-                <span className="absolute inset-0 rounded-full scale-75 group-hover:scale-100 opacity-0 group-hover:opacity-100 transition-all duration-300 bg-white/10" />
-                <span
-                  className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-0.5 rounded-full transition-all duration-300 bg-blue-400"
-                  style={{ width: isActive ? "24px" : "0px" }}
-                />
-                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-0 group-hover:w-6 h-0.5 rounded-full transition-all duration-300 bg-blue-400" />
-
-                <Icon size={15} className={`relative z-10 shrink-0 group-hover:scale-110 transition-all duration-300 ${isActive ? "text-white" : "group-hover:text-blue-300"}`} />
-                <span className="relative z-10 transition-colors duration-300 flex items-center gap-2">
-                  {link.name}
-                </span>
-              </Link>
-            )
-          })}
+      {/* ═══════════════ BARRA SUPERIOR (MOBILE) ═══════════════ */}
+      <header className="lg:hidden sticky top-0 z-40 h-14 flex items-center gap-2 px-3 bg-white border-b border-slate-200">
+        <button
+          type="button"
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="relative p-2 rounded-md text-slate-700 hover:bg-slate-100"
+          aria-label="Abrir menu"
+          aria-expanded={isMobileMenuOpen}
+        >
+          <Menu size={22} />
+          {(totalNegociacoesCount > 0 || solicitacoes.length > 0) && (
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500" />
+          )}
+        </button>
+        <p className="flex-1 min-w-0 text-base font-semibold text-slate-900 truncate">{tituloPagina || "MedConnect"}</p>
+        <div className="flex items-center gap-1.5">
+          {renderSino()}
+          <CreditosBadge saldo={empresa?.saldo_creditos ?? null} isActive={pathname === "/creditos"} claro />
+          {renderConta(true)}
         </div>
+      </header>
 
-        {/* AÇÕES DIREITA */}
-        <div className="flex items-center gap-1.5 sm:gap-3 z-50">
-
-          <CreditosBadge saldo={empresa?.saldo_creditos ?? null} />
-
-          {/* USER MENU */}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className="flex items-center gap-1 sm:gap-2.5 focus:outline-none p-1 sm:pl-1.5 sm:pr-2 lg:pr-4 sm:py-1.5 rounded-full transition-all duration-300 bg-white/10 hover:bg-white/15 border border-white/5 active:scale-[0.98] cursor-pointer outline-none ring-0"
-            >
-              <div
-                className="w-7 h-7 lg:w-8 lg:h-8 shrink-0 rounded-full flex items-center justify-center font-bold text-xs lg:text-sm tracking-wider text-white shadow-inner overflow-hidden border border-blue-400/30"
-                style={{ background: "linear-gradient(135deg, #3b82f6, #2563eb)" }}
-              >
-                {empresa?.imagem_perfil ? (
-                  <img src={empresa.imagem_perfil} alt="Perfil" className="w-full h-full object-cover" />
-                ) : (
-                  empresa?.nm_pessoaj?.substring(0, 2).toUpperCase() ?? "PJ"
-                )}
-              </div>
-              <span className="hidden xl:block text-sm font-semibold tracking-wide text-blue-100/90 max-w-30 truncate">
-                {empresa?.nm_pessoaj ?? "Perfil"}
-              </span>
-              <ChevronDown size={14} className="text-blue-200/60 transition-transform duration-300" />
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent align="end" className="w-60 bg-surface rounded-2xl shadow-2xl border border-border/60 py-1.5 z-50">
-              <DropdownMenuGroup>
-                <DropdownMenuItem className="p-0 hover:bg-brand-subtle focus:bg-brand-subtle transition-colors cursor-pointer rounded-lg mx-1.5 mt-1 overflow-hidden">
-                  <Link href="/perfil" className="w-full px-4 py-3 flex flex-col items-start gap-0.5 outline-none">
-                    <span className="text-sm font-bold text-main">Meu Perfil</span>
-                    <span className="text-xs text-subtle font-medium">Configurações da conta</span>
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-
-              <DropdownMenuSeparator className="border-t border-border-subtle my-1" />
-
-
-              <DropdownMenuItem
-                className="flex items-center gap-2 px-4 py-2.5 mb-1 mx-1.5 text-sm font-bold text-danger text-left transition-colors cursor-pointer focus:text-danger focus:bg-danger-subtle rounded-lg"
-                onClick={() => {
-                  import("@/lib/AuthManager").then(({ AuthManager }) => {
-                    AuthManager.getInstance().logout()
-                    localStorage.removeItem("cnpj")
-                    router.push("/auth")
-                  })
-                }}
-              >
-                <LogOut size={16} className="text-danger" />
-                Sair do Sistema
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* BOTÃO HAMBÚRGUER (MOBILE & TABLET) */}
-          <button
-            className="xl:hidden relative p-1 sm:p-2 rounded-xl text-white hover:bg-white/10 transition-colors duration-300 cursor-pointer"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            aria-label="Toggle menu"
-          >
-            <div className="relative w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center">
-              <Menu className={`absolute inset-0 w-full h-full transition-all duration-300 ${isMobileMenuOpen ? "opacity-0 rotate-90 scale-75" : "opacity-100 rotate-0 scale-100"}`} />
-              <X className={`absolute inset-0 w-full h-full transition-all duration-300 ${isMobileMenuOpen ? "opacity-100 rotate-0 scale-100" : "opacity-0 -rotate-90 scale-75"}`} />
-            </div>
-            {totalNegociacoesCount > 0 && !isMobileMenuOpen && (
-              <span className="absolute top-1 right-1 flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
-              </span>
-            )}
-          </button>
-        </div>
-      </nav>
-
-      {/* MOBILE MENU OVERLAY — full-screen como na landing */}
-      <div
-        className={`xl:hidden fixed inset-0 z-40 transition-all duration-400 ${isMobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
-        style={{ backgroundColor: "rgba(23, 37, 84, 0.98)", backdropFilter: "blur(20px)" }}
-      >
-        <div className="relative flex flex-col items-center gap-2 pt-20 pb-24 px-6 transition-all duration-400 overflow-y-auto h-full w-full">
-          {NAV_LINKS.filter(link => !link.isAdminOnly || empresa?.is_admin).map((link, i) => {
-            const Icon = link.icon
-            const isActive = pathname === link.href || link.subLinks?.some(sub => pathname === sub.href.split('?')[0])
-
-            if (link.subLinks) {
-              const isMobileDropdownOpen = openMobileDropdown === link.name
-              return (
-                <div key={link.name} className="w-full" style={{ transitionDelay: `${i * 50}ms` }}>
-                  <button
-                    type="button"
-                    onClick={() => setOpenMobileDropdown(isMobileDropdownOpen ? null : link.name)}
-                    className={`flex items-center gap-3 w-full px-6 py-4 text-base font-semibold rounded-xl transition-all duration-300 cursor-pointer ${isActive
-                      ? "bg-white/10 text-white"
-                      : "text-zinc-200 hover:text-white hover:bg-white/10"
-                      }`}
-                  >
-                    <Icon size={20} className={isActive ? "text-blue-400" : "text-blue-400/60"} />
-                    <span>{link.name}</span>
-                    {renderNotificationBadge(getLinkNotificationCount(link), "ml-2")}
-                    <ChevronDown size={16} className={`ml-auto transition-transform duration-300 ${isMobileDropdownOpen ? "rotate-180 text-blue-400" : "text-zinc-400"}`} />
-                  </button>
-                  <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isMobileDropdownOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0"}`}>
-                    <div className="flex flex-col gap-1 pl-4 py-2">
-                      {link.subLinks.map(sub => {
-                        const SubIcon = sub.icon
-                        const isSubActive = pathname === sub.href.split('?')[0]
-                        const subCount = getSubLinkNotificationCount(sub.name)
-                        return (
-                          <Link
-                            key={sub.name}
-                            href={sub.href}
-                            onClick={() => setIsMobileMenuOpen(false)}
-                            className={`flex items-center justify-between gap-3 w-full px-6 py-3 text-[15px] font-semibold rounded-xl transition-all duration-200 ${isSubActive
-                              ? "bg-white/10 text-white"
-                              : "text-zinc-300 hover:text-white hover:bg-white/5"
-                              }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="shrink-0 w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
-                                <SubIcon size={16} className="text-blue-300" />
-                              </div>
-                              <span>{sub.name}</span>
-                            </div>
-                            {renderNotificationBadge(subCount, "mr-2")}
-                          </Link>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )
-            }
-
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={`flex items-center gap-3 w-full px-6 py-4 text-base font-semibold rounded-xl transition-all duration-300 ${isActive
-                  ? "bg-white/10 text-white"
-                  : "text-zinc-200 hover:text-white hover:bg-white/10"
-                  }`}
-                style={{ transitionDelay: `${i * 50}ms` }}
-              >
-                <Icon size={20} className={isActive ? "text-blue-400" : "text-blue-400/60"} />
-                {link.name}
-                {isActive && <ArrowRight size={16} className="ml-auto text-blue-400" />}
-              </Link>
-            )
-          })}
-        </div>
+      {/* ═══════════════ GAVETA (MOBILE) ═══════════════ */}
+      <div className={`lg:hidden fixed inset-0 z-50 ${isMobileMenuOpen ? "" : "pointer-events-none"}`} aria-hidden={!isMobileMenuOpen}>
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label="Fechar menu"
+          onClick={() => setIsMobileMenuOpen(false)}
+          className={`absolute inset-0 bg-slate-950/50 transition-opacity duration-200 ${isMobileMenuOpen ? "opacity-100" : "opacity-0"}`}
+        />
+        <aside
+          className={`absolute inset-y-0 left-0 w-72 max-w-[85vw] shadow-xl transition-transform duration-200 ease-out ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}
+        >
+          {renderSidebar(false, true)}
+        </aside>
       </div>
 
-      {/* CONTEÚDO DA PÁGINA */}
-      <main className={`w-full flex-1 ${isCatalogo ? "p-0 max-w-none" : "p-4 md:p-8 max-w-7xl"}`}>
-        {children}
-      </main>
-
-      <Footer />
-
+      {/* ═══════════════ CONTEÚDO ═══════════════ */}
+      <div className={`min-h-screen flex flex-col transition-[padding] duration-200 ${collapsed ? "lg:pl-[72px]" : "lg:pl-64"}`}>
+        {/* Barra superior (desktop): créditos e conta */}
+        <header className="hidden lg:flex h-16 shrink-0 items-center gap-3 px-8 bg-white border-b border-slate-200">
+          <p className="flex-1 min-w-0 text-lg font-semibold text-slate-900 tracking-tight truncate">{tituloPagina}</p>
+          {renderSino()}
+          <CreditosBadge saldo={empresa?.saldo_creditos ?? null} isActive={pathname === "/creditos"} claro />
+          <span className="w-px h-6 bg-slate-200" aria-hidden="true" />
+          {renderConta(false)}
+        </header>
+        <main className="w-full flex-1 min-w-0 px-4 sm:px-6 lg:px-8 py-6 lg:py-7">
+          <NotificacoesContext.Provider value={notificacoes}>
+            {children}
+          </NotificacoesContext.Provider>
+        </main>
+        <AppFooter />
+      </div>
     </div>
   )
 }

@@ -11,12 +11,12 @@ class PacoteCreditoAdmin(admin.ModelAdmin):
 
 @admin.register(TransacaoCredito)
 class TransacaoCreditoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'data_transacao', 'pessoa_juridica', 'tipo', 'status', 'quantidade', 'saldo_apos', 'descricao')
+    list_display = ('id', 'data_transacao', 'pessoa_juridica', 'tipo', 'status', 'quantidade', 'saldo_apos', 'descricao', 'expira_em')
     list_filter = ('tipo', 'status', 'metodo_pagamento')
     search_fields = ('pessoa_juridica__nm_pessoaj', 'pessoa_juridica__nr_cnpj', 'codigo_pagamento')
     date_hierarchy = 'data_transacao'
 
-    # Ledger imutável: alterações de saldo só via creditos.services
+    # Ledger imutável: alterações de saldo só via creditos.carteira.CarteiraCreditos
     def has_add_permission(self, request):
         return False
 

@@ -33,3 +33,30 @@ export interface CreatePessoaJuridicaForm {
 }
 
 export type UpdatePessoaJuridicaForm = Partial<CreatePessoaJuridicaForm>
+
+/** Item do relatório de verificação do CNPJ (painel do admin). */
+export type ItemVerificacao = {
+  chave: "digitos" | "receita" | "situacao" | "razao_social" | "atividade" | "localizacao" | string
+  rotulo: string
+  situacao: "ok" | "alerta" | "erro"
+  detalhe: string
+}
+
+/** Relatório que compara o cadastro da empresa com os dados da Receita Federal. */
+export type VerificacaoCredenciamento = {
+  cnpj: string
+  resultado: "ok" | "alerta" | "erro"
+  itens: ItemVerificacao[]
+  dados_receita: {
+    razao_social: string
+    nome_fantasia: string
+    situacao: string
+    cnae_codigo: string
+    cnae_descricao: string
+    municipio: string
+    uf: string
+    data_abertura: string
+  } | null
+  consultado_em: string | null
+  aviso: string | null
+}

@@ -1,15 +1,11 @@
 "use client"
 
-import { ArrowDownLeft, ArrowUpRight, Gift, RotateCcw } from "lucide-react"
+import { ArrowDownLeft, ArrowUpRight, Clock, Gift, RotateCcw } from "lucide-react"
 import { TransacaoCredito } from "@/types"
 import { formatBRL, formatCreditos, formatDataHora } from "@/lib/creditos"
 
-const ESTILOS_TIPO = {
-  C: { icon: ArrowDownLeft, bg: "bg-success-subtle", fg: "text-success", ring: "ring-success-border" },
-  D: { icon: ArrowUpRight, bg: "bg-danger-subtle", fg: "text-danger", ring: "ring-danger-border" },
-  E: { icon: RotateCcw, bg: "bg-brand-subtle", fg: "text-brand", ring: "ring-brand-border" },
-  B: { icon: Gift, bg: "bg-brand-subtle", fg: "text-brand", ring: "ring-brand-border" },
-} as const
+/** Ícone neutro por tipo de movimentação; a cor fica só no valor. */
+export const ICONE_TIPO = { C: ArrowDownLeft, D: ArrowUpRight, E: RotateCcw, B: Gift, X: Clock } as const
 
 interface Props {
   transacao: TransacaoCredito
@@ -17,52 +13,31 @@ interface Props {
   index?: number
 }
 
-export default function ExtratoItem({ transacao: t, compact = false, index = 0 }: Props) {
-  const estilo = ESTILOS_TIPO[t.tipo]
-  const Icon = estilo.icon
+/** Linha de movimentação usada no resumo do perfil. */
+export default function ExtratoItem({ transacao: t, compact = false }: Props) {
+  const Icon = ICONE_TIPO[t.tipo]
 
   return (
-    <li
-      className="animate-credit-rise flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 rounded-2xl hover:bg-slate-50 transition-colors"
-      style={{ animationDelay: `${Math.min(index, 10) * 40}ms` }}
-    >
-      <div className={`shrink-0 w-10 h-10 rounded-xl ${estilo.bg} ${estilo.fg} ring-1 ${estilo.ring} flex items-center justify-center`}>
-        <Icon size={18} strokeWidth={2.4} />
-      </div>
+    <li className="flex items-center gap-3 px-3 py-3">
+      <span className="shrink-0 w-9 h-9 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center">
+        <Icon size={16} aria-hidden="true" />
+      </span>
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-slate-800 truncate">{t.descricao}</p>
-        <p className="text-xs text-slate-400 font-medium mt-0.5 flex flex-wrap items-center gap-x-2">
-          <span>{formatDataHora(t.data_transacao)}</span>
-          {!compact && t.metodo_pagamento_display && (
-            <>
-              <span className="text-slate-300">•</span>
-              <span>{t.metodo_pagamento_display}</span>
-            </>
-          )}
-          {!compact && t.valor_pago && (
-            <>
-              <span className="text-slate-300">•</span>
-              <span>{formatBRL(t.valor_pago)}</span>
-            </>
-          )}
-          {t.status !== "A" && (
-            <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase ${t.status === "P" ? "bg-warning-subtle text-warning" : "bg-danger-subtle text-danger"}`}>
-              {t.status_display}
-            </span>
-          )}
+        <p className="text-sm font-medium text-slate-900 truncate">{t.descricao}</p>
+        <p className="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-x-1.5">
+          <span className="tabular-nums">{formatDataHora(t.data_transacao)}</span>
+          {!compact && t.metodo_pagamento_display && <span>· {t.metodo_pagamento_display}</span>}
+          {!compact && t.valor_pago && <span className="tabular-nums">· {formatBRL(t.valor_pago)}</span>}
+          {t.status !== "A" && <span className={t.status === "P" ? "text-amber-700" : "text-red-700"}>· {t.status_display}</span>}
         </p>
       </div>
 
       <div className="text-right shrink-0">
-        <p className={`text-sm font-extrabold tabular-nums ${t.is_entrada ? "text-success" : "text-danger"}`}>
+        <p className={`text-sm font-semibold tabular-nums ${t.is_entrada ? "text-emerald-700" : "text-slate-900"}`}>
           {t.is_entrada ? "+" : "−"}{formatCreditos(t.quantidade)}
         </p>
-        {!compact && (
-          <p className="text-[11px] text-slate-400 font-medium tabular-nums mt-0.5">
-            saldo {formatCreditos(t.saldo_apos)}
-          </p>
-        )}
+        {!compact && <p className="text-xs text-slate-500 tabular-nums mt-0.5">saldo {formatCreditos(t.saldo_apos)}</p>}
       </div>
     </li>
   )

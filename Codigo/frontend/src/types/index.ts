@@ -16,12 +16,14 @@ export type {
 	PessoaJuridica,
 	CreatePessoaJuridicaForm,
 	UpdatePessoaJuridicaForm,
+	VerificacaoCredenciamento,
+	ItemVerificacao,
 } from './pessoa_juridica'
-export type { MatMed, CreateMatMedForm, UpdateMatMedForm } from './mat_med'
+export type { MatMed, CreateMatMedForm, UpdateMatMedForm, SugestaoCatmat, PrecoReferencia } from './mat_med'
 
-export type { Negociacao, CreateNegociacaoForm, UpdateNegociacaoForm } from './negociacao'
+export type { Negociacao, CreateNegociacaoForm, UpdateNegociacaoForm, StatusNegociacao, MotivoRecusa } from './negociacao'
 export type { Anuncio, CreateAnuncioForm, UpdateAnuncioForm } from './anuncio'
-export type { StatisticsResponse } from './statistics'
+export type { StatisticsResponse, IndicadoresControle, RankingItem } from './statistics'
 export type {
 	GerarAnuncioRequest,
 	GerarAnuncioSuccessResponse,
@@ -36,4 +38,11 @@ export type {
 	TipoTransacaoCredito,
 	ComprarCreditosRequest,
 	ComprarCreditosResponse,
+	CustoFuncionalidade,
 } from './creditos'
+export type {
+	TipoNotificacao,
+	Notificacao,
+	NotificacoesResponse,
+	AlertaInteresse,
+} from './notificacoes'

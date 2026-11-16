@@ -1,4 +1,4 @@
-export type TipoTransacaoCredito = "C" | "D" | "E" | "B"
+export type TipoTransacaoCredito = "C" | "D" | "E" | "B" | "X"
 export type StatusTransacaoCredito = "P" | "A" | "R"
 export type MetodoPagamento = "PIX" | "CARTAO" | "BOLETO"
 
@@ -32,12 +32,19 @@ export type TransacaoCredito = {
 	metodo_pagamento_display: string | null
 	codigo_pagamento: string | null
 	data_transacao: string
+	expira_em: string | null
 }
 
 export type SaldoCreditos = {
 	saldo: number
 	total_adquirido: number
 	total_consumido: number
+}
+
+export type CustoFuncionalidade = {
+	codigo: "PUBLICAR_ANUNCIO" | "IA_DESCRICAO" | string
+	descricao: string
+	custo: number
 }
 
 export type ComprarCreditosRequest = {
