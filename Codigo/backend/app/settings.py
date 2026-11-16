@@ -117,12 +117,15 @@ WSGI_APPLICATION = 'app.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-# Em produção (Render), usa DATABASE_URL; em dev, usa PostgreSQL local
+# Em produção, usa DATABASE_URL (banco no Neon); em dev, usa PostgreSQL local.
+# conn_health_checks testa a conexão antes de reutilizá-la: o Neon "dorme"
+# quando ocioso e encerra conexões abertas, o que sem isso geraria erro.
 if os.environ.get('DATABASE_URL'):
     DATABASES = {
         'default': dj_database_url.config(
             default=os.environ.get('DATABASE_URL'),
-            conn_max_age=600
+            conn_max_age=600,
+            conn_health_checks=True,
         )
     }
 else:
