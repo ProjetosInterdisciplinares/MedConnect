@@ -27,7 +27,7 @@ class TransacaoCreditoSerializer(serializers.ModelSerializer):
             'quantidade', 'saldo_apos', 'is_entrada', 'descricao',
             'funcionalidade', 'referencia', 'pacote', 'pacote_nome',
             'valor_pago', 'metodo_pagamento', 'metodo_pagamento_display',
-            'codigo_pagamento', 'data_transacao',
+            'codigo_pagamento', 'data_transacao', 'expira_em',
         )
         read_only_fields = fields
 

@@ -11,6 +11,8 @@ urlpatterns = [
     path('api/medconnect/', include('anuncio.urls')),
     path('api/medconnect/', include('gemini_api.urls')),
     path('api/medconnect/', include('creditos.urls')),
+    path('api/medconnect/', include('notificacoes.urls')),
+    path('api/medconnect/', include('preco_referencia.urls')),
     path('authentication/', include('authentication.urls')),
 
     path('authentication/token/', TokenObtainPairView.as_view(), name='token-obtain-pair'),

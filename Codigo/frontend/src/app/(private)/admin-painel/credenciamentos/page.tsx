@@ -21,6 +21,9 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 import { AuthManager } from "@/lib/AuthManager"
+import { BarraAbas } from "@/components/layout/SecaoTabs"
+import { avisarSolicitacoesAtualizadas } from "@/lib/solicitacoes"
+import VerificacaoCNPJ from "@/components/admin/VerificacaoCNPJ"
 
 interface Empresa {
   cd_pessoaj: number
@@ -57,6 +60,37 @@ const TABS = [
 
 const ITEMS_PER_PAGE = 5
 
+const STATUS_INFO: Record<string, { label: string; badge: string; icon: React.ElementType }> = {
+  PENDENTE: { label: "Aguardando aprovação", badge: "bg-amber-50 text-amber-700 border-amber-200", icon: Clock },
+  ATIVA: { label: "Ativa", badge: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: CheckCircle2 },
+  BLOQUEADA: { label: "Rejeitada / bloqueada", badge: "bg-rose-50 text-rose-700 border-rose-200", icon: Ban },
+}
+
+function DetalheItem({
+  icon: Icon,
+  label,
+  value,
+  wide = false,
+  mono = false,
+}: {
+  icon: React.ElementType
+  label: string
+  value?: string | null
+  wide?: boolean
+  mono?: boolean
+}) {
+  return (
+    <div className={`py-3 border-b border-slate-100 min-w-0 ${wide ? "sm:col-span-2 border-b-0" : ""}`}>
+      <dt className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+        <Icon size={13} className="text-slate-400 shrink-0" aria-hidden="true" /> {label}
+      </dt>
+      <dd className={`mt-1 text-sm font-medium break-words ${value ? "text-slate-800" : "text-slate-400"} ${mono ? "tabular-nums" : ""}`}>
+        {value || "Não informado"}
+      </dd>
+    </div>
+  )
+}
+
 export default function AdminCredenciamentos() {
   const [empresas, setEmpresas] = useState<Empresa[]>([])
   const [loading, setLoading] = useState(true)
@@ -88,6 +122,7 @@ export default function AdminCredenciamentos() {
       if (!res.ok) throw new Error("Erro ao carregar")
       const data = await res.json()
       setEmpresas(data)
+      return data as Empresa[]
     } catch (error) {
       toast.error("Erro ao carregar a lista de empresas")
     } finally {
@@ -96,7 +131,14 @@ export default function AdminCredenciamentos() {
   }
 
   useEffect(() => {
-    fetchEmpresas()
+    // Abre direto a solicitação escolhida no sininho (?empresa=ID)
+    const alvo = Number(new URLSearchParams(window.location.search).get("empresa"))
+    fetchEmpresas().then((lista) => {
+      if (!alvo || !lista) return
+      const emp = lista.find((e) => e.cd_pessoaj === alvo)
+      if (emp) setSelectedEmpresa(emp)
+      window.history.replaceState(null, "", window.location.pathname)
+    })
     const userId = String(AuthManager.getInstance().getUserId())
     if (userId) setLoggedUserId(Number(userId))
   }, [])
@@ -122,8 +164,11 @@ export default function AdminCredenciamentos() {
 
       if (!res.ok) throw new Error("Erro ao atualizar")
 
-      toast.success(`Empresa ${novoStatus === "ATIVA" ? "aprovada" : "rejeitada"} com sucesso!`)
+      toast.success(novoStatus === "ATIVA" ? "Credenciamento aprovado" : "Credenciamento rejeitado", {
+        description: novoStatus === "ATIVA" ? "A empresa já pode acessar a plataforma." : "A empresa foi movida para o histórico.",
+      })
       fetchEmpresas() // recarrega a lista
+      avisarSolicitacoesAtualizadas() // atualiza menu e sininho
 
       // Atualiza o state do modal se ele estiver aberto
       setSelectedEmpresa(prev => {
@@ -133,7 +178,10 @@ export default function AdminCredenciamentos() {
         return prev
       })
     } catch (error) {
-      toast.error("Erro ao atualizar o status")
+      toast.error("Não foi possível atualizar o status", {
+        description: "Atualize a lista e tente novamente.",
+      })
+      fetchEmpresas()
     } finally {
       setActionLoading(null)
     }
@@ -190,22 +238,25 @@ export default function AdminCredenciamentos() {
   }
 
   return (
-    <div className="relative min-h-screen w-full antialiased bg-slate-50/50 selection:bg-blue-500/20 pb-12">
+    <div className="relative w-full antialiased">
 
-      <div className="max-w-[1200px] mx-auto py-8 md:py-12 px-4 sm:px-6 lg:px-8 font-sans relative z-10">
+      <div className="w-full font-sans relative z-10">
+        <BarraAbas
+          label="Abas de credenciamento"
+          itens={TABS.map(({ id, label }) => ({
+            key: id,
+            label,
+            ativa: activeTab === id,
+            badge: id === "pendentes" ? pendentesGerais.length : 0,
+            onClick: () => setActiveTab(id),
+          }))}
+        />
 
         {/* Header da Página */}
-        <div className="mb-8 md:mb-12 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-blue-900 flex items-center justify-center text-white shadow-lg shadow-blue-900/20">
-                <Building2 size={20} />
-              </div>
-              <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">
-                Painel Administrativo
-              </h1>
-            </div>
-            <p className="text-slate-500 text-sm md:text-base max-w-2xl ml-[52px]">
+            <h1 className="sr-only">Solicitações de credenciamento</h1>
+            <p className="text-sm text-slate-500 max-w-2xl">
               Gerencie as solicitações de credenciamento e verifique o histórico das empresas parceiras.
             </p>
           </div>
@@ -219,51 +270,8 @@ export default function AdminCredenciamentos() {
           </button>
         </div>
 
-        {/* Layout Master-Detail / Sidebar */}
-        <div className="flex flex-col md:flex-row gap-8 items-start">
-
-          {/* Navegação Lateral */}
-          <aside className="w-full md:w-72 shrink-0 flex flex-col gap-2">
-            {TABS.map(({ id, label, description, icon: Icon }) => {
-              const isActive = activeTab === id
-
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setActiveTab(id)}
-                  className={`relative w-full text-left flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group ${isActive
-                      ? "bg-white shadow-sm ring-1 ring-slate-200/50"
-                      : "hover:bg-white/50"
-                    }`}
-                >
-                  {isActive && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-900 rounded-r-full" />
-                  )}
-                  <div className={`shrink-0 rounded-xl p-2 transition-colors ${isActive ? "bg-blue-50 text-blue-900" : "bg-slate-100 text-slate-500 group-hover:text-blue-900 group-hover:bg-blue-50/50"
-                    }`}>
-                    <Icon size={20} />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className={`font-bold text-sm flex items-center justify-between ${isActive ? "text-slate-800" : "text-slate-600"}`}>
-                      {label}
-                      {id === "pendentes" && pendentesGerais.length > 0 && (
-                        <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-black">
-                          {pendentesGerais.length}
-                        </span>
-                      )}
-                    </h3>
-                    <p className="text-xs text-slate-400 mt-1 leading-snug">
-                      {description}
-                    </p>
-                  </div>
-                </button>
-              )
-            })}
-          </aside>
-
-          {/* Área de Conteúdo */}
-          <div className="flex-1 w-full min-w-0">
+        <div>
+          <div className="w-full min-w-0">
             <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden flex flex-col mb-4">
 
               {/* Cabeçalho Interno e Filtros */}
@@ -429,147 +437,83 @@ export default function AdminCredenciamentos() {
 
       {/* Modal de Detalhes da Empresa */}
       <Dialog open={!!selectedEmpresa} onOpenChange={(open) => !open && setSelectedEmpresa(null)}>
-        {selectedEmpresa && (
-          <DialogContent className="sm:max-w-2xl p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
-            <DialogHeader className="m-0 bg-blue-600 px-6 py-5 rounded-t-xl border-b border-blue-950">
-              <DialogTitle className="flex items-center justify-between text-xl font-black text-white pr-6">
-                Detalhes do Credenciamento
-                <span className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full uppercase tracking-widest border border-blue-100">
-                  ID #{selectedEmpresa.cd_pessoaj}
-                </span>
-              </DialogTitle>
-              <DialogDescription className="text-blue-100 mt-2">
-                Informações completas do usuário/empresa. Visualização somente-leitura.
-              </DialogDescription>
-            </DialogHeader>
+        {selectedEmpresa && (() => {
+          const status = STATUS_INFO[selectedEmpresa.status] ?? STATUS_INFO.PENDENTE
+          const StatusIcon = status.icon
+          const endereco = selectedEmpresa.cep
+            ? [
+                [selectedEmpresa.logradouro, selectedEmpresa.numero].filter(Boolean).join(", "),
+                selectedEmpresa.complemento,
+                selectedEmpresa.bairro,
+                [selectedEmpresa.cidade, selectedEmpresa.estado].filter(Boolean).join("/"),
+                `CEP ${selectedEmpresa.cep}`,
+              ].filter(Boolean).join(" · ")
+            : null
 
-            <div className="p-6 space-y-6">
-              {/* Destaque Principal */}
-              <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex items-center gap-5">
-                <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 border border-blue-100 text-blue-900">
-                  <Building2 className="w-8 h-8" />
+          return (
+            <DialogContent showCloseButton={false} className="sm:max-w-xl p-0 gap-0 overflow-hidden max-h-[90vh] flex flex-col bg-white border-slate-200">
+              <div className="px-6 pt-5 pb-4 border-b border-slate-100 text-left">
+                <div className="flex items-center gap-2 pr-8">
+                  <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md border ${status.badge}`}>
+                    <StatusIcon size={12} aria-hidden="true" /> {status.label}
+                  </span>
+                  <span className="text-xs font-medium text-slate-400 tabular-nums">ID #{selectedEmpresa.cd_pessoaj}</span>
                 </div>
-                <div>
-                  <h4 className="font-bold text-xl text-slate-800">{selectedEmpresa.nm_pessoaj}</h4>
-                  <p className="text-sm text-slate-500 mt-1">{selectedEmpresa.razao_social}</p>
-                </div>
+                <DialogTitle className="mt-2 text-lg font-bold text-slate-900 leading-snug pr-8 break-words">
+                  {selectedEmpresa.nm_pessoaj}
+                </DialogTitle>
+                <DialogDescription className="text-sm text-slate-500 break-words">
+                  {selectedEmpresa.razao_social}
+                </DialogDescription>
               </div>
 
-              {/* Informações Detalhadas */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm">
-                  <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">CNPJ</p>
-                  <p className="font-semibold text-slate-700 flex items-center gap-2">
-                    <FileText size={16} className="text-slate-400" />
-                    {selectedEmpresa.nr_cnpj}
-                  </p>
-                </div>
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm">
-                  <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">E-mail de Contato</p>
-                  <p className="font-semibold text-slate-700 flex items-center gap-2">
-                    <Mail size={16} className="text-slate-400" />
-                    {selectedEmpresa.email_pj}
-                  </p>
-                </div>
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm md:col-span-2">
-                  <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Responsável Técnico</p>
-                  <p className="font-semibold text-slate-700 flex items-center gap-2">
-                    <User size={16} className="text-slate-400" />
-                    {selectedEmpresa.resp_tec}
-                  </p>
-                </div>
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm md:col-span-1">
-                  <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Telefone</p>
-                  <p className="font-semibold text-slate-700 flex items-center gap-2">
-                    <Phone size={16} className="text-slate-400" />
-                    {selectedEmpresa.telefone || "Não informado"}
-                  </p>
-                </div>
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm md:col-span-2">
-                  <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Endereço</p>
-                  <p className="font-semibold text-slate-700 flex items-center gap-2">
-                    <MapPin size={16} className="text-slate-400 shrink-0" />
-                    <span>
-                      {selectedEmpresa.cep
-                        ? `${selectedEmpresa.logradouro || ""}, ${selectedEmpresa.numero || ""} - ${selectedEmpresa.bairro || ""}, ${selectedEmpresa.cidade || ""}/${selectedEmpresa.estado || ""} (CEP: ${selectedEmpresa.cep})`
-                        : "Não informado"
-                      }
-                    </span>
-                  </p>
-                </div>
+              <div className="flex-1 overflow-y-auto px-6 py-4">
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+                  <DetalheItem icon={FileText} label="CNPJ" value={selectedEmpresa.nr_cnpj} mono />
+                  <DetalheItem icon={Phone} label="Telefone" value={selectedEmpresa.telefone} mono />
+                  <DetalheItem icon={Mail} label="E-mail" value={selectedEmpresa.email_pj} />
+                  <DetalheItem icon={User} label="Responsável técnico" value={selectedEmpresa.resp_tec} />
+                  <DetalheItem icon={MapPin} label="Endereço" value={endereco} wide />
+                </dl>
+
+                <VerificacaoCNPJ empresaId={selectedEmpresa.cd_pessoaj} />
               </div>
 
-              {/* Status Section */}
-              <div className={`p-5 rounded-2xl border flex items-center justify-between ${selectedEmpresa.status === "ATIVA" ? "bg-emerald-50 border-emerald-200" :
-                  selectedEmpresa.status === "BLOQUEADA" ? "bg-rose-50 border-rose-200" :
-                    "bg-amber-50 border-amber-200"
-                }`}>
-                <div>
-                  <p className={`text-[10px] uppercase font-bold mb-1 ${selectedEmpresa.status === "ATIVA" ? "text-emerald-600" :
-                      selectedEmpresa.status === "BLOQUEADA" ? "text-rose-600" :
-                        "text-amber-600"
-                    }`}>
-                    Status Atual da Empresa
-                  </p>
-                  <p className={`font-black text-lg ${selectedEmpresa.status === "ATIVA" ? "text-emerald-800" :
-                      selectedEmpresa.status === "BLOQUEADA" ? "text-rose-800" :
-                        "text-amber-800"
-                    }`}>
-                    {selectedEmpresa.status === "BLOQUEADA" ? "REJEITADA / BLOQUEADA" : selectedEmpresa.status}
-                  </p>
-                </div>
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center bg-white shadow-sm border ${selectedEmpresa.status === "ATIVA" ? "border-emerald-200 text-emerald-600" :
-                    selectedEmpresa.status === "BLOQUEADA" ? "border-rose-200 text-rose-600" :
-                      "border-amber-200 text-amber-600"
-                  }`}>
-                  {selectedEmpresa.status === "ATIVA" ? <CheckCircle2 className="w-6 h-6" /> :
-                    selectedEmpresa.status === "BLOQUEADA" ? <Ban className="w-6 h-6" /> :
-                      <Clock className="w-6 h-6" />}
-                </div>
-              </div>
-            </div>
+              <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/70 flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedEmpresa(null)}
+                  className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  Fechar
+                </button>
 
-            {/* Ações Dinâmicas baseadas no Status Atual */}
-            <div className="bg-white px-6 py-5 border-t border-slate-100 flex flex-col-reverse sm:flex-row justify-between items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setSelectedEmpresa(null)}
-                className="w-full sm:w-auto px-5 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-all"
-              >
-                Fechar
-              </button>
-
-              <div className="flex w-full sm:w-auto gap-3">
-                {/* Se a empresa for a do próprio admin, não mostra ações */}
                 {selectedEmpresa.cd_pessoaj !== loggedUserId && (
-                  <>
-                    {/* Se a empresa estiver PENDENTE ou ATIVA, permite Bloquear */}
+                  <div className="flex gap-2">
                     {(selectedEmpresa.status === "PENDENTE" || selectedEmpresa.status === "ATIVA") && (
                       <button
                         disabled={actionLoading === selectedEmpresa.cd_pessoaj}
                         onClick={() => { updateStatus(selectedEmpresa.cd_pessoaj, "BLOQUEADA"); setSelectedEmpresa(null); }}
-                        className="flex-1 sm:flex-none px-5 py-2.5 bg-white text-rose-600 border border-rose-200 hover:border-rose-300 hover:bg-rose-50 rounded-xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        className="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold text-rose-700 bg-white border border-rose-200 hover:bg-rose-50 rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
                       >
-                        <XCircle className="w-4 h-4" /> {selectedEmpresa.status === "ATIVA" ? "Bloquear Cadastro" : "Rejeitar"}
+                        <XCircle className="w-4 h-4" aria-hidden="true" /> {selectedEmpresa.status === "ATIVA" ? "Bloquear" : "Rejeitar"}
                       </button>
                     )}
-
-                    {/* Se a empresa estiver PENDENTE ou BLOQUEADA, permite Aprovar */}
                     {(selectedEmpresa.status === "PENDENTE" || selectedEmpresa.status === "BLOQUEADA") && (
                       <button
                         disabled={actionLoading === selectedEmpresa.cd_pessoaj}
                         onClick={() => { updateStatus(selectedEmpresa.cd_pessoaj, "ATIVA"); setSelectedEmpresa(null); }}
-                        className="flex-1 sm:flex-none px-6 py-2.5 bg-blue-900 text-white rounded-xl font-bold hover:bg-blue-950 transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 group disabled:opacity-50"
+                        className="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold text-white bg-blue-900 hover:bg-blue-950 rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
                       >
-                        {selectedEmpresa.status === "BLOQUEADA" ? "Reativar Cadastro" : "Aprovar"} <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        <CheckCircle2 className="w-4 h-4" aria-hidden="true" /> {selectedEmpresa.status === "BLOQUEADA" ? "Reativar" : "Aprovar"}
                       </button>
                     )}
-                  </>
+                  </div>
                 )}
               </div>
-            </div>
-          </DialogContent>
-        )}
+            </DialogContent>
+          )
+        })()}
       </Dialog>
     </div>
   )

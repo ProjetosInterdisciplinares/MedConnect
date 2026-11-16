@@ -1,38 +1,22 @@
 "use client"
 
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import {
-  MapPin,
-  Map as MapIcon,
-  Package,
-  PackageX,
-  AlertCircle,
-  CheckCircle,
-  Flag,
-  ChevronRight,
-  Info,
-  Building2,
-  Handshake,
-  ShoppingCart
-} from "lucide-react"
+import { MapPin, Package, PackageX, Flag, ChevronRight, MessageCircle, Store, CalendarClock } from "lucide-react"
+import InfoCodigo from "@/components/ui/info-codigo"
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
 import servicesGetAnuncioDetails from "@/server/(GET)-anuncio-details"
 import servicesPostNegociacao from "@/server/(POST)-negociacao"
 import servicesGetMaterials from "@/server/(GET)-materials-and-brands"
 import servicesGetMinhaPessoaJuridica from "@/server/(GET)-minha-pessoa-juridica"
-import { Anuncio, MatMed, PessoaJuridica } from "@/types"
+import servicesPostPrecoReferencia from "@/server/(POST)-preco-referencia"
+import { Anuncio, MatMed, PessoaJuridica, PrecoReferencia } from "@/types"
+import { rotuloCreditos, useCustosCreditos } from "@/hooks/useCustosCreditos"
 import { AuthManager } from "@/lib/AuthManager"
+import { quantidadeComUnidade, unidadeDeVenda } from "@/lib/format/unidade"
 
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371 // km
@@ -40,12 +24,45 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
   const dLon = ((lon2 - lon1) * Math.PI) / 180
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2)
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  return R * c
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+// Preços unitários de compras públicas podem ter 4 casas (R$ 0,0450)
+const brlUnitario = (v: string | undefined) =>
+  Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2, maximumFractionDigits: 4 })
+
+function formatarData(iso: string | null | undefined) {
+  if (!iso) return null
+  const [a, m, d] = iso.slice(0, 10).split("-")
+  return a && m && d ? `${d}/${m}/${a}` : null
+}
+
+function diasAte(iso: string | null | undefined) {
+  if (!iso) return null
+  const alvo = new Date(iso.slice(0, 10) + "T00:00:00")
+  const hoje = new Date()
+  hoje.setHours(0, 0, 0, 0)
+  return Math.round((alvo.getTime() - hoje.getTime()) / 86_400_000)
+}
+
+/** Tabela TISS de origem do código (19 = materiais, 20 = medicamentos). */
+const TABELA_TISS: Record<string, string> = { "19": "19 · Materiais", "20": "20 · Medicamentos" }
+
+/* Classes compartilhadas */
+const CARTAO = "bg-white rounded-xl border border-slate-200"
+const BTN_PRIMARIO = "h-10 px-4 rounded-lg bg-blue-700 hover:bg-blue-800 text-sm font-semibold text-white transition-colors cursor-pointer"
+const BTN_SECUNDARIO = "h-10 px-4 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+const INPUT = "w-full h-10 px-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 tabular-nums outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/15"
+
+function Campo({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-slate-500">{rotulo}</dt>
+      <dd className="mt-1 text-sm font-medium text-slate-900 tabular-nums">{children}</dd>
+    </div>
+  )
 }
 
 export default function AnuncioDetalhePage() {
@@ -57,24 +74,39 @@ export default function AnuncioDetalhePage() {
   const [meuPerfil, setMeuPerfil] = useState<PessoaJuridica | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Estados de Proposta & Modais
+  // Propostas e modais
   const [valorProposta, setValorProposta] = useState("")
   const [qtdProposta, setQtdProposta] = useState("")
+  // false enquanto o valor é a sugestão proporcional; vira true quando o comprador digita
   const [isCompraModalOpen, setIsCompraModalOpen] = useState(false)
   const [isOfertaModalOpen, setIsOfertaModalOpen] = useState(false)
   const [isDenunciaModalOpen, setIsDenunciaModalOpen] = useState(false)
   const [isMapOpen, setIsMapOpen] = useState(false)
-  const [motivoDenuncia, setMotivoDenuncia] = useState("Informações incorretas")
+  const [motivoDenuncia, setMotivoDenuncia] = useState("Informações incorretas ou enganosas")
 
-  // Feedback Dialogs
+  // Retorno ao usuário
   const [isSuccessOpen, setIsSuccessOpen] = useState(false)
+  const [successTitle, setSuccessTitle] = useState("")
   const [successMessage, setSuccessMessage] = useState("")
+  const [successIrParaNegociacoes, setSuccessIrParaNegociacoes] = useState(true)
   const [isErrorOpen, setIsErrorOpen] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
+
+  // Preço de referência (Compras.gov.br)
+  const { precoReferencia: custoPreco } = useCustosCreditos()
+  const [preco, setPreco] = useState<PrecoReferencia | null>(null)
+  const [consultandoPreco, setConsultandoPreco] = useState(false)
 
   function showError(msg: string) {
     setErrorMessage(msg)
     setIsErrorOpen(true)
+  }
+
+  function showSuccess(titulo: string, msg: string, irParaNegociacoes = true) {
+    setSuccessTitle(titulo)
+    setSuccessMessage(msg)
+    setSuccessIrParaNegociacoes(irParaNegociacoes)
+    setIsSuccessOpen(true)
   }
 
   useEffect(() => {
@@ -85,19 +117,14 @@ export default function AnuncioDetalhePage() {
           servicesGetMaterials(),
           servicesGetMinhaPessoaJuridica(),
         ])
-
         if (!("isError" in res)) {
           setAnuncio(res)
-
           if (Array.isArray(matRes)) {
             const foundMat = matRes.find((m) => m.cd_mat === res.cd_mat)
             if (foundMat) setMaterial(foundMat)
           }
         }
-
-        if (perfilRes && !("isError" in perfilRes)) {
-          setMeuPerfil(perfilRes as PessoaJuridica)
-        }
+        if (perfilRes && !("isError" in perfilRes)) setMeuPerfil(perfilRes as PessoaJuridica)
       } catch (err) {
         console.error("Erro ao carregar detalhes do anúncio:", err)
       } finally {
@@ -107,15 +134,12 @@ export default function AnuncioDetalhePage() {
     load()
   }, [id])
 
-  // Ações de Negociação
   async function handleCompraDireta() {
     if (!anuncio) return
-    const cdPessoa = Number(AuthManager.getInstance().getUserId())
-    if (!cdPessoa) {
-      showError("Usuário não autenticado")
+    if (!Number(AuthManager.getInstance().getUserId())) {
+      showError("Sua sessão expirou. Entre novamente para continuar.")
       return
     }
-
     const res = await servicesPostNegociacao({
       anuncio: Number(id),
       vendedor: anuncio.cd_pessoa_anunciante,
@@ -123,44 +147,29 @@ export default function AnuncioDetalhePage() {
       qtd_proposta: anuncio.qtd_mat,
       ds_obs: "Compra Direta via Plataforma",
     })
-
     if ("isError" in res) {
-      showError("Erro ao realizar compra: " + (res as any).message)
+      showError("Não foi possível registrar a compra: " + (res as any).message)
       return
     }
-
     setIsCompraModalOpen(false)
-    setSuccessMessage("Compra realizada com sucesso!")
-    setIsSuccessOpen(true)
+    showSuccess("Pedido de compra enviado", "O vendedor foi notificado e precisa confirmar a venda.")
   }
 
   async function handleProposta() {
     if (!anuncio) return
-    const cdPessoa = Number(AuthManager.getInstance().getUserId())
-    if (!cdPessoa) {
-      showError("Usuário não autenticado")
+    if (!Number(AuthManager.getInstance().getUserId())) {
+      showError("Sua sessão expirou. Entre novamente para continuar.")
       return
     }
     if (!valorProposta || Number(valorProposta) <= 0) {
-      showError("Informe um valor de proposta válido")
+      showError("Informe o valor total que você propõe pagar.")
       return
     }
-
     const qtd = qtdProposta === "" ? anuncio.qtd_mat : Number(qtdProposta)
     if (!Number.isInteger(qtd) || qtd < 1 || qtd > anuncio.qtd_mat) {
-      showError(`Informe uma quantidade entre 1 e ${anuncio.qtd_mat}`)
+      showError(`Informe uma quantidade entre 1 e ${anuncio.qtd_mat}.`)
       return
     }
-    if (
-      qtd < anuncio.qtd_mat &&
-      Number(valorProposta) === Number(anuncio.val_base)
-    ) {
-      showError(
-        "Ao comprar uma quantidade menor, é obrigatório sugerir um novo valor total (diferente do valor integral)."
-      )
-      return
-    }
-
     const res = await servicesPostNegociacao({
       anuncio: Number(id),
       vendedor: anuncio.cd_pessoa_anunciante,
@@ -168,574 +177,415 @@ export default function AnuncioDetalhePage() {
       qtd_proposta: qtd,
       ds_obs: "Proposta enviada pelo comprador",
     })
-
     if ("isError" in res) {
-      showError("Erro ao enviar proposta: " + (res as any).message)
+      showError("Não foi possível enviar a proposta: " + (res as any).message)
       return
     }
-
     setIsOfertaModalOpen(false)
-    setSuccessMessage("Proposta enviada com sucesso!")
-    setIsSuccessOpen(true)
+    showSuccess("Proposta enviada", "O vendedor pode aceitar ou recusar a sua oferta.")
+  }
+
+  async function handleConsultarPreco() {
+    if (!material) return
+    setConsultandoPreco(true)
+    const res = await servicesPostPrecoReferencia(material.cd_mat)
+    setConsultandoPreco(false)
+    if ("isError" in res) {
+      showError(res.message)
+      return
+    }
+    setPreco(res)
   }
 
   function handleCloseSuccess() {
     setIsSuccessOpen(false)
-    router.push("/minhas-negociacoes")
+    if (successIrParaNegociacoes) router.push("/minhas-negociacoes")
   }
 
   function handleDenunciarSubmit() {
     setIsDenunciaModalOpen(false)
-    setSuccessMessage("Denúncia registrada com sucesso! Nossa equipe analisará o anúncio.")
-    setIsSuccessOpen(true)
+    showSuccess("Denúncia registrada", "A equipe do MedConnect vai analisar este anúncio.", false)
   }
 
   if (loading) {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center bg-canvas">
-        <div className="w-8 h-8 border-3 border-brand border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="w-7 h-7 border-[3px] border-blue-700 border-t-transparent rounded-full animate-spin" aria-label="Carregando" />
       </div>
     )
   }
 
   if (!anuncio) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center p-10 text-center bg-canvas">
-        <PackageX className="w-12 h-12 text-slate-300 mb-3" />
-        <h2 className="text-xl font-bold text-slate-700">Anúncio não encontrado</h2>
-        <Link
-          href="/catalogo"
-          className="mt-4 text-sm font-semibold text-brand hover:underline"
-        >
+      <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">
+        <PackageX className="w-10 h-10 text-slate-300 mb-3" aria-hidden="true" />
+        <h2 className="text-lg font-semibold text-slate-900">Anúncio não encontrado</h2>
+        <Link href="/catalogo" className="mt-3 text-sm font-semibold text-blue-700 hover:underline">
           Voltar para o catálogo
         </Link>
       </div>
     )
   }
 
-  // Cálculos de Preço e Quantidade
-  const valBaseNum = Number(anuncio.val_base) || 0
-  const qtdNum = anuncio.qtd_mat || 1
-  const precoUnitario = valBaseNum / (qtdNum > 0 ? qtdNum : 1)
+  /* ─── Valores ─── */
+  const valorLote = Number(anuncio.val_base) || 0
+  const qtd = anuncio.qtd_mat || 0
+  const precoUnitario = qtd > 0 ? valorLote / qtd : valorLote
 
-  // Unidade de medida textual
-  const unidadeRaw = material?.unidade_med?.trim().toLowerCase() || "caixa"
-  const unidadeSingular = unidadeRaw.includes("caixa")
-    ? "caixa"
-    : unidadeRaw.includes("frasco")
-    ? "frasco"
-    : unidadeRaw.includes("unidade")
-    ? "unidade"
-    : unidadeRaw
-  const unidadePlural = unidadeSingular === "caixa"
-    ? "caixas"
-    : unidadeSingular === "frasco"
-    ? "frascos"
-    : unidadeSingular === "unidade"
-    ? "unidades"
-    : `${unidadeSingular}s`
 
-  // Data de validade formatada
-  let dataValidade = "Não informada"
-  if (anuncio.dt_validade) {
-    const d = new Date(anuncio.dt_validade)
-    if (!isNaN(d.getTime())) {
-      dataValidade = d.toLocaleDateString("pt-BR")
-    }
-  }
+  // Unidade de venda: "Caixa c/ 100" → "caixa"
+  const unidadeTexto = material?.unidade_med?.trim() || ""
+  const { singular: unidadeBase, plural } = unidadeDeVenda(unidadeTexto)
+  const qtdTexto = quantidadeComUnidade(qtd, unidadeTexto)
 
-  // Nome e Cidade do Vendedor
-  const vendedorNome =
-    anuncio.anunciante_razao ||
-    (anuncio as any).nm_vendedor ||
-    (anuncio as any).ds_empresa ||
-    "Hospital Parceiro"
+  const nomeProduto = material?.ds_mat || anuncio.material_nome || "Insumo sem nome"
+  const validade = formatarData(anuncio.dt_validade)
+  const fabricacao = formatarData(anuncio.dt_fabricacao)
+  const dias = diasAte(anuncio.dt_validade)
+  const vencendo = dias !== null && dias >= 0 && dias <= 30
 
-  const vendedorCidadeEstado =
-    anuncio.anunciante_cidade && anuncio.anunciante_estado
-      ? `${anuncio.anunciante_cidade} / ${anuncio.anunciante_estado}`
-      : "Campinas / SP"
+  const vendedorNome = anuncio.anunciante_razao || "Vendedor não identificado"
+  const vendedorLocal = anuncio.anunciante_cidade && anuncio.anunciante_estado
+    ? `${anuncio.anunciante_cidade}/${anuncio.anunciante_estado}`
+    : null
+  const enderecoCompleto = [
+    [anuncio.anunciante_logradouro, anuncio.anunciante_numero].filter(Boolean).join(", "),
+    anuncio.anunciante_bairro,
+    vendedorLocal,
+  ].filter(Boolean).join(" · ")
 
-  const vendedorTelefone =
-    anuncio.anunciante_telefone ||
-    (anuncio as any).telefone ||
-    "(19) 12345-1234"
-
-  // Distância calculada
   const distanciaKm =
-    meuPerfil?.latitude &&
-    meuPerfil?.longitude &&
-    anuncio.anunciante_lat &&
-    anuncio.anunciante_lon
-      ? getDistance(
-          Number(meuPerfil.latitude),
-          Number(meuPerfil.longitude),
-          Number(anuncio.anunciante_lat),
-          Number(anuncio.anunciante_lon)
-        ).toFixed(1)
+    meuPerfil?.latitude && meuPerfil?.longitude && anuncio.anunciante_lat && anuncio.anunciante_lon
+      ? getDistance(Number(meuPerfil.latitude), Number(meuPerfil.longitude), Number(anuncio.anunciante_lat), Number(anuncio.anunciante_lon))
       : null
 
-  const isDono =
-    anuncio.cd_pessoa_anunciante === Number(AuthManager.getInstance().getUserId())
+  const isDono = anuncio.cd_pessoa_anunciante === Number(AuthManager.getInstance().getUserId())
   const bloqueado = anuncio.ie_status !== "A"
 
-  // Lista de códigos de referência formatados para a linha pontilhada
-  const codigosReferencia = [
-    {
-      label: "ANVISA",
-      value:
-        (material as any)?.cd_anvisa ||
-        (material as any)?.cd_registro_ms ||
-        "80254280",
-    },
-    {
-      label: "TISS",
-      value: material?.cd_tiss || "03.07.01.030-2",
-    },
-    {
-      label: "TUSS",
-      value: material?.cd_tuss || "0301070103",
-    },
-    ...(material?.cd_simpro
-      ? [{ label: "SIMPRO", value: material.cd_simpro }]
-      : []),
-    ...(material?.cd_brasindice
-      ? [{ label: "BRASÍNDICE", value: material.cd_brasindice }]
-      : []),
+  const codigos = [
+    { rotulo: "TUSS", codigo: "TUSS" as const, valor: material?.cd_tuss },
+    { rotulo: "Tabela TISS", codigo: "TISS" as const, valor: material?.cd_tiss ? TABELA_TISS[material.cd_tiss] ?? material.cd_tiss : null },
+    { rotulo: "SIMPRO", codigo: "SIMPRO" as const, valor: material?.cd_simpro },
+    { rotulo: "Brasíndice", codigo: "BRASINDICE" as const, valor: material?.cd_brasindice },
+    { rotulo: "CATMAT", codigo: "CATMAT" as const, valor: material?.cd_catmat },
   ]
 
   return (
-    <div className="w-full min-h-screen bg-canvas text-slate-800 antialiased py-6 sm:py-8 px-4 sm:px-6 lg:px-12">
-      <div className="max-w-[1240px] mx-auto">
+    <div className="w-full max-w-[1200px] text-slate-800">
+      {/* Navegação */}
+      <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-slate-500 mb-4 min-w-0">
+        <Link href="/catalogo" className="hover:text-blue-700 transition-colors">Catálogo</Link>
+        <ChevronRight size={14} className="shrink-0 text-slate-400" aria-hidden="true" />
+        <span className="text-slate-700 truncate">{nomeProduto}</span>
+      </nav>
 
-        {/* ═══════════════════════════════════════════════════════════════
-         * BREADCRUMB: Catálogo > Nome do Produto
-         * ═══════════════════════════════════════════════════════════════ */}
-        <nav
-          aria-label="Breadcrumb"
-          className="flex items-center gap-2 text-xs sm:text-sm mb-6 text-slate-500 font-medium"
-        >
-          <Link
-            href="/catalogo"
-            className="hover:text-brand transition-colors text-slate-600 font-semibold"
-          >
-            Catálogo
-          </Link>
-          <ChevronRight size={14} className="text-slate-400 shrink-0" />
-          <span className="text-slate-900 font-bold truncate max-w-[280px] sm:max-w-md">
-            {material?.ds_mat || "Dipirona Gotas 500mg/mL"}
-          </span>
-        </nav>
+      {/* Cabeçalho */}
+      <header className="mb-6">
+        <h1 className="text-2xl font-bold text-slate-900 tracking-tight text-balance">{nomeProduto}</h1>
+        <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-500">
+          {material?.ds_marca && <span className="font-medium text-slate-700">{material.ds_marca}</span>}
+          {material?.ds_marca && material?.ds_tipo && <span aria-hidden="true">·</span>}
+          {material?.ds_tipo && <span>{material.ds_tipo}</span>}
+          <span aria-hidden="true">·</span>
+          <span className="tabular-nums">Anúncio nº {anuncio.nr_anuncio}</span>
+        </p>
+      </header>
 
-        {/* ═══════════════════════════════════════════════════════════════
-         * GRID PRINCIPAL (2 COLUNAS NO DESKTOP, EMPILHADO NO MOBILE)
-         * ═══════════════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-
-          {/* ─────────────────────────────────────────────────────────────
-           * COLUNA ESQUERDA (IMAGEM + DESCRIÇÃO + CÓDIGOS DE REFERÊNCIA)
-           * ───────────────────────────────────────────────────────────── */}
-          <div className="lg:col-span-7 flex flex-col gap-6">
-
-            {/* CARD 1: IMAGEM DO PRODUTO */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 sm:p-10 flex items-center justify-center min-h-[360px] sm:min-h-[440px] relative overflow-hidden group">
-              {anuncio.imagem_anuncio ? (
-                <img
-                  src={anuncio.imagem_anuncio}
-                  alt={material?.ds_mat || "Imagem do Produto"}
-                  className="max-h-[340px] sm:max-h-[400px] w-auto max-w-full object-contain mix-blend-multiply drop-shadow-md group-hover:scale-102 transition-transform duration-300"
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center text-slate-300">
-                  <Package className="w-20 h-20 mb-2 stroke-1" />
-                  <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
-                    Sem foto do produto
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* CARD 2: DESCRIÇÃO */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 sm:p-7">
-              <h2 className="text-lg sm:text-xl font-bold text-brand-header mb-3 tracking-tight">
-                Descrição
-              </h2>
-              <p className="text-sm text-slate-600 leading-relaxed font-normal">
-                {anuncio.ds_obs ||
-                  "Dipirona sódica 500mg/mL gotas, frascos-ampola de 2mL individuais. Medicamento para uso hospitalar, sob controle de temperatura 15–30°C, cadeia de frio preservada. Rastreabilidade disponível, nota fiscal emitida, conforme RDC ANVISA 204/2017."}
-              </p>
-            </div>
-
-            {/* CARD 3: CÓDIGOS DE REFERÊNCIA */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 sm:p-7">
-              <h2 className="text-lg sm:text-xl font-bold text-brand-header mb-4 tracking-tight">
-                Códigos de referência
-              </h2>
-              <div className="space-y-3">
-                {codigosReferencia.map((item) => (
-                  <div
-                    key={item.label}
-                    className="flex items-baseline justify-between text-xs sm:text-sm"
-                  >
-                    <span className="font-bold text-slate-700 tracking-wider uppercase text-xs shrink-0">
-                      {item.label}
-                    </span>
-                    <span
-                      className="flex-1 mx-3 border-b border-dotted border-slate-300"
-                      aria-hidden="true"
-                    />
-                    <span className="font-mono font-bold text-slate-800 text-xs sm:text-sm shrink-0 tracking-wider">
-                      {item.value}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-          </div>
-
-          {/* ─────────────────────────────────────────────────────────────
-           * COLUNA DIREITA (INFORMAÇÕES, PREÇO, BOTÕES, VENDEDOR E DENÚNCIA)
-           * ───────────────────────────────────────────────────────────── */}
-          <div className="lg:col-span-5 flex flex-col gap-4 sticky top-20">
-
-            {/* CARD 1: INFORMAÇÕES DE COMPRA & ESPECIFICAÇÕES */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 sm:p-7">
-              {/* Título do Produto */}
-              <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight leading-snug">
-                {material?.ds_mat || "Dipirona Gotas 500mg/mL"}
-              </h1>
-
-              {/* Fabricante */}
-              <p className="text-sm font-semibold text-brand-header mt-1 mb-5">
-                {material?.ds_marca ||
-                  (anuncio as any).nm_fabricante ||
-                  "Neo Química"}
-              </p>
-
-              {/* Linhas de Especificação */}
-              <div className="border-t border-slate-100 divide-y divide-slate-100 text-sm">
-                {/* Lote */}
-                <div className="py-3 flex items-center justify-between">
-                  <span className="text-slate-500 font-medium">Lote</span>
-                  <span className="text-slate-900 font-bold">
-                    {anuncio.ds_lote || "LT-2024-09-012"}
-                  </span>
-                </div>
-
-                {/* Validade */}
-                <div className="py-3 flex items-center justify-between">
-                  <span className="text-slate-500 font-medium">Validade</span>
-                  <span className="text-slate-900 font-bold">
-                    {dataValidade !== "Não informada" ? dataValidade : "19/09/2027"}
-                  </span>
-                </div>
-
-                {/* Quantidade */}
-                <div className="py-3 flex items-center justify-between">
-                  <span className="text-slate-500 font-medium">Qtd.</span>
-                  <span className="text-slate-900 font-bold">
-                    {anuncio.qtd_mat} {anuncio.qtd_mat > 1 ? unidadePlural : unidadeSingular}
-                  </span>
-                </div>
-
-                {/* Faixa de Preço */}
-                <div className="pt-3 pb-1 flex items-center justify-between">
-                  <span className="text-slate-500 font-medium">Faixa de preço</span>
-                  <span className="text-slate-900 font-bold text-sm">
-                    R$
-                    {precoUnitario.toLocaleString("pt-BR", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}{" "}
-                    /{unidadeSingular}
-                  </span>
-                </div>
-              </div>
-
-              {/* Preço Total em Destaque */}
-              <div className="mt-4 pt-1">
-                <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-brand-header tracking-tight leading-none">
-                  R$
-                  {valBaseNum.toLocaleString("pt-BR", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </div>
-                <span className="text-xs text-slate-400 font-medium block mt-1.5">
-                  *Preço anunciado
-                </span>
-              </div>
-            </div>
-
-            {/* BOTÕES DE AÇÃO: COMPRA IMEDIATA & FAZER OFERTA */}
-            {bloqueado ? (
-              <div className="bg-danger-subtle border border-danger-border rounded-2xl p-4 text-center text-danger font-semibold text-sm">
-                Este anúncio não está mais disponível para negociação.
-              </div>
-            ) : isDono ? (
-              <div className="bg-brand-subtle border border-brand-border rounded-2xl p-4 text-center text-brand-hover font-semibold text-sm flex items-center justify-center gap-2">
-                <Info size={18} className="text-brand shrink-0" />
-                <span>Este é o seu próprio anúncio.</span>
-              </div>
+      {/* Mobile: foto → compra/vendedor → dados. Desktop: dados à esquerda, compra fixa à direita. */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-6 items-start">
+          <div className={`${CARTAO} overflow-hidden min-w-0 lg:col-start-1`}>
+            {anuncio.imagem_anuncio ? (
+              <img
+                src={anuncio.imagem_anuncio}
+                alt={`Foto do lote: ${nomeProduto}`}
+                className="w-full aspect-[16/9] max-h-[380px] object-contain bg-white"
+              />
             ) : (
-              <div className="grid grid-cols-2 gap-3.5">
-                <button
-                  type="button"
-                  onClick={() => setIsCompraModalOpen(true)}
-                  className="w-full bg-brand hover:bg-brand-hover text-white font-bold text-sm sm:text-base py-3.5 sm:py-4 px-3 rounded-xl shadow-sm transition-all duration-200 flex items-center justify-center text-center cursor-pointer active:scale-[0.99]"
-                >
-                  Compra imediata
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQtdProposta("")
-                    setValorProposta("")
-                    setIsOfertaModalOpen(true)
-                  }}
-                  className="w-full bg-brand hover:bg-brand-hover text-white font-bold text-sm sm:text-base py-3.5 sm:py-4 px-3 rounded-xl shadow-sm transition-all duration-200 flex items-center justify-center text-center cursor-pointer active:scale-[0.99]"
-                >
-                  Fazer oferta
-                </button>
+              <div className="w-full aspect-[16/9] max-h-[380px] flex flex-col items-center justify-center bg-slate-50 text-slate-400">
+                <Package className="w-10 h-10 stroke-[1.5]" aria-hidden="true" />
+                <span className="mt-2 text-sm">Anúncio sem foto</span>
               </div>
             )}
-
-            {/* CARD 2: VENDEDOR & TELEFONE */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 sm:p-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
-                {/* Lado Esquerdo: Vendedor */}
-                <div className="flex flex-col">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">
-                    Vendedor
-                  </span>
-                  <div className="flex items-start gap-2">
-                    <MapPin className="w-4 h-4 text-brand-header shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-bold text-sm text-slate-900 block leading-tight">
-                        {vendedorNome}
-                      </span>
-                      <span className="text-xs text-slate-500 font-medium block mt-0.5">
-                        {vendedorCidadeEstado}
-                      </span>
-                      {distanciaKm && (
-                        <div className="flex items-center gap-1.5 mt-1.5">
-                          <span className="text-[11px] text-brand-hover font-bold">
-                            {distanciaKm} km de você
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setIsMapOpen(true)}
-                            className="text-[11px] text-brand hover:text-brand-hover underline font-semibold cursor-pointer"
-                          >
-                            (ver mapa)
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Lado Direito: Número */}
-                <div className="flex flex-col pt-3 sm:pt-0 sm:pl-4">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">
-                    Número
-                  </span>
-                  <span className="font-bold text-sm text-slate-900 block">
-                    {vendedorTelefone}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      router.push(
-                        `/catalogo?anunciante=${encodeURIComponent(vendedorNome)}`
-                      )
-                    }}
-                    className="text-xs font-semibold text-brand hover:text-brand-hover hover:underline mt-2 text-left cursor-pointer transition-colors"
-                  >
-                    Ver mais anúncios ↗
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* BOTÃO DENUNCIAR ANÚNCIO */}
-            <button
-              type="button"
-              onClick={() => setIsDenunciaModalOpen(true)}
-              className="w-full bg-danger-subtle hover:bg-danger-border text-danger border border-danger-border rounded-2xl py-3.5 px-4 font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-colors cursor-pointer"
-            >
-              <Flag size={16} className="fill-danger" />
-              <span>Denunciar anúncio</span>
-            </button>
-
           </div>
 
+        <div className="flex flex-col gap-6 min-w-0 lg:col-start-1">
+          <section className={`${CARTAO} p-5`}>
+            <h2 className="text-base font-semibold text-slate-900">Dados do lote</h2>
+            <dl className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-5">
+              <Campo rotulo="Lote">{anuncio.ds_lote || "Não informado"}</Campo>
+              <Campo rotulo="Fabricação">{fabricacao || "Não informada"}</Campo>
+              <Campo rotulo="Validade">
+                <span className={vencendo ? "text-amber-700" : undefined}>{validade || "Não informada"}</span>
+                {dias !== null && dias >= 0 && (
+                  <span className={`block text-xs font-normal ${vencendo ? "text-amber-700" : "text-slate-500"}`}>
+                    {dias === 0 ? "vence hoje" : `vence em ${dias.toLocaleString("pt-BR")} dias`}
+                  </span>
+                )}
+              </Campo>
+              <Campo rotulo="Quantidade disponível">{qtdTexto}</Campo>
+              <Campo rotulo="Unidade de venda">{unidadeTexto || "Não informada"}</Campo>
+              <Campo rotulo="Categoria">{material?.ds_tipo || "Não informada"}</Campo>
+            </dl>
+
+            <div className="mt-6 pt-5 border-t border-slate-100">
+              <h3 className="text-sm font-semibold text-slate-900">Descrição</h3>
+              <p className="mt-1.5 text-sm text-slate-600 leading-relaxed max-w-[70ch] whitespace-pre-line">
+                {anuncio.ds_obs || "O anunciante não incluiu uma descrição."}
+              </p>
+            </div>
+          </section>
+
+          <section className={`${CARTAO} p-5`}>
+            <h2 className="text-base font-semibold text-slate-900">Códigos de referência</h2>
+            <p className="mt-0.5 text-xs text-slate-500">Identificação do insumo nas tabelas de faturamento.</p>
+            <dl className="mt-4 grid grid-cols-2 md:grid-cols-5 rounded-lg border border-slate-200 divide-x divide-y md:divide-y-0 divide-slate-200 overflow-hidden">
+              {codigos.map((c) => (
+                <div key={c.rotulo} className="px-4 py-3 min-w-0">
+                  <dt className="flex items-center gap-1 text-xs text-slate-500">{c.rotulo} <InfoCodigo codigo={c.codigo} /></dt>
+                  <dd className={`mt-1 text-sm tabular-nums truncate ${c.valor ? "font-semibold text-slate-900" : "text-slate-400"}`}>
+                    {c.valor || "—"}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+
+          <section className={`${CARTAO} p-5`}>
+            <h2 className="text-base font-semibold text-slate-900">Preço de referência</h2>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Quanto órgãos públicos pagaram por este item nos últimos 12 meses, pelo código CATMAT.
+            </p>
+
+            {!preco ? (
+              <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleConsultarPreco}
+                  disabled={!material?.cd_catmat || consultandoPreco}
+                  className={`${BTN_SECUNDARIO} disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  {consultandoPreco ? "Consultando…" : `Consultar preço de referência · ${rotuloCreditos(custoPreco)}`}
+                </button>
+                <p className="text-xs text-slate-500">
+                  {material?.cd_catmat
+                    ? "Os créditos só são cobrados se a consulta trouxer resultados."
+                    : "Este insumo não tem código CATMAT cadastrado."}
+                </p>
+              </div>
+            ) : !preco.encontrado ? (
+              <p className="mt-4 rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-600">
+                Nenhuma compra pública deste item nos últimos 12 meses. Nenhum crédito foi cobrado.
+              </p>
+            ) : (
+              <div className="mt-4">
+                <dl className="grid grid-cols-3 rounded-lg border border-slate-200 divide-x divide-slate-200">
+                  {[["Menor", preco.menor], ["Mediana", preco.mediana], ["Maior", preco.maior]].map(([rotulo, valor]) => (
+                    <div key={rotulo} className="px-4 py-3 min-w-0">
+                      <dt className="text-xs text-slate-500">{rotulo}</dt>
+                      <dd className="mt-1 text-sm font-semibold text-slate-900 tabular-nums">{brlUnitario(valor)}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <p className="mt-2 text-xs text-slate-500 tabular-nums">
+                  Preço por {preco.unidade || "unidade"} · {preco.total_compras?.toLocaleString("pt-BR")} compras desde {formatarData(preco.periodo_inicio)}
+                </p>
+
+                {preco.exemplos && preco.exemplos.length > 0 && (
+                  <ul className="mt-4 divide-y divide-slate-100 text-sm">
+                    {preco.exemplos.map((e, i) => (
+                      <li key={i} className="flex justify-between gap-4 py-2">
+                        <span className="min-w-0 truncate text-slate-600">{e.orgao}{e.uf && ` (${e.uf})`} · {formatarData(e.data)}</span>
+                        <span className="shrink-0 font-medium text-slate-900 tabular-nums">{brlUnitario(e.preco_unitario)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <p className="mt-4 text-xs text-slate-500 leading-relaxed">
+                  Fonte: {preco.fonte}. {preco.aviso}
+                </p>
+              </div>
+            )}
+          </section>
         </div>
 
+        {/* ─── Coluna lateral ─── */}
+        <aside className="flex flex-col gap-4 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-6 max-lg:row-start-2">
+          <section className={`${CARTAO} p-5`}>
+            <p className="text-sm text-slate-500">Valor do lote</p>
+            <p className="mt-1 text-3xl font-bold text-slate-900 tracking-tight tabular-nums">{brl(valorLote)}</p>
+            <p className="mt-1 text-sm text-slate-500 tabular-nums">
+              {brl(precoUnitario)} por {unidadeBase} · {qtdTexto}
+            </p>
+
+            {bloqueado ? (
+              <p className="mt-5 rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-600">
+                Este anúncio está em negociação ou foi encerrado e não aceita novas propostas.
+              </p>
+            ) : isDono ? (
+              <p className="mt-5 rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-600">
+                Este anúncio é seu. Acompanhe as propostas em <Link href="/caixa-de-propostas" className="font-semibold text-blue-700 hover:underline">Negociações</Link>.
+              </p>
+            ) : (
+              <div className="mt-5 flex flex-col gap-2">
+                <button type="button" onClick={() => setIsCompraModalOpen(true)} className={`${BTN_PRIMARIO} h-11 w-full`}>
+                  Comprar lote
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setQtdProposta(""); setValorProposta(""); setIsOfertaModalOpen(true) }}
+                  className={`${BTN_SECUNDARIO} h-11 w-full`}
+                >
+                  Fazer proposta
+                </button>
+                <p className="mt-1 text-xs text-slate-500 leading-relaxed">
+                  Pagamento, nota fiscal e entrega são combinados diretamente com o vendedor.
+                </p>
+              </div>
+            )}
+          </section>
+
+          <section className={`${CARTAO} p-5`}>
+            <h2 className="text-sm font-semibold text-slate-900">Vendedor</h2>
+            <p className="mt-3 text-sm font-semibold text-slate-900">{vendedorNome}</p>
+            <ul className="mt-3 space-y-2.5 text-sm text-slate-600">
+              {vendedorLocal && (
+                <li className="flex items-start gap-2.5">
+                  <MapPin size={16} className="mt-0.5 shrink-0 text-slate-400" aria-hidden="true" />
+                  <span>
+                    {vendedorLocal}
+                    {distanciaKm !== null && (
+                      <span className="text-slate-500 tabular-nums"> · {distanciaKm.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km de você</span>
+                    )}
+                    {anuncio.anunciante_lat && anuncio.anunciante_lon && (
+                      <button type="button" onClick={() => setIsMapOpen(true)} className="block text-xs font-semibold text-blue-700 hover:underline cursor-pointer">
+                        Ver no mapa
+                      </button>
+                    )}
+                  </span>
+                </li>
+              )}
+              {!isDono && (
+                <li className="flex items-start gap-2.5 text-slate-500">
+                  <MessageCircle size={16} className="mt-0.5 shrink-0 text-slate-400" aria-hidden="true" />
+                  <span>O WhatsApp do vendedor é liberado quando ele aceitar a sua proposta.</span>
+                </li>
+              )}
+            </ul>
+            <button
+              type="button"
+              onClick={() => router.push(`/catalogo?anunciante=${encodeURIComponent(vendedorNome)}`)}
+              className={`${BTN_SECUNDARIO} mt-4 w-full inline-flex items-center justify-center gap-2`}
+            >
+              <Store size={16} aria-hidden="true" /> Ver outros anúncios
+            </button>
+          </section>
+
+          <div className="flex items-center justify-between px-1 text-xs text-slate-500">
+            <span className="inline-flex items-center gap-1.5 tabular-nums">
+              <CalendarClock size={14} aria-hidden="true" /> Publicado em {formatarData(anuncio.data_anuncio) ?? "—"}
+            </span>
+            {!isDono && (
+              <button
+                type="button"
+                onClick={() => setIsDenunciaModalOpen(true)}
+                className="inline-flex items-center gap-1.5 hover:text-red-700 transition-colors cursor-pointer"
+              >
+                <Flag size={14} aria-hidden="true" /> Denunciar anúncio
+              </button>
+            )}
+          </div>
+        </aside>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════
-       * MODAL 1: COMPRA IMEDIATA
-       * ═══════════════════════════════════════════════════════════════ */}
+      {/* ─── Comprar lote ─── */}
       <Dialog open={isCompraModalOpen} onOpenChange={setIsCompraModalOpen}>
-        <DialogContent className="sm:max-w-md bg-white rounded-2xl p-6">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-brand-header flex items-center gap-2">
-              <ShoppingCart size={20} className="text-brand" />
-              Confirmar Compra Imediata
-            </DialogTitle>
-            <DialogDescription className="text-sm text-slate-600 pt-1">
-              Você está fechando a compra integral deste anúncio nas condições originais anunciadas.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="bg-slate-50 rounded-xl p-4 border border-slate-200/80 space-y-2.5 my-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-slate-500 font-medium">Produto:</span>
-              <span className="font-bold text-slate-800 text-right">
-                {material?.ds_mat || "Insumo"}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500 font-medium">Quantidade:</span>
-              <span className="font-bold text-slate-800">
-                {anuncio.qtd_mat} {anuncio.qtd_mat > 1 ? unidadePlural : unidadeSingular}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500 font-medium">Vendedor:</span>
-              <span className="font-bold text-slate-800">{vendedorNome}</span>
-            </div>
-            <div className="flex justify-between pt-2 border-t border-slate-200">
-              <span className="font-bold text-slate-700">Valor Total:</span>
-              <span className="font-black text-lg text-brand-header">
-                R$
-                {valBaseNum.toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </span>
-            </div>
+        <DialogContent showCloseButton={false} className="sm:max-w-md p-6 gap-0 bg-white">
+          <DialogTitle className="text-lg font-semibold text-slate-900">Comprar o lote inteiro?</DialogTitle>
+          <DialogDescription className="mt-2 text-sm text-slate-600">
+            O pedido é enviado ao vendedor nas condições anunciadas. A venda é concluída quando ele confirmar.
+          </DialogDescription>
+          <dl className="mt-5 rounded-lg border border-slate-200 divide-y divide-slate-100 text-sm">
+            {[
+              ["Produto", nomeProduto],
+              ["Lote", anuncio.ds_lote || "Não informado"],
+              ["Quantidade", qtdTexto],
+              ["Vendedor", vendedorNome],
+              ["Valor total", brl(valorLote)],
+            ].map(([rotulo, valor]) => (
+              <div key={rotulo} className="flex justify-between gap-4 px-4 py-2.5">
+                <dt className="text-slate-500 shrink-0">{rotulo}</dt>
+                <dd className={`text-right tabular-nums ${rotulo === "Valor total" ? "font-semibold text-slate-900" : "font-medium text-slate-800"}`}>{valor}</dd>
+              </div>
+            ))}
+          </dl>
+          <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <button type="button" onClick={() => setIsCompraModalOpen(false)} className={BTN_SECUNDARIO}>Cancelar</button>
+            <button type="button" onClick={handleCompraDireta} className={BTN_PRIMARIO}>Enviar pedido de compra</button>
           </div>
-
-          <DialogFooter className="flex gap-2 sm:justify-end">
-            <button
-              type="button"
-              onClick={() => setIsCompraModalOpen(false)}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-100 transition-colors cursor-pointer"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={handleCompraDireta}
-              className="px-5 py-2.5 rounded-xl bg-brand hover:bg-brand-hover text-white font-bold text-sm shadow-sm transition-all cursor-pointer"
-            >
-              Finalizar Compra
-            </button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ═══════════════════════════════════════════════════════════════
-       * MODAL 2: FAZER OFERTA (PROPOSTA PERSONALIZADA)
-       * ═══════════════════════════════════════════════════════════════ */}
+      {/* ─── Fazer proposta ─── */}
       <Dialog open={isOfertaModalOpen} onOpenChange={setIsOfertaModalOpen}>
-        <DialogContent className="sm:max-w-md bg-white rounded-2xl p-6">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-brand-header flex items-center gap-2">
-              <Handshake size={20} className="text-brand" />
-              Fazer Oferta ao Vendedor
-            </DialogTitle>
-            <DialogDescription className="text-sm text-slate-600 pt-1">
-              Envie uma proposta com a quantidade desejada e o valor que você deseja pagar.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 my-2 text-sm">
-            {/* Quantidade */}
+        <DialogContent showCloseButton={false} className="sm:max-w-md p-6 gap-0 bg-white">
+          <DialogTitle className="text-lg font-semibold text-slate-900">Fazer proposta</DialogTitle>
+          <DialogDescription className="mt-2 text-sm text-slate-600">
+            Informe a quantidade e o valor total que você propõe pagar.
+          </DialogDescription>
+          <div className="mt-5 space-y-4">
             <div>
-              <label className="font-bold text-slate-700 block mb-1 text-xs uppercase tracking-wider">
-                Quantidade desejada ({unidadePlural})
+              <label htmlFor="qtd-proposta" className="block text-sm font-medium text-slate-700 mb-1.5">
+                Quantidade ({plural})
               </label>
               <input
+                id="qtd-proposta"
                 type="number"
                 min={1}
-                max={anuncio.qtd_mat}
+                max={qtd}
                 value={qtdProposta}
                 onChange={(e) => setQtdProposta(e.target.value)}
-                placeholder={`Máx.: ${anuncio.qtd_mat} (deixe vazio para tudo)`}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand/20 focus:border-brand focus:bg-white outline-none font-bold text-slate-800 text-sm"
+                placeholder={`${qtd} (lote inteiro)`}
+                className={INPUT}
               />
-              <span className="text-[11px] text-slate-400 mt-0.5 block">
-                Disponível no anúncio: {anuncio.qtd_mat} {unidadePlural}
-              </span>
+              <p className="mt-1 text-xs text-slate-500">Se deixar a quantidade em branco, a proposta vale pelo lote inteiro ({qtdTexto}).</p>
             </div>
-
-            {/* Valor da Proposta */}
             <div>
-              <label className="font-bold text-slate-700 block mb-1 text-xs uppercase tracking-wider">
-                Sua Oferta - Valor Total (R$)
+              <label htmlFor="valor-proposta" className="block text-sm font-medium text-slate-700 mb-1.5">
+                Valor total proposto
               </label>
               <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">
-                  R$
-                </span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">R$</span>
                 <input
+                  id="valor-proposta"
                   type="number"
                   step="0.01"
+                  min={0}
                   value={valorProposta}
                   onChange={(e) => setValorProposta(e.target.value)}
-                  placeholder={`Ex: ${(valBaseNum * 0.9).toFixed(2)}`}
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand/20 focus:border-brand focus:bg-white outline-none font-bold text-slate-800 text-sm"
+                  placeholder="0,00"
+                  className={`${INPUT} pl-9`}
                 />
               </div>
-              <span className="text-[11px] text-slate-400 mt-0.5 block">
-                Preço original total: R$
-                {valBaseNum.toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </span>
+              <p className="mt-1 text-xs text-slate-500">Obrigatório. O vendedor decide se aceita ou recusa.</p>
             </div>
           </div>
-
-          <DialogFooter className="flex gap-2 sm:justify-end mt-2">
-            <button
-              type="button"
-              onClick={() => setIsOfertaModalOpen(false)}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-100 transition-colors cursor-pointer"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={handleProposta}
-              className="px-5 py-2.5 rounded-xl bg-brand hover:bg-brand-hover text-white font-bold text-sm shadow-sm transition-all cursor-pointer"
-            >
-              Enviar Oferta
-            </button>
-          </DialogFooter>
+          <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <button type="button" onClick={() => setIsOfertaModalOpen(false)} className={BTN_SECUNDARIO}>Cancelar</button>
+            <button type="button" onClick={handleProposta} className={BTN_PRIMARIO}>Enviar proposta</button>
+          </div>
         </DialogContent>
       </Dialog>
 
-      {/* ═══════════════════════════════════════════════════════════════
-       * MODAL 3: DENUNCIAR ANÚNCIO
-       * ═══════════════════════════════════════════════════════════════ */}
+      {/* ─── Denunciar ─── */}
       <Dialog open={isDenunciaModalOpen} onOpenChange={setIsDenunciaModalOpen}>
-        <DialogContent className="sm:max-w-md bg-white rounded-2xl p-6">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-danger flex items-center gap-2">
-              <Flag size={20} className="fill-danger" />
-              Denunciar Anúncio
-            </DialogTitle>
-            <DialogDescription className="text-sm text-slate-600 pt-1">
-              Informe o motivo para que nossa equipe de moderação hospitalar audite este anúncio.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-2.5 my-3">
+        <DialogContent showCloseButton={false} className="sm:max-w-md p-6 gap-0 bg-white">
+          <DialogTitle className="text-lg font-semibold text-slate-900">Denunciar anúncio</DialogTitle>
+          <DialogDescription className="mt-2 text-sm text-slate-600">
+            Informe o motivo. A equipe do MedConnect vai analisar o anúncio.
+          </DialogDescription>
+          <fieldset className="mt-5 space-y-2">
+            <legend className="sr-only">Motivo da denúncia</legend>
             {[
               "Informações incorretas ou enganosas",
               "Problema com validade ou lote",
@@ -745,7 +595,8 @@ export default function AnuncioDetalhePage() {
             ].map((motivo) => (
               <label
                 key={motivo}
-                className="flex items-center gap-2.5 p-2.5 rounded-xl border border-slate-200/80 hover:bg-slate-50 cursor-pointer text-xs font-semibold text-slate-700 transition-colors"
+                className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm cursor-pointer transition-colors
+                  ${motivoDenuncia === motivo ? "border-blue-600 bg-blue-50/60 text-slate-900" : "border-slate-200 text-slate-700 hover:bg-slate-50"}`}
               >
                 <input
                   type="radio"
@@ -753,128 +604,70 @@ export default function AnuncioDetalhePage() {
                   value={motivo}
                   checked={motivoDenuncia === motivo}
                   onChange={(e) => setMotivoDenuncia(e.target.value)}
-                  className="text-brand"
+                  className="accent-blue-700"
                 />
-                <span>{motivo}</span>
+                {motivo}
               </label>
             ))}
+          </fieldset>
+          <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <button type="button" onClick={() => setIsDenunciaModalOpen(false)} className={BTN_SECUNDARIO}>Cancelar</button>
+            <button type="button" onClick={handleDenunciarSubmit} className="h-10 px-4 rounded-lg bg-red-600 hover:bg-red-700 text-sm font-semibold text-white transition-colors cursor-pointer">
+              Enviar denúncia
+            </button>
           </div>
-
-          <DialogFooter className="flex gap-2 sm:justify-end">
-            <button
-              type="button"
-              onClick={() => setIsDenunciaModalOpen(false)}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-100 transition-colors cursor-pointer"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={handleDenunciarSubmit}
-              className="px-5 py-2.5 rounded-xl bg-danger hover:bg-danger/90 text-white font-bold text-sm shadow-sm transition-all cursor-pointer"
-            >
-              Enviar Denúncia
-            </button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ═══════════════════════════════════════════════════════════════
-       * MODAL 4: MAPA DA LOCALIZAÇÃO DO ANUNCIANTE
-       * ═══════════════════════════════════════════════════════════════ */}
+      {/* ─── Mapa ─── */}
       <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
-        <DialogContent className="sm:max-w-lg bg-white rounded-2xl p-6">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-brand-header font-bold">
-              <MapPin className="w-5 h-5 text-brand" />
-              Localização do Anunciante
-            </DialogTitle>
-          </DialogHeader>
-          {anuncio && anuncio.anunciante_lat && anuncio.anunciante_lon && (
-            <div className="mt-3 flex flex-col gap-3">
-              <div className="w-full h-64 rounded-xl overflow-hidden border border-slate-200">
+        <DialogContent className="sm:max-w-lg p-6 gap-0 bg-white">
+          <DialogTitle className="text-lg font-semibold text-slate-900">Localização do vendedor</DialogTitle>
+          {anuncio.anunciante_lat && anuncio.anunciante_lon && (
+            <>
+              <div className="mt-4 w-full h-64 rounded-lg overflow-hidden border border-slate-200">
                 <iframe
+                  title="Mapa da localização do vendedor"
                   width="100%"
                   height="100%"
                   style={{ border: 0 }}
                   loading="lazy"
-                  allowFullScreen
                   referrerPolicy="no-referrer-when-downgrade"
                   src={`https://maps.google.com/maps?q=${anuncio.anunciante_lat},${anuncio.anunciante_lon}&hl=pt-BR&z=15&output=embed`}
                 />
               </div>
-              <p className="text-xs text-slate-500 font-medium text-center">
-                {anuncio.anunciante_logradouro && `${anuncio.anunciante_logradouro}, `}
-                {anuncio.anunciante_numero && `${anuncio.anunciante_numero} - `}
-                {anuncio.anunciante_bairro && `${anuncio.anunciante_bairro}, `}
-                {vendedorCidadeEstado}
-              </p>
-            </div>
+              {enderecoCompleto && <p className="mt-3 text-sm text-slate-600">{enderecoCompleto}</p>}
+            </>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* ═══════════════════════════════════════════════════════════════
-       * MODAL 5: SUCESSO
-       * ═══════════════════════════════════════════════════════════════ */}
-      <Dialog
-        open={isSuccessOpen}
-        onOpenChange={(open) => {
-          if (!open) handleCloseSuccess()
-        }}
-      >
-        <DialogContent className="sm:max-w-md bg-white rounded-2xl p-6">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-success text-xl font-bold">
-              <CheckCircle className="w-6 h-6" />
-              Tudo Certo!
-            </DialogTitle>
-            <DialogDescription className="text-sm text-slate-600 pt-1">
-              {successMessage}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm text-center text-slate-600 my-2">
-            Você pode acompanhar o andamento da negociação na aba{" "}
-            <strong>Minhas Negociações</strong>.
+      {/* ─── Sucesso ─── */}
+      <Dialog open={isSuccessOpen} onOpenChange={(open) => { if (!open) handleCloseSuccess() }}>
+        <DialogContent showCloseButton={false} className="sm:max-w-md p-6 gap-0 bg-white">
+          <DialogTitle className="text-lg font-semibold text-slate-900">{successTitle}</DialogTitle>
+          <DialogDescription className="mt-2 text-sm text-slate-600">
+            {successMessage}
+            {successIrParaNegociacoes && " Acompanhe o andamento em Negociações › Enviadas."}
+          </DialogDescription>
+          <div className="mt-6 flex justify-end">
+            <button type="button" onClick={handleCloseSuccess} className={BTN_PRIMARIO}>
+              {successIrParaNegociacoes ? "Ver minhas negociações" : "Fechar"}
+            </button>
           </div>
-          <DialogFooter className="mt-2">
-            <button
-              type="button"
-              onClick={handleCloseSuccess}
-              className="px-5 py-2.5 bg-brand text-white rounded-xl font-bold text-sm hover:bg-brand-hover transition-colors w-full sm:w-auto cursor-pointer"
-            >
-              Ir para Minhas Negociações
-            </button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ═══════════════════════════════════════════════════════════════
-       * MODAL 6: ERRO / ATENÇÃO
-       * ═══════════════════════════════════════════════════════════════ */}
+      {/* ─── Erro ─── */}
       <Dialog open={isErrorOpen} onOpenChange={setIsErrorOpen}>
-        <DialogContent className="sm:max-w-md bg-white rounded-2xl p-6">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-danger text-xl font-bold">
-              <AlertCircle className="w-6 h-6" />
-              Atenção
-            </DialogTitle>
-            <DialogDescription className="pt-2 text-sm font-medium text-slate-800">
-              {errorMessage}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-3">
-            <button
-              type="button"
-              onClick={() => setIsErrorOpen(false)}
-              className="px-6 py-2.5 bg-slate-200 text-slate-800 rounded-xl font-bold text-sm hover:bg-slate-300 transition-colors cursor-pointer"
-            >
-              OK
-            </button>
-          </DialogFooter>
+        <DialogContent showCloseButton={false} className="sm:max-w-md p-6 gap-0 bg-white">
+          <DialogTitle className="text-lg font-semibold text-slate-900">Não foi possível continuar</DialogTitle>
+          <DialogDescription className="mt-2 text-sm text-slate-600">{errorMessage}</DialogDescription>
+          <div className="mt-6 flex justify-end">
+            <button type="button" onClick={() => setIsErrorOpen(false)} className={BTN_SECUNDARIO}>Entendi</button>
+          </div>
         </DialogContent>
       </Dialog>
-
     </div>
   )
 }

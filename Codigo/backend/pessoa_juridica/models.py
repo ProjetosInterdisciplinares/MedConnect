@@ -56,12 +56,38 @@ class PessoaJuridica(models.Model):
     # Perfil inteligente de buscas gerado pela IA (ex: "luva, seringa, cateter")
     interesses_ia = models.TextField(blank=True, null=True)
 
-    # Saldo de créditos (RF14). NÃO altere diretamente — use creditos.services
+    # Saldo de créditos (RF14). NÃO altere diretamente: use creditos.carteira.CarteiraCreditos
     saldo_creditos = models.PositiveIntegerField(default=0)
 
+    # A empresa faz o papel de usuário autenticado no DRF (request.user)
     @property
     def is_authenticated(self):
         return True
 
+    @property
+    def is_anonymous(self):
+        return False
+
+    @property
+    def is_bloqueada(self) -> bool:
+        return self.status == 'BLOQUEADA'
+
     def __str__(self):
         return str(self.nm_pessoaj)
+
+
+class VerificacaoCNPJ(models.Model):
+    """
+    Último resultado da consulta do CNPJ na Receita Federal, guardado para
+    não consultar o serviço externo toda vez que o admin abre a solicitação.
+    """
+    empresa = models.OneToOneField(PessoaJuridica, on_delete=models.CASCADE, related_name='verificacao_cnpj')
+    dados = models.JSONField()
+    consultado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Verificação de CNPJ'
+        verbose_name_plural = 'Verificações de CNPJ'
+
+    def __str__(self):
+        return f'CNPJ de {self.empresa} consultado em {self.consultado_em:%d/%m/%Y}'

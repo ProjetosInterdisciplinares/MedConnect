@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Megaphone, Package, Hash, DollarSign, FileText, Sparkles, CheckCircle, ImagePlus, X, Crop, ZoomIn, Calendar, Layers, FileSpreadsheet, Coins } from "lucide-react"
-import Cropper, { Area } from "react-easy-crop"
+import { ModalPadrao, AvisoDialog, Resumo, BOTAO } from "@/components/ui/modal-padrao"
+import { Megaphone, Package, Hash, DollarSign, FileText, Sparkles, CheckCircle, Calendar, Layers, FileSpreadsheet, Coins, Loader2 } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -22,60 +22,46 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import servicesGetMatMed from "@/server/(GET)-mat-med"
+import servicesGetMeusAnuncios from "@/server/(GET)-meus-anuncios"
 import servicesCreateAnuncio from "@/server/(POST)-anuncio"
 import servicesGerarAnuncio from "@/server/(POST)-gerar-anuncio"
 import servicesGetCreditosSaldo from "@/server/(GET)-creditos-saldo"
 import { notificarCreditosAtualizados } from "@/lib/creditos"
-import { CreateAnuncioForm, MatMed } from "@/types"
+import { rotuloCreditos, useCustosCreditos } from "@/hooks/useCustosCreditos"
+import UploadImagem from "@/components/ui/upload-imagem"
+import { otimizarImagem } from "@/lib/imagem"
+import { Anuncio, CreateAnuncioForm, MatMed } from "@/types"
+import SecaoTabs from "@/components/layout/SecaoTabs"
 
-import CadastroMassa from "@/components/anunciar/cadastro-massa"
 
 import InputField from "@/components/cadastro/InputField"
 import { AuthManager } from "@/lib/AuthManager"
 
-async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<string> {
-  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const img = new Image()
-    img.onload = () => resolve(img)
-    img.onerror = (error) => reject(error)
-    img.src = imageSrc
-  })
-  const canvas = document.createElement("canvas")
-  const ctx = canvas.getContext("2d")
-  if (!ctx) return ""
+/** Campos reaproveitados do último anúncio do mesmo insumo (lote, datas e quantidade são sempre do novo lote). */
+type Reaproveitado = { val_base: string; ds_obs: string; imagem_anuncio: string; data: string }
 
-  canvas.width = pixelCrop.width
-  canvas.height = pixelCrop.height
-
-  ctx.drawImage(
-    image,
-    pixelCrop.x,
-    pixelCrop.y,
-    pixelCrop.width,
-    pixelCrop.height,
-    0,
-    0,
-    pixelCrop.width,
-    pixelCrop.height
-  )
-
-  return canvas.toDataURL("image/jpeg", 0.9)
+function formatarData(iso: string) {
+  const d = new Date(iso)
+  return isNaN(d.getTime()) ? "" : d.toLocaleDateString("pt-BR")
 }
 
 export default function AnunciarPage() {
+  const custos = useCustosCreditos()
+  const custoPublicacao = rotuloCreditos(custos.publicacao)
+  const custoIA = rotuloCreditos(custos.ia)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const tabParam = searchParams.get("tab") as "publicar" | "cadastro_massa" | null
+  const tabParam = searchParams.get("tab")
+  const matParam = Number(searchParams.get("mat")) || 0
 
-  const [activeTab, setActiveTab] = useState<"publicar" | "cadastro_massa">(tabParam || "publicar")
-
+  // Endereço antigo do cadastro em massa (agora em Ofertar insumos)
   useEffect(() => {
-    if (tabParam && ["publicar", "cadastro_massa"].includes(tabParam)) {
-      setActiveTab(tabParam)
-    }
-  }, [tabParam])
+    if (tabParam === "cadastro_massa") router.replace("/cadastrar/massa")
+  }, [tabParam, router])
 
   const [materiais, setMateriais] = useState<MatMed[]>([])
+  const [meusAnuncios, setMeusAnuncios] = useState<Anuncio[]>([])
+  const [reaproveitado, setReaproveitado] = useState<Reaproveitado | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
 
   const [anuncioForm, setAnuncioForm] = useState<CreateAnuncioForm>({
@@ -105,21 +91,19 @@ export default function AnunciarPage() {
     setErrorModal({ open: true, title, message })
   }
 
-  // Estados do Cropper
-  const [cropModalOpen, setCropModalOpen] = useState(false)
-  const [imageToCrop, setImageToCrop] = useState<string>("")
-  const [crop, setCrop] = useState({ x: 0, y: 0 })
-  const [zoom, setZoom] = useState(1)
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
 
   useEffect(() => {
     const userId = AuthManager.getInstance().getUserId() || 0
     setAnuncioForm((prev) => ({ ...prev, cd_pessoa_anunciante: userId }))
 
     async function fetchData() {
-      const responseMateriais = await servicesGetMatMed()
+      const [responseMateriais, responseAnuncios] = await Promise.all([servicesGetMatMed(), servicesGetMeusAnuncios()])
       if (responseMateriais && !("isError" in responseMateriais)) {
         setMateriais(responseMateriais)
+      }
+      if (responseAnuncios && !("isError" in responseAnuncios)) {
+        const lista = Array.isArray(responseAnuncios) ? responseAnuncios : ((responseAnuncios as { data?: Anuncio[] }).data ?? [])
+        setMeusAnuncios(lista)
       }
     }
 
@@ -127,13 +111,49 @@ export default function AnunciarPage() {
   }, [])
 
   function handleMatChange(value: string | null) {
-    if (!value) {
-      setAnuncioForm((prev) => ({ ...prev, cd_mat: 0 }))
-      return
-    }
-    const cdMat = Number(value)
-    setAnuncioForm((prev) => ({ ...prev, cd_mat: cdMat }))
+    const cdMat = value ? Number(value) : 0
+    // Último anúncio deste insumo publicado pela instituição
+    const anterior = cdMat
+      ? meusAnuncios
+          .filter((a) => Number(a.cd_mat) === cdMat)
+          .sort((a, b) => (b.data_anuncio || "").localeCompare(a.data_anuncio || "") || b.nr_anuncio - a.nr_anuncio)[0]
+      : undefined
+    const novo: Reaproveitado | null = anterior
+      ? {
+          val_base: anterior.val_base ? String(anterior.val_base).replace(".", ",") : "",
+          ds_obs: anterior.ds_obs || "",
+          imagem_anuncio: anterior.imagem_anuncio || "",
+          data: anterior.data_anuncio,
+        }
+      : null
+
+    setAnuncioForm((prev) => {
+      // Só troca campos vazios ou que ainda guardam o que foi reaproveitado antes
+      const livre = (campo: "val_base" | "ds_obs" | "imagem_anuncio") => !prev[campo] || prev[campo] === reaproveitado?.[campo]
+      return {
+        ...prev,
+        cd_mat: cdMat,
+        val_base: livre("val_base") ? (novo?.val_base ?? "") : prev.val_base,
+        ds_obs: livre("ds_obs") ? (novo?.ds_obs ?? "") : prev.ds_obs,
+        imagem_anuncio: livre("imagem_anuncio") ? (novo?.imagem_anuncio ?? "") : prev.imagem_anuncio,
+      }
+    })
+    setReaproveitado(novo)
   }
+
+  function limparReaproveitado() {
+    setAnuncioForm((prev) => ({ ...prev, val_base: "", ds_obs: "", imagem_anuncio: "" }))
+    setReaproveitado(null)
+  }
+
+  // Insumo recém-cadastrado chega selecionado (?mat=ID)
+  useEffect(() => {
+    if (!matParam || anuncioForm.cd_mat || materiais.length === 0) return
+    if (materiais.some((m) => Number(m.cd_mat) === matParam)) handleMatChange(String(matParam))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matParam, materiais, meusAnuncios])
+
+  const matSelecionado = materiais.find((m) => Number(m.cd_mat) === Number(anuncioForm.cd_mat))
 
   async function handleConfirmAI() {
     setIsConfirmAIOpen(false)
@@ -149,7 +169,7 @@ export default function AnunciarPage() {
 
       if (response && "isError" in response) {
         if (response.status === 402) {
-          setMissingCreditsFeature("gerar a descrição com IA (1 crédito)")
+          setMissingCreditsFeature(`gerar a descrição com IA (${custoIA})`)
           setIsInsufficientCreditsOpen(true)
           return
         }
@@ -171,39 +191,21 @@ export default function AnunciarPage() {
     }
   }
 
-  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    if (file.size > 5242880) {
-      showError("Imagem muito grande", "A imagem selecionada é muito grande. O limite máximo é de 5MB.")
+  function handleImageUpload(file: File) {
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      showError("Formato não aceito", "Envie uma imagem PNG, JPG ou WEBP.")
       return
     }
 
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      const base64String = event.target?.result as string
-      setImageToCrop(base64String)
-      setCropModalOpen(true)
+    // Fotos grandes (ex.: de celular) são aceitas: a imagem é reduzida sem cortar
+    if (file.size > 20 * 1024 * 1024) {
+      showError("Imagem muito grande", "Envie uma imagem de até 20 MB.")
+      return
     }
-    reader.onerror = () => {
-      showError("Erro de Leitura", "Não foi possível ler o arquivo de imagem.")
-    }
-    reader.readAsDataURL(file)
-  }
 
-  async function handleSaveCrop() {
-    if (imageToCrop && croppedAreaPixels) {
-      try {
-        const croppedImage = await getCroppedImg(imageToCrop, croppedAreaPixels)
-        setAnuncioForm((prev) => ({ ...prev, imagem_anuncio: croppedImage }))
-        setCropModalOpen(false)
-        setImageToCrop("")
-      } catch (e) {
-        console.error(e)
-        showError("Erro ao Cortar", "Não foi possível cortar e processar a imagem.")
-      }
-    }
+    otimizarImagem(file)
+      .then((imagem) => setAnuncioForm((prev) => ({ ...prev, imagem_anuncio: imagem })))
+      .catch(() => showError("Erro de leitura", "Não foi possível ler o arquivo de imagem."))
   }
 
 
@@ -217,7 +219,7 @@ export default function AnunciarPage() {
     if (!anuncioForm.dt_validade) errors.dt_validade = "Data de validade é obrigatória."
     if (!anuncioForm.qtd_mat || anuncioForm.qtd_mat <= 0) errors.qtd_mat = "Quantidade inválida."
     if (!anuncioForm.val_base) errors.val_base = "Valor é obrigatório."
-    if (!anuncioForm.ds_obs) errors.ds_obs = "Observações são obrigatórias."
+    if (!anuncioForm.ds_obs) errors.ds_obs = "Descrição é obrigatória."
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors)
@@ -251,7 +253,7 @@ export default function AnunciarPage() {
     if (response && "isError" in response) {
       console.error("Erro ao criar anúncio:", response.message)
       if (response.status === 402) {
-        setMissingCreditsFeature("publicar o anúncio (5 créditos)")
+        setMissingCreditsFeature(`publicar o anúncio (${custoPublicacao})`)
         setIsInsufficientCreditsOpen(true)
       } else {
         setFieldErrors({ global: response.message || "Falha ao publicar o anúncio. Tente novamente." })
@@ -261,7 +263,7 @@ export default function AnunciarPage() {
 
     setIsSuccessOpen(true)
 
-    // Atualiza o saldo global pois consumimos 5 créditos
+    // Atualiza o saldo global, pois a publicação consumiu créditos
     servicesGetCreditosSaldo().then(res => {
       if (!("isError" in res)) notificarCreditosAtualizados(res.saldo)
     })
@@ -280,6 +282,7 @@ export default function AnunciarPage() {
       imagem_anuncio: "",
     })
     setLastSaved(null)
+    setReaproveitado(null)
   }
 
   function handleCloseSuccess() {
@@ -288,71 +291,24 @@ export default function AnunciarPage() {
   }
 
   return (
-    <div className="relative min-h-screen w-full antialiased bg-slate-50/50 selection:bg-blue-900/20">
+    <div className="relative w-full antialiased">
 
-      <div className="max-w-7xl mx-auto py-8 px-4 relative z-10">
+      <div className="w-full relative z-10">
+        <SecaoTabs secao="anuncios" />
 
         {/* Header da Página */}
-        <div className="mb-8 md:mb-12">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-blue-900 flex items-center justify-center text-white shadow-lg shadow-blue-900/20">
-              <Megaphone size={20} />
-            </div>
-            <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">
-              Anunciar
-            </h1>
-          </div>
-          <p className="text-slate-500 text-sm md:text-base font-medium max-w-2xl">
-            Selecione um de seus materiais cadastrados para anunciar no marketplace ou baixe o template para fazer publicações em massa.
+        <div className="mb-6">
+          <h1 className="sr-only">Publicar novo anúncio</h1>
+          <p className="text-sm text-slate-500 max-w-2xl">
+            Escolha um insumo cadastrado e informe os dados do lote para publicá-lo no catálogo.
           </p>
         </div>
 
         <div className="flex flex-col md:flex-row gap-8 items-start">
-          {/* Sidebar */}
-          <aside className="w-full md:w-64 shrink-0 flex flex-col gap-2">
-            <nav className="flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={() => setActiveTab("publicar")}
-                className={`relative w-full text-left flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group ${activeTab === "publicar" ? "bg-white shadow-sm ring-1 ring-slate-200/50" : "hover:bg-white/50"
-                  }`}
-              >
-                {activeTab === "publicar" && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-900 rounded-r-full" />}
-                <div className={`shrink-0 rounded-xl p-2 transition-colors ${activeTab === "publicar" ? "bg-blue-50 text-blue-900" : "bg-slate-100 text-slate-500 group-hover:text-blue-900 group-hover:bg-blue-50/50"
-                  }`}>
-                  <Megaphone size={20} />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-slate-800 text-sm">Publicar Anúncio</h3>
-                  <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">Criar nova oferta de venda</p>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab("cadastro_massa")}
-                className={`relative w-full text-left flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group ${activeTab === "cadastro_massa" ? "bg-white shadow-sm ring-1 ring-slate-200/50" : "hover:bg-white/50"
-                  }`}
-              >
-                {activeTab === "cadastro_massa" && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-900 rounded-r-full" />}
-                <div className={`shrink-0 rounded-xl p-2 transition-colors ${activeTab === "cadastro_massa" ? "bg-blue-50 text-blue-900" : "bg-slate-100 text-slate-500 group-hover:text-blue-900 group-hover:bg-blue-50/50"
-                  }`}>
-                  <FileSpreadsheet size={20} />
-                </div>
-                <div className="flex-1">
-                  <h3 className={`font-bold text-sm transition-colors ${activeTab === "cadastro_massa" ? "text-slate-800" : "text-slate-600 group-hover:text-slate-800"
-                    }`}>Cadastro em Massa</h3>
-                  <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">Importar anúncios via Excel</p>
-                </div>
-              </button>
-            </nav>
-          </aside>
 
           {/* Área de Conteúdo principal */}
           <main className="flex-1 min-w-0 w-full">
-            {activeTab === "cadastro_massa" ? (
-              <CadastroMassa />
-            ) : (
+            {(
               <div className="bg-white border border-slate-100 rounded-3xl p-6 md:p-8 shadow-sm">
 
                 <div className="mb-6">
@@ -383,8 +339,8 @@ export default function AnunciarPage() {
                       >
                         <SelectTrigger className={`w-full bg-slate-50 border rounded-xl text-sm h-[42px] ${fieldErrors.cd_mat ? "border-red-300 focus:ring-2 focus:ring-red-400" : "border-slate-200 focus:ring-blue-900/20 focus:border-blue-900"
                           }`}>
-                          <div className="flex items-center gap-2 text-muted truncate">
-                            <Package size={16} className="shrink-0" />
+                          <div className="flex items-center gap-2 min-w-0 text-slate-900 truncate">
+                            <Package size={16} className="shrink-0 text-slate-400" aria-hidden="true" />
                             <SelectValue placeholder="Selecione o insumo cadastrado">
                               {anuncioForm.cd_mat
                                 ? (() => {
@@ -411,6 +367,39 @@ export default function AnunciarPage() {
                           <CheckCircle className="w-3 h-3 shrink-0 hidden" />
                           {fieldErrors.cd_mat}
                         </p>
+                      )}
+                      {materiais.length === 0 && (
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Nenhum insumo cadastrado. <a href="/cadastrar" className="font-semibold text-blue-700 hover:underline">Cadastre o primeiro insumo</a>
+                        </p>
+                      )}
+
+                      {matSelecionado && (
+                        <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50">
+                          <dl className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-3 px-4 py-3 text-sm">
+                            {[
+                              ["Categoria", matSelecionado.ds_tipo],
+                              ["Marca", matSelecionado.ds_marca],
+                              ["Unidade", matSelecionado.unidade_med],
+                              ["TUSS", matSelecionado.cd_tuss],
+                            ].map(([rotulo, valor]) => (
+                              <div key={rotulo} className="min-w-0">
+                                <dt className="text-xs text-slate-500">{rotulo}</dt>
+                                <dd className="mt-0.5 font-medium text-slate-900 truncate tabular-nums">{valor || "Não informado"}</dd>
+                              </div>
+                            ))}
+                          </dl>
+                          {reaproveitado && (
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 py-2.5 border-t border-slate-200 text-xs text-slate-600">
+                              <p>
+                                Valor, observações e foto vieram do seu último anúncio deste insumo{formatarData(reaproveitado.data) ? ` (${formatarData(reaproveitado.data)})` : ""}. Informe os dados do novo lote.
+                              </p>
+                              <button type="button" onClick={limparReaproveitado} className="shrink-0 self-start sm:self-auto font-semibold text-slate-700 hover:text-blue-700">
+                                Limpar
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -492,7 +481,7 @@ export default function AnunciarPage() {
                   {/* BLOCO 3: OBSERVAÇÕES COM BOTÃO DE IA EMBUTIDO */}
                   <div className="w-full">
                     <InputField
-                      label="Observações do Anúncio"
+                      label="Descrição"
                       icon={FileText}
                       type="textarea"
                       required
@@ -508,29 +497,25 @@ export default function AnunciarPage() {
                           type="button"
                           onClick={() => {
                             if (!anuncioForm.cd_mat || !anuncioForm.qtd_mat) {
-                              showError("Atenção", "Por favor, selecione o Insumo e defina a quantidade antes de gerar a descrição por IA.")
+                              showError("Faltam informações", "Selecione o insumo e informe a quantidade antes de gerar a descrição com IA.")
                               return
                             }
                             setIsConfirmAIOpen(true)
                           }}
                           disabled={isGenerating}
-                          className="text-xs flex items-center gap-2 text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 font-bold px-3 py-1.5 rounded-lg shadow-md transition-all duration-200 disabled:opacity-60 cursor-pointer border border-indigo-400/30"
+                          className="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors disabled:opacity-60 cursor-pointer"
                         >
                           {isGenerating ? (
                             <>
-                              <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                              Gerando...
+                              <Loader2 size={14} className="animate-spin text-slate-500" />
+                              Gerando…
                             </>
                           ) : (
                             <>
-                              <span className="flex items-center gap-1">
-                                <Sparkles size={13} className="animate-pulse text-amber-300" />
-                                Gerar com IA
-                              </span>
-                              <span className="bg-black/20 px-1.5 py-0.5 rounded text-[10px] flex items-center gap-1 border border-white/10">
-                                <Coins size={12} className="text-amber-300" />
-                                1 Crédito
-                              </span>
+                              <Sparkles size={14} className="text-blue-700" aria-hidden="true" />
+                              <span className="sm:hidden">Gerar com IA</span>
+                              <span className="hidden sm:inline">Gerar descrição com IA</span>
+                              <span className="ml-1 pl-2 border-l border-slate-200 font-normal text-slate-500">{custoIA}</span>
                             </>
                           )}
                         </button>
@@ -539,347 +524,158 @@ export default function AnunciarPage() {
                   </div>
 
                   {/* BLOCO 4: IMAGEM DO ANÚNCIO */}
-                  <div className="w-full flex flex-col gap-1.5">
-                    <label className="text-sm font-semibold text-slate-700">
-                      Foto do Lote/Produto
-                    </label>
+                  <UploadImagem
+                    imagem={anuncioForm.imagem_anuncio || ""}
+                    onArquivo={handleImageUpload}
+                    onRemover={() => setAnuncioForm(prev => ({ ...prev, imagem_anuncio: "" }))}
+                    tamanhoMaximoMB={20}
+                  />
 
-                    {!anuncioForm.imagem_anuncio ? (
-                      <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <div className="w-10 h-10 mb-3 text-slate-400 bg-white shadow-sm rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <ImagePlus size={20} className="text-blue-900" />
-                          </div>
-                          <p className="mb-1 text-sm text-slate-600 font-semibold">
-                            Clique para fazer upload
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            PNG, JPG ou WEBP (Max. 5MB)
-                          </p>
-                        </div>
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept="image/png, image/jpeg, image/webp"
-                          onChange={handleImageUpload}
-                        />
-                      </label>
-                    ) : (
-                      <div className="relative w-full h-48 rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-900 flex items-center justify-center">
-                        <img
-                          src={anuncioForm.imagem_anuncio}
-                          alt="Preview"
-                          className="w-full h-full object-cover opacity-90"
-                        />
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                          <button
-                            type="button"
-                            onClick={() => setAnuncioForm(prev => ({ ...prev, imagem_anuncio: "" }))}
-                            className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-xl font-bold shadow-lg hover:bg-red-700 transition-colors"
-                          >
-                            <X size={16} /> Remover Imagem
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                  <div className="mt-2 pt-5 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3">
+                    <p className="flex items-center gap-1.5 text-sm text-slate-500 sm:mr-auto">
+                      <Coins size={15} className="text-slate-400" aria-hidden="true" />
+                      A publicação usa <span className="font-semibold text-slate-700">{custoPublicacao}</span> do seu saldo.
+                    </p>
+                    <button
+                      type="submit"
+                      className="h-11 px-6 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                    >
+                      Publicar anúncio
+                    </button>
                   </div>
-
-                  <button
-                    type="submit"
-                    className="group w-full text-white font-bold py-4 rounded-xl flex items-center justify-between px-6 transition-all duration-300 shadow-lg shadow-blue-900/20 bg-blue-900 hover:bg-blue-950 mt-4 cursor-pointer overflow-hidden relative"
-                  >
-                    <span className="flex items-center gap-2 text-lg">
-                      Publicar no Marketplace
-                    </span>
-                    <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1.5 rounded-xl border border-white/10 group-hover:bg-white/30 transition-colors shadow-inner">
-                      <Coins size={16} className="text-amber-300" />
-                      <span className="text-sm font-black">5 Créditos</span>
-                    </div>
-                  </button>
                 </form>
               </div>
             )}
           </main>
         </div>
 
-        <Dialog open={isSuccessOpen} onOpenChange={(open) => {
-          if (!open) handleCloseSuccess()
-        }}>
-          <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
-            <DialogHeader className="m-0 bg-blue-900 px-6 py-5 rounded-t-xl border-b border-blue-950">
-              <DialogTitle className="flex items-center gap-2 text-white text-xl font-black">
-                <CheckCircle className="w-6 h-6" />
-                Anúncio Publicado!
-              </DialogTitle>
-              <DialogDescription className="text-blue-100">
-                Seu insumo agora está visível no catálogo para potenciais compradores.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="p-6">
-              {lastSaved && (
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3 text-sm">
-                  <p className="flex justify-between border-b border-slate-100 pb-2"><span className="font-semibold text-slate-500">Insumo</span> <span className="font-bold text-slate-800 text-right">{materiais.find(m => String(m.cd_mat) === String(lastSaved.cd_mat))?.ds_mat || "Insumo"}</span></p>
-                  <p className="flex justify-between border-b border-slate-100 pb-2"><span className="font-semibold text-slate-500">Quantidade</span> <span className="font-bold text-slate-800 text-right">{lastSaved.qtd_mat} unid.</span></p>
-                  <p className="flex justify-between border-b border-slate-100 pb-2"><span className="font-semibold text-slate-500">Valor Base</span> <span className="font-bold text-blue-900 text-right">R$ {lastSaved.val_base}</span></p>
-                  {lastSaved.ds_lote && <p className="flex justify-between"><span className="font-semibold text-slate-500">Lote</span> <span className="font-bold text-slate-800 text-right">{lastSaved.ds_lote}</span></p>}
-                </div>
-              )}
-              <div className="mt-6 flex gap-3">
-                <button
-                  type="button"
-                  onClick={handleCloseSuccess}
-                  className="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-colors w-full"
-                >
-                  Continuar Anunciando
-                </button>
-                <button
-                  type="button"
-                  onClick={() => router.push("/catalogo")}
-                  className="px-6 py-2.5 bg-blue-900 text-white rounded-xl font-bold hover:bg-blue-950 transition-colors w-full shadow-lg shadow-blue-900/20 cursor-pointer"
-                >
-                  Ir para o Catálogo
-                </button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <ModalPadrao
+          open={isSuccessOpen}
+          onOpenChange={(open) => { if (!open) handleCloseSuccess() }}
+          titulo="Anúncio publicado"
+          descricao="O insumo já está visível no catálogo para as outras instituições."
+          acoes={
+            <>
+              <button type="button" onClick={handleCloseSuccess} className={BOTAO.secundario}>Publicar outro</button>
+              <button type="button" onClick={() => router.push("/meus-anuncios")} className={BOTAO.primario}>Ver meus anúncios</button>
+            </>
+          }
+        >
+          {lastSaved && (
+            <Resumo itens={[
+              ["Insumo", materiais.find(m => String(m.cd_mat) === String(lastSaved.cd_mat))?.ds_mat || "Insumo"],
+              ["Quantidade", lastSaved.qtd_mat],
+              ["Valor do lote", `R$ ${lastSaved.val_base}`],
+              ...(lastSaved.ds_lote ? [["Lote", lastSaved.ds_lote] as [string, string]] : []),
+            ]} />
+          )}
+        </ModalPadrao>
 
         {/* MODAL DE CONFIRMAÇÃO IA */}
         <Dialog open={isConfirmAIOpen} onOpenChange={setIsConfirmAIOpen}>
-          <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
-            <DialogHeader className="m-0 bg-indigo-600 px-6 py-5 rounded-t-xl border-b border-indigo-700">
-              <DialogTitle className="flex items-center gap-2 text-white text-xl font-black">
-                <Sparkles className="w-6 h-6" />
-                Gerar Descrição
-              </DialogTitle>
-              <DialogDescription className="text-indigo-100">
-                Confirmação de Ação
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="p-6">
-              <div className="flex flex-col items-center text-center mb-6">
-                <p className="text-slate-600 text-sm font-medium leading-relaxed">
-                  Usar inteligência artificial para criar uma descrição profissional para este insumo custa <span className="font-bold text-indigo-700 text-base">1 Crédito</span>.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3 w-full">
-                <button
-                  type="button"
-                  onClick={handleConfirmAI}
-                  className="w-full py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-black shadow-lg shadow-indigo-500/30 hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-                >
-                  <Sparkles size={18} className="text-amber-300" /> Confirmar e Gerar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsConfirmAIOpen(false)}
-                  className="w-full py-2.5 bg-white text-slate-500 border border-slate-200 hover:bg-slate-100 rounded-xl font-bold transition-colors"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* MODAL GENÉRICO DE AVISO/ERRO */}
-        <Dialog open={errorModal.open} onOpenChange={(open) => setErrorModal(prev => ({ ...prev, open }))}>
-          <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
-            <DialogHeader className="m-0 bg-slate-900 px-6 py-5 rounded-t-xl border-b border-slate-950">
-              <DialogTitle className="flex items-center gap-2 text-white text-xl font-black">
-                <Megaphone className="w-5 h-5 text-amber-400" />
-                {errorModal.title}
-              </DialogTitle>
-              <DialogDescription className="text-slate-400 text-sm">
-                Mensagem do Sistema
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="p-6 text-center flex flex-col items-center">
-              <p className="text-slate-600 mb-6 text-sm font-medium leading-relaxed">
-                {errorModal.message}
-              </p>
-
+          <DialogContent showCloseButton={false} className="sm:max-w-md p-6 gap-0 bg-white">
+            <DialogTitle className="text-lg font-semibold text-slate-900">Gerar descrição com IA?</DialogTitle>
+            <DialogDescription className="mt-2 text-sm text-slate-600 leading-relaxed">
+              A IA sugere um texto a partir do insumo e da quantidade informados. Revise antes de publicar.
+            </DialogDescription>
+            <dl className="mt-5 flex items-center justify-between rounded-lg border border-slate-200 px-4 py-3 text-sm">
+              <dt className="text-slate-500">Custo</dt>
+              <dd className="font-semibold text-slate-900 tabular-nums">{custoIA}</dd>
+            </dl>
+            <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setErrorModal(prev => ({ ...prev, open: false }))}
-                className="w-full py-2.5 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/20"
+                onClick={() => setIsConfirmAIOpen(false)}
+                className="h-10 px-4 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
               >
-                Entendi
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmAI}
+                className="h-10 px-4 rounded-lg bg-blue-700 hover:bg-blue-800 text-sm font-semibold text-white transition-colors"
+              >
+                Gerar descrição
               </button>
             </div>
           </DialogContent>
         </Dialog>
 
+        {/* AVISO / ERRO */}
+        <AvisoDialog
+          open={errorModal.open}
+          onClose={() => setErrorModal(prev => ({ ...prev, open: false }))}
+          titulo={errorModal.title}
+          mensagem={errorModal.message}
+        />
+
         {/* MODAL DE CONFIRMAÇÃO DE PUBLICAÇÃO */}
         <Dialog open={isConfirmPublishOpen} onOpenChange={setIsConfirmPublishOpen}>
-          <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
-            <DialogHeader className="m-0 bg-blue-900 px-6 py-5 rounded-t-xl border-b border-blue-950">
-              <DialogTitle className="flex items-center gap-2 text-white text-xl font-black">
-                <Megaphone className="w-6 h-6" />
-                Confirmar Publicação
-              </DialogTitle>
-              <DialogDescription className="text-blue-100">
-                Revise os dados antes de tornar seu insumo público.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="p-6">
-              {lastSaved && (
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3 text-sm mb-6">
-                  <p className="flex justify-between border-b border-slate-100 pb-2">
-                    <span className="font-semibold text-slate-500">Insumo</span>
-                    <span className="font-bold text-slate-800 text-right">{materiais.find(m => String(m.cd_mat) === String(lastSaved.cd_mat))?.ds_mat || "Insumo"}</span>
-                  </p>
-                  <p className="flex justify-between border-b border-slate-100 pb-2">
-                    <span className="font-semibold text-slate-500">Quantidade</span>
-                    <span className="font-bold text-slate-800 text-right">{lastSaved.qtd_mat} unid.</span>
-                  </p>
-                  <p className="flex justify-between border-b border-slate-100 pb-2">
-                    <span className="font-semibold text-slate-500">Valor Base</span>
-                    <span className="font-bold text-slate-800 text-right">R$ {lastSaved.val_base}</span>
-                  </p>
-                  <p className="flex justify-between">
-                    <span className="font-semibold text-slate-500">Custo da Ação</span>
-                    <span className="font-black text-amber-500 text-right flex items-center gap-1.5">
-                      <Coins size={16} />
-                      5 Créditos
-                    </span>
-                  </p>
-                </div>
-              )}
-
-              <div className="flex flex-col gap-3 w-full">
-                <button
-                  type="button"
-                  onClick={handleConfirmPublish}
-                  className="w-full py-3 bg-blue-900 text-white rounded-xl font-black shadow-lg shadow-blue-900/20 hover:bg-blue-950 transition-colors flex items-center justify-center gap-2"
-                >
-                  Confirmar e Descontar (5 Créditos)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsConfirmPublishOpen(false)}
-                  className="w-full py-2.5 bg-white text-slate-500 border border-slate-200 hover:bg-slate-100 rounded-xl font-bold transition-colors"
-                >
-                  Cancelar
-                </button>
-              </div>
+          <DialogContent showCloseButton={false} className="sm:max-w-md p-6 gap-0 bg-white">
+            <DialogTitle className="text-lg font-semibold text-slate-900">Publicar anúncio?</DialogTitle>
+            <DialogDescription className="mt-2 text-sm text-slate-600">
+              Revise os dados. Após a publicação, o anúncio fica visível no catálogo.
+            </DialogDescription>
+            {lastSaved && (
+              <dl className="mt-5 rounded-lg border border-slate-200 divide-y divide-slate-100 text-sm">
+                {[
+                  ["Insumo", materiais.find(m => String(m.cd_mat) === String(lastSaved.cd_mat))?.ds_mat || "Insumo"],
+                  ["Quantidade", `${lastSaved.qtd_mat} unid.`],
+                  ["Valor base", `R$ ${lastSaved.val_base}`],
+                  ["Custo", custoPublicacao],
+                ].map(([rotulo, valor]) => (
+                  <div key={rotulo} className="flex justify-between gap-4 px-4 py-2.5">
+                    <dt className="text-slate-500">{rotulo}</dt>
+                    <dd className="font-medium text-slate-900 text-right tabular-nums">{valor}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+            <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsConfirmPublishOpen(false)}
+                className="h-10 px-4 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmPublish}
+                className="h-10 px-4 rounded-lg bg-blue-700 hover:bg-blue-800 text-sm font-semibold text-white transition-colors"
+              >
+                Publicar ({custoPublicacao})
+              </button>
             </div>
           </DialogContent>
         </Dialog>
 
         {/* MODAL SEM CRÉDITOS */}
         <Dialog open={isInsufficientCreditsOpen} onOpenChange={setIsInsufficientCreditsOpen}>
-          <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
-            <DialogHeader className="m-0 bg-amber-500 px-6 py-5 rounded-t-xl border-b border-amber-600">
-              <DialogTitle className="flex items-center gap-2 text-white text-xl font-black">
-                <DollarSign className="w-6 h-6" />
-                Sem créditos!
-              </DialogTitle>
-              <DialogDescription className="text-amber-100">
-                Saldo Insuficiente
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="p-6 text-center flex flex-col items-center">
-              <p className="text-slate-600 mb-6 text-sm font-medium leading-relaxed">
-                Você não possui saldo suficiente para {missingCreditsFeature}. <br />
-                Adquira um pacote de créditos para continuar turbinando suas negociações.
-              </p>
-
-              <div className="flex flex-col gap-3 w-full">
-                <button
-                  type="button"
-                  onClick={() => router.push("/creditos")}
-                  className="w-full py-3 bg-gradient-to-r from-amber-400 to-amber-500 text-white rounded-xl font-black shadow-lg shadow-amber-500/30 hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-                >
-                  <Coins size={18} /> Ir para a Central de Créditos
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsInsufficientCreditsOpen(false)}
-                  className="w-full py-2.5 bg-white text-slate-500 border border-slate-200 hover:bg-slate-100 rounded-xl font-bold transition-colors"
-                >
-                  Cancelar
-                </button>
-              </div>
+          <DialogContent showCloseButton={false} className="sm:max-w-md p-6 gap-0 bg-white">
+            <DialogTitle className="text-lg font-semibold text-slate-900">Saldo insuficiente</DialogTitle>
+            <DialogDescription className="mt-2 text-sm text-slate-600 leading-relaxed">
+              Você não tem créditos suficientes para {missingCreditsFeature}. Compre um pacote na Central de Créditos para continuar.
+            </DialogDescription>
+            <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsInsufficientCreditsOpen(false)}
+                className="h-10 px-4 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                Agora não
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/creditos")}
+                className="h-10 px-4 rounded-lg bg-blue-700 hover:bg-blue-800 text-sm font-semibold text-white transition-colors"
+              >
+                Ver pacotes de créditos
+              </button>
             </div>
           </DialogContent>
         </Dialog>
 
-        {/* MODAL DE CORTE DE IMAGEM */}
-        <Dialog open={cropModalOpen} onOpenChange={(open) => {
-          if (!open) {
-            setCropModalOpen(false)
-            setImageToCrop("")
-          }
-        }}>
-          <DialogContent className="sm:max-w-xl p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
-            <DialogHeader className="m-0 bg-blue-900 px-6 py-5 rounded-t-xl border-b border-blue-950">
-              <DialogTitle className="flex items-center gap-2 text-white text-xl font-black">
-                <Crop className="w-5 h-5" />
-                Ajustar Imagem do Produto
-              </DialogTitle>
-              <DialogDescription className="text-blue-100">
-                Arraste a imagem e use o zoom para enquadrar da melhor forma.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="p-6">
-              <div className="relative w-full h-80 bg-slate-900 rounded-2xl overflow-hidden mb-6 shadow-inner">
-                {imageToCrop && (
-                  <Cropper
-                    image={imageToCrop}
-                    crop={crop}
-                    zoom={zoom}
-                    aspect={16 / 9}
-                    onCropChange={setCrop}
-                    onCropComplete={(_, croppedPixels) => setCroppedAreaPixels(croppedPixels)}
-                    onZoomChange={setZoom}
-                  />
-                )}
-              </div>
-
-              <div className="flex items-center gap-4 px-2 mb-2">
-                <ZoomIn className="w-5 h-5 text-slate-500" />
-                <input
-                  type="range"
-                  value={zoom}
-                  min={1}
-                  max={3}
-                  step={0.1}
-                  aria-labelledby="Zoom"
-                  onChange={(e) => setZoom(Number(e.target.value))}
-                  className="w-full accent-blue-900 cursor-pointer"
-                />
-              </div>
-
-              <div className="mt-6 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCropModalOpen(false)
-                    setImageToCrop("")
-                  }}
-                  className="flex-1 px-4 py-2.5 bg-white text-slate-600 border border-slate-200 rounded-xl font-bold hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveCrop}
-                  className="flex-1 px-4 py-2.5 bg-blue-900 text-white rounded-xl font-bold hover:bg-blue-950 transition-colors shadow-lg shadow-blue-900/20 cursor-pointer"
-                >
-                  Cortar e Salvar Imagem
-                </button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
     </div>
   )

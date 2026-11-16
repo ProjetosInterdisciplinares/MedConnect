@@ -40,13 +40,18 @@ class TransacaoCredito(models.Model):
     TIPO_CONSUMO = 'D'
     TIPO_ESTORNO = 'E'
     TIPO_BONUS = 'B'
+    TIPO_EXPIRACAO = 'X'
 
     TIPO_CHOICES = [
         (TIPO_COMPRA, 'Compra'),
         (TIPO_CONSUMO, 'Consumo'),
         (TIPO_ESTORNO, 'Estorno'),
         (TIPO_BONUS, 'Bônus / Ajuste'),
+        (TIPO_EXPIRACAO, 'Expiração'),
     ]
+
+    # Tipos que reduzem o saldo
+    TIPOS_SAIDA = (TIPO_CONSUMO, TIPO_EXPIRACAO)
 
     STATUS_PENDENTE = 'P'
     STATUS_APROVADA = 'A'
@@ -72,7 +77,7 @@ class TransacaoCredito(models.Model):
     tipo = models.CharField(max_length=1, choices=TIPO_CHOICES)
     status = models.CharField(max_length=1, choices=STATUS_CHOICES, default=STATUS_APROVADA)
 
-    # Sempre positivo; o sinal é determinado pelo tipo (C/E/B soma, D subtrai)
+    # Sempre positivo; o sinal é determinado pelo tipo (C/E/B soma, D/X subtrai)
     quantidade = models.PositiveIntegerField()
     saldo_apos = models.PositiveIntegerField()
 
@@ -97,6 +102,9 @@ class TransacaoCredito(models.Model):
 
     data_transacao = models.DateTimeField(auto_now_add=True)
 
+    # Validade de créditos concedidos (ex.: boas-vindas). Nulo = sem validade.
+    expira_em = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         verbose_name = 'Transação de Crédito'
         verbose_name_plural = 'Transações de Crédito'
@@ -107,7 +115,7 @@ class TransacaoCredito(models.Model):
 
     @property
     def is_entrada(self):
-        return self.tipo != self.TIPO_CONSUMO
+        return self.tipo not in self.TIPOS_SAIDA
 
     def __str__(self):
         sinal = '+' if self.is_entrada else '-'

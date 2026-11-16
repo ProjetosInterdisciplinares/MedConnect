@@ -21,8 +21,6 @@ export interface Anuncio {
   anunciante_numero?: string
   anunciante_bairro?: string
   anunciante_cep?: string
-  anunciante_email?: string
-  anunciante_telefone?: string
 
   // Novos campos vindos da unificação da negociação
   val_proposta: string | null

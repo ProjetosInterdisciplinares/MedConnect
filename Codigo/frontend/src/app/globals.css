@@ -88,7 +88,8 @@
 }
 
 :root {
-  --navbar-height: 64px;
+  /* Barra superior só existe abaixo de lg (menu lateral no desktop) */
+  --navbar-height: 56px;
   --sticky-gap: 16px;
 
   /* ─── MedConnect Standardized Design Tokens ─── */
@@ -157,6 +158,12 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --navbar-height: 0px;
+  }
 }
 
 .dark {
@@ -364,6 +371,12 @@
 
 .animate-dash-orbit {
   animation: dash-orbit 12s linear infinite;
+}
+
+/* Edge/IE: remove o botão nativo de mostrar senha (os formulários já têm o seu) */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
 }
 
 /* Smooth scroll behavior */

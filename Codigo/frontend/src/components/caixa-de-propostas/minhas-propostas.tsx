@@ -1,17 +1,23 @@
 "use client"
 
 import React, { useEffect, useState, useMemo } from "react"
-import { Package, Calendar, SendHorizontal, Loader2, X, XCircle, Tag, CheckCircle2, Clock, Ban, Building2, MapPin, DollarSign, FileText, Mail, Phone } from "lucide-react"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { Package, Calendar, SendHorizontal, Loader2, XCircle, Tag, CheckCircle2, Clock, Ban } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
+import { BOTAO, ModalPadrao, Resumo } from "@/components/ui/modal-padrao"
+import AndamentoNegociacao from "@/components/caixa-de-propostas/AndamentoNegociacao"
+import BotaoWhatsApp from "@/components/caixa-de-propostas/BotaoWhatsApp"
+import { quantidadeComUnidade } from "@/lib/format/unidade"
+import { formatarPrazo } from "@/lib/whatsapp"
 import servicesGetNegociacoes from "@/server/(GET)-negociacoes"
 import servicesUpdateNegociacao from "@/server/(PUT)-negociacao"
 import { Negociacao } from "@/types"
 import { AuthManager } from "@/lib/AuthManager"
+
+/** Rótulo do filtro → código do status ("Todas" não filtra). */
+const STATUS_DO_FILTRO: Record<string, string | undefined> = {
+  Aguardando: "P", Aceita: "A", "Concluída": "F", "Não concluída": "N",
+  Recusada: "R", Cancelada: "C", Expirada: "E",
+}
 
 export function PropostasTab() {
   const [negociacoes, setNegociacoes] = useState<Negociacao[]>([])
@@ -45,15 +51,14 @@ export function PropostasTab() {
   }, [negociacoes, myUserId])
 
   const propostasFiltradas = useMemo(() => {
-    return propostasMinhas.filter((n) => {
-      if (filtroStatus === "Todas") return true;
-      if (filtroStatus === "Aguardando" && n.status === "P") return true;
-      if (filtroStatus === "Aprovada" && n.status === "A") return true;
-      if (filtroStatus === "Recusada" && n.status === "R") return true;
-      if (filtroStatus === "Cancelada" && n.status === "C") return true;
-      return false;
-    });
+    const codigo = STATUS_DO_FILTRO[filtroStatus]
+    return codigo ? propostasMinhas.filter((n) => n.status === codigo) : propostasMinhas
   }, [propostasMinhas, filtroStatus])
+
+  function atualizar(atualizada: Negociacao) {
+    setNegociacoes((lista) => lista.map((n) => (n.id === atualizada.id ? atualizada : n)))
+    setSelectedNegociacao(atualizada)
+  }
 
   const totalPages = Math.ceil(propostasFiltradas.length / ITEMS_PER_PAGE)
   const paginatedPropostas = useMemo(() => {
@@ -75,13 +80,15 @@ export function PropostasTab() {
     )
   }
 
-  const FILTERS = [
-    { label: "Todas", count: propostasMinhas.length, icon: null },
-    { label: "Aguardando", count: propostasMinhas.filter(p => p.status === "P").length, icon: Clock },
-    { label: "Aprovada", count: propostasMinhas.filter(p => p.status === "A").length, icon: CheckCircle2 },
-    { label: "Recusada", count: propostasMinhas.filter(p => p.status === "R").length, icon: Ban },
-    { label: "Cancelada", count: propostasMinhas.filter(p => p.status === "C").length, icon: Ban },
-  ]
+  const ICONES: Record<string, typeof Clock | null> = {
+    Todas: null, Aguardando: Clock, Aceita: CheckCircle2, "Concluída": CheckCircle2,
+    "Não concluída": Ban, Recusada: Ban, Cancelada: Ban, Expirada: Clock,
+  }
+  const FILTERS = Object.keys(ICONES).map((label) => ({
+    label,
+    icon: ICONES[label],
+    count: STATUS_DO_FILTRO[label] ? propostasMinhas.filter((p) => p.status === STATUS_DO_FILTRO[label]).length : propostasMinhas.length,
+  }))
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -94,33 +101,40 @@ export function PropostasTab() {
 
         {/* Filtros */}
         {propostasMinhas.length > 0 && (
-          <div className="flex flex-wrap bg-slate-100/80 p-1 rounded-xl">
-            {FILTERS.map((f) => {
-              const isActive = filtroStatus === f.label;
-              const Icon = f.icon;
-              return (
-                <button
-                  key={f.label}
-                  onClick={() => {
-                    setFiltroStatus(f.label)
-                    setCurrentPage(1)
-                  }}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                    isActive 
-                      ? "bg-white text-slate-800 shadow-sm" 
-                      : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
-                  }`}
-                >
-                  {Icon && <Icon size={14} className={isActive ? "text-blue-900" : ""} />}
-                  {f.label}
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                    isActive ? "bg-slate-100 text-slate-600" : "bg-slate-200 text-slate-500"
-                  }`}>
-                    {f.count}
+          <div className="w-full sm:w-56">
+            <Select
+              value={filtroStatus}
+              onValueChange={(v) => {
+                setFiltroStatus(String(v || "Todas"))
+                setCurrentPage(1)
+              }}
+            >
+              <SelectTrigger
+                aria-label="Filtrar por status"
+                className="h-10 w-full px-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-700 hover:border-slate-300 transition-colors cursor-pointer"
+              >
+                <span className="truncate">
+                  <span className="text-slate-500">Status:</span> {filtroStatus}
+                  <span className="ml-1.5 text-slate-400 tabular-nums">
+                    ({FILTERS.find((f) => f.label === filtroStatus)?.count ?? 0})
                   </span>
-                </button>
-              )
-            })}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                {FILTERS.map((f) => {
+                  const Icon = f.icon
+                  return (
+                    <SelectItem key={f.label} value={f.label}>
+                      <span className="flex w-full items-center gap-2">
+                        {Icon && <Icon size={14} className="text-slate-400" aria-hidden="true" />}
+                        <span className="flex-1">{f.label}</span>
+                        <span className="text-xs text-slate-400 tabular-nums">{f.count}</span>
+                      </span>
+                    </SelectItem>
+                  )
+                })}
+              </SelectContent>
+            </Select>
           </div>
         )}
       </div>
@@ -165,14 +179,23 @@ export function PropostasTab() {
                 rowBg: "hover:bg-warning-subtle/20"
               }
 
-              if (negociacao.status === "A") {
+              if (negociacao.status === "A" || negociacao.status === "F") {
                 statusConfig = {
                   badgeBg: "bg-success-subtle",
                   badgeBorder: "border-success-border",
                   badgeText: "text-success",
                   icon: <CheckCircle2 size={12} className="mr-1.5" />,
-                  label: "APROVADA",
+                  label: negociacao.status === "F" ? "CONCLUÍDA" : "ACEITA",
                   rowBg: "hover:bg-success-subtle/20"
+                }
+              } else if (negociacao.status === "E" || negociacao.status === "N") {
+                statusConfig = {
+                  badgeBg: "bg-surface-muted",
+                  badgeBorder: "border-border",
+                  badgeText: "text-muted",
+                  icon: <Ban size={12} className="mr-1.5" />,
+                  label: negociacao.status === "E" ? "EXPIRADA" : "NÃO CONCLUÍDA",
+                  rowBg: "hover:bg-surface-subtle"
                 }
               } else if (negociacao.status === "R") {
                 statusConfig = {
@@ -213,7 +236,13 @@ export function PropostasTab() {
                         </span>
                       </div>
                       <h3 className="font-semibold text-lg text-slate-800 truncate pr-4">{nomeMaterial}</h3>
-                      
+                      {negociacao.status === "P" && formatarPrazo(negociacao.prazo_resposta) && (
+                        <p className="mt-0.5 text-xs text-slate-500">O vendedor tem até {formatarPrazo(negociacao.prazo_resposta)} para responder.</p>
+                      )}
+                      {negociacao.status === "A" && (
+                        <p className="mt-0.5 text-xs font-medium text-emerald-700">Contato do vendedor liberado. Abra para conversar pelo WhatsApp.</p>
+                      )}
+
                       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm mt-2">
                         <span className="flex items-center gap-2 text-slate-600">
                           <Tag size={14} className="text-slate-400" />
@@ -242,7 +271,8 @@ export function PropostasTab() {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1.5 w-12 justify-end">
+                    <div className="flex items-center gap-1.5 min-w-12 justify-end">
+                      {negociacao.status === "A" && <BotaoWhatsApp negociacao={negociacao} papel="comprador" compacto />}
                       {negociacao.status === 'P' && (
                         <button 
                           onClick={(e) => {
@@ -289,109 +319,63 @@ export function PropostasTab() {
         </div>
       )}
 
-      {/* Modal de Detalhes da Proposta */}
-      <Dialog open={!!selectedNegociacao} onOpenChange={(open) => !open && setSelectedNegociacao(null)}>
-        {selectedNegociacao && (
-          <DialogContent className="sm:max-w-2xl p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
-            <DialogHeader className="m-0 bg-blue-900 px-6 py-5 rounded-t-xl border-b border-blue-950 flex flex-row items-center justify-between">
-              <div>
-                <DialogTitle className="flex items-center gap-2 text-white text-xl font-black mb-1">
-                  Detalhes da Negociação
-                </DialogTitle>
-                <div className="text-blue-200 text-sm font-medium flex items-center gap-2">
-                  ID: #{selectedNegociacao.anuncio}
-                </div>
-              </div>
-            </DialogHeader>
-
-            <div className="p-6 overflow-y-auto max-h-[70vh]">
-              <div className="flex flex-col gap-6">
-                
-                {/* Cabeçalho do Anúncio */}
-                <div className="flex items-start gap-4">
-                  <div className="w-20 h-20 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 border border-slate-200 shadow-sm">
-                    <Package className="w-10 h-10 text-slate-400" />
-                  </div>
-                  <div className="flex-1">
-                    <h2 className="text-xl font-bold text-slate-800 mb-2">
-                      {selectedNegociacao.anuncio_nome ?? "Insumo não identificado"}
-                    </h2>
-                    <div className="flex flex-col gap-1.5 text-sm">
-                      <div className="flex items-center gap-2 text-slate-600">
-                        <Building2 size={16} className="text-slate-400" />
-                        <span className="font-semibold">{selectedNegociacao.vendedor_nome || "Vendedor Oculto"}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Grid de Informações */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Quantidade</p>
-                    <p className="font-semibold text-slate-800">{selectedNegociacao.qtd_proposta || selectedNegociacao.anuncio_qtd} und.</p>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Valor Base</p>
-                    <p className="font-semibold text-slate-800">{Number(selectedNegociacao.anuncio_val_base).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm bg-blue-50/50">
-                    <p className="text-[11px] font-bold text-blue-900/60 uppercase tracking-wider mb-1">
-                      Lance Total (p/ {selectedNegociacao.qtd_proposta || selectedNegociacao.anuncio_qtd} un.)
-                    </p>
-                    <p className="font-bold text-blue-900 text-lg">
-                      {Number(selectedNegociacao.val_proposta || selectedNegociacao.anuncio_val_base).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                    </p>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center items-start">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</p>
-                    {selectedNegociacao.status === "P" && <span className="text-warning font-bold text-sm bg-warning-subtle px-2.5 py-1 rounded-md border border-warning-border">Aguardando</span>}
-                    {selectedNegociacao.status === "A" && <span className="text-success font-bold text-sm bg-success-subtle px-2.5 py-1 rounded-md border border-success-border">Aprovada</span>}
-                    {selectedNegociacao.status === "R" && <span className="text-danger font-bold text-sm bg-danger-subtle px-2.5 py-1 rounded-md border border-danger-border">Recusada</span>}
-                    {selectedNegociacao.status === "C" && <span className="text-muted font-bold text-sm bg-surface-muted px-2.5 py-1 rounded-md border border-border">Cancelada</span>}
-                  </div>
-                </div>
-
-                {/* Contatos (Visível apenas se Aprovada) */}
-                {selectedNegociacao.status === "A" && (
-                  <div className="bg-emerald-50/50 rounded-xl border border-emerald-100 shadow-sm p-5">
-                    <h3 className="font-bold text-emerald-800 mb-3 flex items-center gap-2">
-                      <CheckCircle2 size={16} className="text-emerald-600" />
-                      Dados de Contato para o Vendedor
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-emerald-100">
-                        <Mail className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600/80">E-mail</p>
-                          <p className="text-sm font-semibold text-slate-700">{selectedNegociacao.vendedor_email || "Não disponível"}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-emerald-100">
-                        <Phone className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600/80">Telefone</p>
-                          <p className="text-sm font-semibold text-slate-700">{selectedNegociacao.vendedor_telefone || "Não disponível"}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-              </div>
-            </div>
-            
-            <div className="p-4 bg-white border-t border-slate-100 flex justify-end">
-              <button
-                onClick={() => setSelectedNegociacao(null)}
-                className="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition-colors"
-              >
-                Fechar
+      {/* Detalhes da proposta (padrão MedConnect) */}
+      <ModalPadrao
+        open={!!selectedNegociacao}
+        onOpenChange={(open) => !open && setSelectedNegociacao(null)}
+        largura="lg"
+        titulo="Minha proposta"
+        descricao={selectedNegociacao ? `${selectedNegociacao.anuncio_nome ?? "Insumo não identificado"} · Anúncio #${selectedNegociacao.anuncio}` : undefined}
+        acoes={
+          <>
+            {selectedNegociacao?.status === "P" && (
+              <button type="button" onClick={() => cancelarProposta(selectedNegociacao)} className={BOTAO.secundario}>
+                Cancelar proposta
               </button>
+            )}
+            <button type="button" onClick={() => setSelectedNegociacao(null)} className={BOTAO.secundario}>Fechar</button>
+          </>
+        }
+      >
+        {selectedNegociacao && (() => {
+          const n = selectedNegociacao
+          const brl = (v: unknown) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+          return (
+            <div className="space-y-5">
+              <Resumo itens={[
+                ["Vendedor", n.vendedor_nome || "—"],
+                ["Quantidade", quantidadeComUnidade(Number(n.qtd_proposta || n.anuncio_qtd || 0), n.anuncio_unidade)],
+                ["Valor anunciado", brl(n.anuncio_val_base)],
+                ["Sua proposta", <span key="v" className="font-semibold">{brl(n.val_proposta)}</span>],
+                ["Enviada em", new Date(n.data_proposta).toLocaleDateString("pt-BR")],
+                ["Situação", n.status_display || n.status],
+              ]} />
+
+              {n.status === "P" && formatarPrazo(n.prazo_resposta) && (
+                <p className="text-sm text-slate-600">
+                  O vendedor tem até <strong className="font-semibold text-slate-900">{formatarPrazo(n.prazo_resposta)}</strong> para responder.
+                  Se não responder, a proposta expira e o anúncio volta ao catálogo.
+                </p>
+              )}
+              {n.status === "R" && (
+                <div className="rounded-lg border border-slate-200 px-4 py-3 text-sm">
+                  <p className="font-semibold text-slate-900">Motivo da recusa</p>
+                  <p className="mt-0.5 text-slate-600">
+                    {n.motivo_recusa_display || "Não informado"}{n.detalhe_recusa ? `: ${n.detalhe_recusa}` : ""}
+                  </p>
+                  <p className="mt-2 text-xs text-slate-500">Se o anúncio ainda estiver no catálogo, você pode enviar uma nova proposta.</p>
+                </div>
+              )}
+              {n.status === "E" && (
+                <p className="text-sm text-slate-600">O vendedor não respondeu no prazo. O anúncio voltou ao catálogo e você pode enviar uma nova proposta.</p>
+              )}
+              {["A", "F", "N"].includes(n.status) && (
+                <AndamentoNegociacao negociacao={n} papel="comprador" onAtualizada={atualizar} />
+              )}
             </div>
-          </DialogContent>
-        )}
-      </Dialog>
+          )
+        })()}
+      </ModalPadrao>
     </div>
   )
 }

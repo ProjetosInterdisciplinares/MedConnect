@@ -31,7 +31,7 @@ export default function MaterialDetails() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-transparent w-full flex items-center justify-center p-6">
+      <div className="min-h-[50vh] w-full flex items-center justify-center p-6">
         <div className="text-center space-y-3">
           <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
           <p className="text-slate-500 font-medium">Carregando detalhes do insumo...</p>
@@ -41,9 +41,9 @@ export default function MaterialDetails() {
   }
 
   return (
-    <div className="relative min-h-screen w-full antialiased selection:bg-blue-500/20">
+    <div className="relative w-full antialiased">
 
-      <div className="max-w-4xl mx-auto py-8 px-4 relative z-10">
+      <div className="max-w-4xl relative z-10">
 
         {/* Header e Voltar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">

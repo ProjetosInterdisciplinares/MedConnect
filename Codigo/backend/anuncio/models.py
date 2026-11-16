@@ -1,15 +1,37 @@
+from datetime import timedelta
+
 from django.db import models
+from django.utils import timezone
+
 from mat_med.models import MatMed
 from pessoa_juridica.models import PessoaJuridica
 
+
+class AnuncioQuerySet(models.QuerySet):
+
+    def inativar_vencidos(self) -> int:
+        """RN02: anúncios ativos com validade vencida saem do catálogo."""
+        return self.filter(
+            ie_status=Anuncio.STATUS_ATIVO, dt_validade__lt=timezone.now().date(),
+        ).update(ie_status=Anuncio.STATUS_INATIVO)
+
+
 class Anuncio(models.Model):
+    STATUS_ATIVO = 'A'          # Público, aguardando propostas
+    STATUS_NEGOCIACAO = 'N'     # Proposta recebida; apenas 1 comprador negociando
+    STATUS_FINALIZADO = 'F'     # Negócio fechado, val_aceito registrado
+    STATUS_INATIVO = 'I'
+    STATUS_SALDO = 'S'          # Saldo de venda parcial
+
     STATUS_CHOICES = [
-        ('A', 'Ativo'),         # Anúncio público, aguardando propostas
-        ('N', 'Em Negociação'), # Proposta recebida, anúncio travado — apenas 1 comprador negociando
-        ('F', 'Finalizado'),    # Negócio fechado, val_aceito registrado
-        ('I', 'Inativo / Rascunho'),
-        ('S', 'Saldo de Venda Parcial'),
+        (STATUS_ATIVO, 'Ativo'),
+        (STATUS_NEGOCIACAO, 'Em Negociação'),
+        (STATUS_FINALIZADO, 'Finalizado'),
+        (STATUS_INATIVO, 'Inativo / Rascunho'),
+        (STATUS_SALDO, 'Saldo de Venda Parcial'),
     ]
+
+    objects = AnuncioQuerySet.as_manager()
 
     nr_anuncio           = models.AutoField(primary_key=True)
     
@@ -44,13 +66,64 @@ class Anuncio(models.Model):
     def __str__(self):
         return f'Anúncio {self.nr_anuncio}'
 
+class NegociacaoQuerySet(models.QuerySet):
+
+    def expirar_vencidas(self) -> int:
+        """
+        Propostas pendentes cujo prazo de resposta passou viram "Expirada" e o
+        anúncio volta ao catálogo. Salva uma a uma para avisar as partes (Observer).
+        """
+        from django.db import transaction
+
+        agora = timezone.now()
+        vencidas = self.filter(status=Negociacao.STATUS_PENDENTE, prazo_resposta__lt=agora).select_related('anuncio')
+        total = 0
+        for negociacao in vencidas:
+            with transaction.atomic():
+                negociacao.status = Negociacao.STATUS_EXPIRADA
+                negociacao.data_resposta = agora
+                negociacao.save()
+                anuncio = negociacao.anuncio
+                if anuncio.ie_status == Anuncio.STATUS_NEGOCIACAO and anuncio.cd_pessoa_compradora_id == negociacao.comprador_id:
+                    anuncio.ie_status = Anuncio.STATUS_ATIVO
+                    anuncio.val_proposta = None
+                    anuncio.cd_pessoa_compradora = None
+                    anuncio.save()
+            total += 1
+        return total
+
+
 class Negociacao(models.Model):
+    STATUS_PENDENTE = 'P'
+    STATUS_ACEITA = 'A'          # contatos liberados; aguardando a conclusão
+    STATUS_RECUSADA = 'R'
+    STATUS_CANCELADA = 'C'
+    STATUS_EXPIRADA = 'E'        # o vendedor não respondeu no prazo
+    STATUS_CONCLUIDA = 'F'       # entrega e recebimento confirmados
+    STATUS_NAO_CONCLUIDA = 'N'   # o negócio não aconteceu
+
     STATUS_CHOICES = [
-        ('P', 'Pendente'),
-        ('A', 'Aprovada'),
-        ('R', 'Recusada'),
-        ('C', 'Cancelada'),
+        (STATUS_PENDENTE, 'Pendente'),
+        (STATUS_ACEITA, 'Aceita'),
+        (STATUS_RECUSADA, 'Recusada'),
+        (STATUS_CANCELADA, 'Cancelada'),
+        (STATUS_EXPIRADA, 'Expirada'),
+        (STATUS_CONCLUIDA, 'Concluída'),
+        (STATUS_NAO_CONCLUIDA, 'Não concluída'),
     ]
+    # Depois do aceite, as partes veem os contatos uma da outra
+    STATUS_COM_CONTATOS = (STATUS_ACEITA, STATUS_CONCLUIDA, STATUS_NAO_CONCLUIDA)
+
+    MOTIVO_CHOICES = [
+        ('VALOR', 'Valor abaixo do esperado'),
+        ('QUANTIDADE', 'Quantidade não atende'),
+        ('NEGOCIADO', 'Lote já negociado'),
+        ('OUTRO', 'Outro motivo'),
+    ]
+
+    PRAZO_RESPOSTA = timedelta(hours=72)
+
+    objects = NegociacaoQuerySet.as_manager()
 
     id = models.AutoField(primary_key=True)
     anuncio = models.ForeignKey(Anuncio, on_delete=models.CASCADE, related_name='negociacoes')
@@ -62,6 +135,12 @@ class Negociacao(models.Model):
     data_proposta = models.DateTimeField(auto_now_add=True)
     data_resposta = models.DateTimeField(null=True, blank=True)
     ds_obs = models.TextField(blank=True, default='')
+
+    prazo_resposta = models.DateTimeField(null=True, blank=True)
+    motivo_recusa = models.CharField(max_length=20, choices=MOTIVO_CHOICES, null=True, blank=True)
+    detalhe_recusa = models.CharField(max_length=255, blank=True, default='')
+    entregue_em = models.DateTimeField(null=True, blank=True)    # confirmado pelo vendedor
+    recebido_em = models.DateTimeField(null=True, blank=True)    # confirmado pelo comprador
 
     class Meta:
         verbose_name = 'Negociação'

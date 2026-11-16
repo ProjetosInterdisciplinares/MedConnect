@@ -1,4 +1,30 @@
+export interface RankingItem {
+  nome: string
+  total: number
+}
+
+export interface IndicadoresControle {
+  empresas_aprovadas: number
+  empresas_pendentes: number
+  empresas_bloqueadas: number
+  empresas_sem_anuncio: number
+  propostas_total: number
+  propostas_pendentes: number
+  propostas_aceitas: number
+  propostas_recusadas: number
+  propostas_canceladas: number
+  taxa_aceite: number | null
+  tempo_medio_resposta_horas: number | null
+  anuncios_vencendo_30d: number
+  top_materiais_propostas: RankingItem[]
+  top_materiais_anunciados: RankingItem[]
+  top_interesses: RankingItem[]
+  creditos_boas_vindas: number
+  creditos_expirados: number
+}
+
 export interface StatisticsResponse {
+  controle?: IndicadoresControle
   total_fabricantes?: number
   total_lotes?: number
   total_marcas?: number

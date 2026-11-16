@@ -62,9 +62,11 @@ INSTALLED_APPS = [
     
     'authentication',
     'statistics_api',
-   'gemini_api',
+    'gemini_api',
     'creditos',
-    
+    'notificacoes',
+    'preco_referencia',
+
 ]
 
 MIDDLEWARE = [

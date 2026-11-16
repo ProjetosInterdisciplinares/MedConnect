@@ -1,23 +1,21 @@
-from rest_framework_simplejwt.authentication import JWTAuthentication
-from pessoa_juridica.models import PessoaJuridica
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
+from pessoa_juridica.models import PessoaJuridica
+
 
 class CustomJWTAuthentication(JWTAuthentication):
+    """
+    O token identifica a empresa pelo claim "id". Empresas bloqueadas perdem
+    o acesso na hora, mesmo que ainda tenham um token válido.
+    """
 
     def get_user(self, validated_token):
-        print("TOKEN:", validated_token)
-
         try:
-            user_id = validated_token["id"]
+            empresa = PessoaJuridica.objects.get(cd_pessoaj=validated_token['id'])
+        except (KeyError, PessoaJuridica.DoesNotExist):
+            raise AuthenticationFailed('Usuário não encontrado')
 
-            print("USER_ID:", user_id)
-
-            user = PessoaJuridica.objects.get(cd_pessoaj=user_id)
-
-            print("USER:", user)
-
-            return user
-
-        except PessoaJuridica.DoesNotExist:
-            print("USUARIO NAO ENCONTRADO")
-            raise AuthenticationFailed("Usuário não encontrado")
+        if empresa.is_bloqueada:
+            raise AuthenticationFailed('Sua empresa está bloqueada.')
+        return empresa

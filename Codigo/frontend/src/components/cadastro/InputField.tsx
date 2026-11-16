@@ -9,18 +9,23 @@ interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement | H
   rightElement?: React.ReactNode
   error?: string
   type?: "text" | "number" | "date" | "textarea" | string
+  /** Elemento ao lado do rótulo, ex.: ícone informativo. */
+  ajuda?: React.ReactNode
 }
 
 const InputField = forwardRef<HTMLInputElement | HTMLTextAreaElement, InputFieldProps>(
-  ({ label, icon: Icon, rightElement, error, type = "text", className = "", required, ...props }, ref) => {
-    
+  ({ label, icon: Icon, rightElement, error, type = "text", className = "", required, ajuda, ...props }, ref) => {
+
     return (
       <div className="flex flex-col gap-1 text-left">
         <div className="flex justify-between items-center">
-          <label className="text-sm font-semibold text-slate-700 flex items-center gap-1">
-            {label}
-            {required && <span className="text-red-500 text-xs mt-0.5" aria-hidden="true">*</span>}
-          </label>
+          <span className="flex items-center gap-1.5">
+            <label className="text-sm font-semibold text-slate-700 flex items-center gap-1">
+              {label}
+              {required && <span className="text-red-500 text-xs mt-0.5" aria-hidden="true">*</span>}
+            </label>
+            {ajuda}
+          </span>
           {rightElement}
         </div>
         
@@ -33,7 +38,7 @@ const InputField = forwardRef<HTMLInputElement | HTMLTextAreaElement, InputField
             <textarea
               {...(props as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
               ref={ref as React.Ref<HTMLTextAreaElement>}
-              className={`w-full pl-9 pr-4 py-2 bg-slate-50 border rounded-xl transition-all duration-200 outline-none min-h-[120px] resize-y text-sm ${
+              className={`w-full pl-9 pr-4 py-2 bg-slate-50 border rounded-xl transition-all duration-200 outline-none h-[140px] resize-none overflow-y-auto text-sm ${
                 error
                   ? "border-red-300 focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:border-red-400"
                   : "border-slate-200 focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 hover:border-slate-300"

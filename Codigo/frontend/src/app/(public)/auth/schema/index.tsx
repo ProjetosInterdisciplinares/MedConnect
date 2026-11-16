@@ -55,11 +55,15 @@ export const registerSchema = z.object({
 
   cep: z.string().min(8, "CEP é obrigatório"),
   logradouro: z.string().min(1, "Logradouro é obrigatório"),
-  numero: z.string().min(1, "Número é obrigatório"),
+  numero: z.string()
+    .min(1, "Número é obrigatório")
+    .regex(/^(\d{1,6}|S\/N)$/, "Use até 6 dígitos ou S/N"),
   bairro: z.string().min(1, "Bairro é obrigatório"),
   cidade: z.string().min(1, "Cidade é obrigatória"),
   estado: z.string().min(2, "UF é obrigatória").max(2, "UF inválida"),
-  telefone: z.string().min(10, "Telefone inválido"),
+  telefone: z.string()
+    .min(1, "Telefone é obrigatório")
+    .refine((v) => [10, 11].includes(v.replace(/\D/g, "").length), "Informe DDD + número (10 ou 11 dígitos)"),
   latitude: z.number().optional().nullable(),
   longitude: z.number().optional().nullable(),
 })

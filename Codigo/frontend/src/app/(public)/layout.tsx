@@ -3,12 +3,12 @@
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Info, HelpCircle, CreditCard, Menu, X, ArrowRight, Shield } from "lucide-react"
+import { Info, HelpCircle, Coins, Menu, X, ArrowRight } from "lucide-react"
 
 const NAV_LINKS = [
   { name: "Sobre Nós", href: "/#sobre", icon: Info },
   { name: "Como Funciona", href: "/#como-funciona", icon: HelpCircle },
-  { name: "Planos", href: "/#planos", icon: CreditCard },
+  { name: "Créditos", href: "/#creditos", icon: Coins },
 ]
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
@@ -25,7 +25,8 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
 
   return (
     <div className="w-full min-h-screen bg-white text-zinc-900 scroll-smooth">
-      {/* ═══════════════ NAVBAR ═══════════════ */}
+      {/* ═══════════════ NAVBAR (oculta no login) ═══════════════ */}
+      {!isAuthPage && (<>
       <nav
         style={{
           height: scrolled ? "56px" : "64px",
@@ -153,6 +154,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           )}
         </div>
       </div>
+      </>)}
 
       <main>{children}</main>
     </div>

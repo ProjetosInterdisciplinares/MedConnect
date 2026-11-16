@@ -1,16 +1,20 @@
 "use client"
 
 import React, { useEffect, useState, useMemo } from "react"
-import { Package, Calendar, Loader2, CheckCircle2, Building2, Mail, Phone, DollarSign, Tag } from "lucide-react"
+import { Package, Calendar, Loader2, CheckCircle2 } from "lucide-react"
+import AndamentoNegociacao from "@/components/caixa-de-propostas/AndamentoNegociacao"
+import BotaoWhatsApp from "@/components/caixa-de-propostas/BotaoWhatsApp"
 import servicesGetNegociacoes from "@/server/(GET)-negociacoes"
 import { Negociacao } from "@/types"
 import { AuthManager } from "@/lib/AuthManager"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { quantidadeComUnidade } from "@/lib/format/unidade"
+import { BOTAO, ModalPadrao, Resumo } from "@/components/ui/modal-padrao"
+
+const SELO: Record<string, { rotulo: string; classe: string }> = {
+  A: { rotulo: "Aguardando conclusão", classe: "bg-amber-50 text-amber-800 border-amber-200" },
+  F: { rotulo: "Concluída", classe: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  N: { rotulo: "Não concluída", classe: "bg-slate-100 text-slate-600 border-slate-200" },
+}
 
 export function HistoricoFinalizadosTab() {
   const [negociacoes, setNegociacoes] = useState<Negociacao[]>([])
@@ -36,10 +40,15 @@ export function HistoricoFinalizadosTab() {
     load()
   }, [])
 
-  // Negociações finalizadas onde eu sou o vendedor (vendi)
+  // Vendas aceitas por mim: aguardando conclusão, concluídas ou não concluídas
   const finalizados = useMemo(() => {
-    return negociacoes.filter(n => n.vendedor === myUserId && n.status === "A")
+    return negociacoes.filter(n => n.vendedor === myUserId && ["A", "F", "N"].includes(n.status))
   }, [negociacoes, myUserId])
+
+  function atualizar(atualizada: Negociacao) {
+    setNegociacoes((lista) => lista.map((n) => (n.id === atualizada.id ? atualizada : n)))
+    setSelectedNegociacao(atualizada)
+  }
 
   const totalPages = Math.ceil(finalizados.length / ITEMS_PER_PAGE)
   const paginatedItems = useMemo(() => {
@@ -61,7 +70,7 @@ export function HistoricoFinalizadosTab() {
           </div>
           <h3 className="font-bold text-xl text-slate-700 mb-2">Sem histórico</h3>
           <p className="text-slate-500 text-base max-w-md">
-            Quando você concluir a venda de algum anúncio, ele aparecerá no seu histórico aqui.
+            Quando você aceitar uma proposta, a venda aparece aqui para combinar com o comprador e confirmar a entrega.
           </p>
         </div>
       ) : (
@@ -121,9 +130,11 @@ export function HistoricoFinalizadosTab() {
                       })}
                     </span>
 
-                    <span className="px-3 py-1.5 text-xs font-bold rounded-full border tracking-wide shadow-sm bg-emerald-50 text-emerald-700 border-emerald-200">
-                      VENDIDO
+                    <span className={`px-3 py-1.5 text-xs font-semibold rounded-full border ${SELO[negociacao.status]?.classe ?? SELO.A.classe}`}>
+                      {SELO[negociacao.status]?.rotulo ?? negociacao.status_display}
                     </span>
+
+                    {negociacao.status === "A" && <BotaoWhatsApp negociacao={negociacao} papel="vendedor" compacto />}
                   </div>
                 </div>
               )
@@ -157,123 +168,36 @@ export function HistoricoFinalizadosTab() {
         </div>
       )}
 
-      {/* Modal de Detalhes da Venda */}
-      <Dialog open={!!selectedNegociacao} onOpenChange={(open) => !open && setSelectedNegociacao(null)}>
-        {selectedNegociacao && (
-          <DialogContent className="sm:max-w-2xl p-0 overflow-hidden bg-slate-50 gap-0 border-slate-200/60 shadow-2xl">
-            <DialogHeader className="m-0 bg-emerald-700 px-6 py-5 rounded-t-xl border-b border-emerald-800 flex flex-row items-center justify-between">
-              <div>
-                <DialogTitle className="flex items-center gap-2 text-white text-xl font-black mb-1">
-                  <CheckCircle2 className="w-6 h-6" />
-                  Venda Finalizada
-                </DialogTitle>
-                <div className="text-emerald-100 text-sm font-medium flex items-center gap-2">
-                  Anúncio #{selectedNegociacao.anuncio}
-                </div>
-              </div>
-            </DialogHeader>
+      {/* Detalhes da venda (padrão MedConnect) */}
+      <ModalPadrao
+        open={!!selectedNegociacao}
+        onOpenChange={(open) => !open && setSelectedNegociacao(null)}
+        largura="lg"
+        titulo={selectedNegociacao?.status === "F" ? "Venda concluída" : selectedNegociacao?.status === "N" ? "Venda não concluída" : "Venda aceita"}
+        descricao={selectedNegociacao ? `${selectedNegociacao.anuncio_nome ?? "Insumo não identificado"} · Anúncio #${selectedNegociacao.anuncio}` : undefined}
+        acoes={<button type="button" onClick={() => setSelectedNegociacao(null)} className={BOTAO.secundario}>Fechar</button>}
+      >
+        {selectedNegociacao && (() => {
+          const n = selectedNegociacao
+          const brl = (v: unknown) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+          const data = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("pt-BR") : "—")
+          const quantidade = quantidadeComUnidade(Number(n.qtd_proposta || n.anuncio_qtd || 0), n.anuncio_unidade)
+          return (
+            <div className="space-y-5">
+              <Resumo itens={[
+                ["Comprador", n.comprador_nome || "Não identificado"],
+                ["Quantidade vendida", quantidade],
+                ["Valor anunciado", brl(n.anuncio_val_base)],
+                ["Valor da venda", <span key="v" className="font-semibold">{brl(n.val_proposta || n.anuncio_val_base)}</span>],
+                ["Proposta enviada em", data(n.data_proposta)],
+                ["Proposta aceita em", data(n.data_resposta)],
+              ]} />
 
-            <div className="p-6 overflow-y-auto max-h-[70vh]">
-              <div className="flex flex-col gap-6">
-                
-                {/* Cabeçalho do Anúncio */}
-                <div className="flex items-start gap-4">
-                  <div className="w-20 h-20 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 border border-slate-200 shadow-sm">
-                    <Package className="w-10 h-10 text-slate-400" />
-                  </div>
-                  <div className="flex-1">
-                    <h2 className="text-xl font-bold text-slate-800 mb-2">
-                      {selectedNegociacao.anuncio_nome ?? "Insumo não identificado"}
-                    </h2>
-                    <div className="flex flex-col gap-1.5 text-sm">
-                      <div className="flex items-center gap-2 text-slate-600">
-                        <Building2 size={16} className="text-slate-400" />
-                        <span className="font-semibold">{selectedNegociacao.comprador_nome || "Comprador Oculto"}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Grid de Informações */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Quantidade</p>
-                    <p className="font-semibold text-slate-800">{selectedNegociacao.qtd_proposta || selectedNegociacao.anuncio_qtd} und.</p>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Valor Base</p>
-                    <p className="font-semibold text-slate-800">
-                      {Number(selectedNegociacao.anuncio_val_base).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                    </p>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm bg-emerald-50/50">
-                    <p className="text-[11px] font-bold text-emerald-700/60 uppercase tracking-wider mb-1">Valor Vendido</p>
-                    <p className="font-bold text-emerald-700 text-lg">
-                      {Number(selectedNegociacao.val_proposta || selectedNegociacao.anuncio_val_base).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                    </p>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center items-start">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</p>
-                    <span className="text-emerald-600 font-bold text-sm bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">Vendido</span>
-                  </div>
-                </div>
-
-                {/* Dados de Data */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
-                    <Calendar className="w-5 h-5 text-slate-400" />
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Data da Proposta</p>
-                      <p className="text-sm font-semibold text-slate-700">{new Date(selectedNegociacao.data_proposta).toLocaleDateString('pt-BR')}</p>
-                    </div>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
-                    <Calendar className="w-5 h-5 text-emerald-500" />
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600/80">Data de Aprovação</p>
-                      <p className="text-sm font-semibold text-slate-700">{selectedNegociacao.data_resposta ? new Date(selectedNegociacao.data_resposta).toLocaleDateString('pt-BR') : "—"}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Dados de Contato do Comprador */}
-                <div className="bg-emerald-50/50 rounded-xl border border-emerald-100 shadow-sm p-5">
-                  <h3 className="font-bold text-emerald-800 mb-3 flex items-center gap-2">
-                    <CheckCircle2 size={16} className="text-emerald-600" />
-                    Dados de Contato do Comprador
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-emerald-100">
-                      <Mail className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600/80">E-mail</p>
-                        <p className="text-sm font-semibold text-slate-700">{selectedNegociacao.comprador_email || "Não disponível"}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-emerald-100">
-                      <Phone className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600/80">Telefone</p>
-                        <p className="text-sm font-semibold text-slate-700">{selectedNegociacao.comprador_telefone || "Não disponível"}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
+              <AndamentoNegociacao negociacao={n} papel="vendedor" onAtualizada={atualizar} />
             </div>
-            
-            <div className="p-4 bg-white border-t border-slate-100 flex justify-end">
-              <button
-                onClick={() => setSelectedNegociacao(null)}
-                className="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition-colors"
-              >
-                Fechar
-              </button>
-            </div>
-          </DialogContent>
-        )}
-      </Dialog>
+          )
+        })()}
+      </ModalPadrao>
     </div>
   )
 }

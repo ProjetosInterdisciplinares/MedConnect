@@ -27,8 +27,13 @@ export function useIsStuck(options: UseIsStuckOptions = {}) {
       if (typeof window === "undefined") return 80
 
       const rootStyle = getComputedStyle(document.documentElement)
-      const navH = parseFloat(rootStyle.getPropertyValue("--navbar-height")) || 64
-      const gap = parseFloat(rootStyle.getPropertyValue("--sticky-gap")) || 16
+      // 0 é válido (desktop com menu lateral, sem barra superior)
+      const lerPx = (nome: string, padrao: number) => {
+        const v = parseFloat(rootStyle.getPropertyValue(nome))
+        return Number.isNaN(v) ? padrao : v
+      }
+      const navH = lerPx("--navbar-height", 64)
+      const gap = lerPx("--sticky-gap", 16)
       return navH + gap
     }
 

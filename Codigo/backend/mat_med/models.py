@@ -79,5 +79,14 @@ class MatMed(models.Model):
         verbose_name="Código Brasíndice"
     )
 
+    # Código do item no catálogo de materiais do Governo Federal (CATMAT).
+    # Opcional; habilita a consulta de preço de referência no Compras.gov.br.
+    cd_catmat = models.CharField(
+        max_length=9,
+        blank=True,
+        null=True,
+        verbose_name="Código CATMAT"
+    )
+
     def __str__(self):
         return str(self.ds_mat) if self.ds_mat else str(self.cd_tuss)
