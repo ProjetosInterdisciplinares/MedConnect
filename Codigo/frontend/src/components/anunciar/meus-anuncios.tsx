@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
+import { hojeISO } from "@/lib/format/hoje"
 import { useRouter } from "next/navigation"
 import { Package, PackageX, Pencil, Trash2, Calendar, Hash, Layers, FileText, AlertCircle, FileStack, Tag, Handshake, CheckCircle2 } from "lucide-react"
 import servicesGetMeusAnuncios from "@/server/(GET)-meus-anuncios"
@@ -40,7 +41,7 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
   const [confirmAction, setConfirmAction] = useState<"none" | "delete" | "activate" | "inactivate">("none")
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [editForm, setEditForm] = useState({ val_base: "", ie_status: "", dt_validade: "", ds_lote: "", ds_obs: "", qtd_mat: "" })
+  const [editForm, setEditForm] = useState({ val_base: "", ie_status: "", dt_validade: "", ds_lote: "", ds_obs: "", qtd_mat: "", val_minimo: "", ie_aceita_parcial: true })
   
   const [statusFilter, setStatusFilter] = useState("ALL")
   const [currentPage, setCurrentPage] = useState(1)
@@ -71,6 +72,15 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
 
   async function handleUpdateAnuncio() {
     if (!selectedAnuncio) return
+    const validadeMudou = (editForm.dt_validade || "") !== (selectedAnuncio.dt_validade || "")
+    if (validadeMudou && editForm.dt_validade && editForm.dt_validade < hojeISO()) {
+      alert("Produto vencido: a validade não pode ser anterior a hoje.")
+      return
+    }
+    if (editForm.val_minimo && Number(editForm.val_minimo) > Number(editForm.val_base)) {
+      alert("O valor mínimo não pode ser maior que o valor base.")
+      return
+    }
     setIsSaving(true)
     try {
       const response = await servicesUpdateAnuncio(selectedAnuncio.nr_anuncio, {
@@ -79,12 +89,14 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
         ie_status: selectedAnuncio.ie_status as any,
         dt_validade: editForm.dt_validade || null,
         ds_lote: editForm.ds_lote || null,
-        ds_obs: editForm.ds_obs || ""
+        ds_obs: editForm.ds_obs || "",
+        val_minimo: editForm.val_minimo || null,
+        ie_aceita_parcial: editForm.ie_aceita_parcial,
       })
       if (response && "isError" in response) {
         alert("Erro ao salvar: " + response.message)
       } else {
-        const updated = { ...selectedAnuncio, ...editForm, ie_status: selectedAnuncio.ie_status, val_base: Number(editForm.val_base), qtd_mat: Number(editForm.qtd_mat) } as unknown as Anuncio
+        const updated = { ...selectedAnuncio, ...editForm, ie_status: selectedAnuncio.ie_status, val_base: Number(editForm.val_base), qtd_mat: Number(editForm.qtd_mat), val_minimo: editForm.val_minimo || null } as unknown as Anuncio
         setAnuncios(prev => prev.map(a => a.nr_anuncio === updated.nr_anuncio ? updated : a))
         setSelectedAnuncio(updated)
         setIsEditing(false)
@@ -304,7 +316,9 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
                         ie_status: anuncio.ie_status,
                         dt_validade: anuncio.dt_validade || "",
                         ds_lote: anuncio.ds_lote || "",
-                        ds_obs: anuncio.ds_obs || ""
+                        ds_obs: anuncio.ds_obs || "",
+                        val_minimo: anuncio.val_minimo ? String(anuncio.val_minimo) : "",
+                        ie_aceita_parcial: anuncio.ie_aceita_parcial !== false,
                       })
                       setIsEditing(false)
                       setConfirmAction("none")
@@ -469,8 +483,19 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
                       </div>
                       <div>
                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Validade</label>
-                        <input type="date" value={editForm.dt_validade} onChange={e => setEditForm(prev => ({...prev, dt_validade: e.target.value}))} className="w-full border border-slate-200 rounded-lg p-2.5 text-slate-800" />
+                        <input type="date" min={hojeISO()} value={editForm.dt_validade} onChange={e => setEditForm(prev => ({...prev, dt_validade: e.target.value}))} className="w-full border border-slate-200 rounded-lg p-2.5 text-slate-800" />
                       </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 items-end">
+                      <div>
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Valor Mínimo Aceito</label>
+                        <input type="number" step="0.01" min="0" placeholder="Opcional" value={editForm.val_minimo} onChange={e => setEditForm(prev => ({...prev, val_minimo: e.target.value}))} className="w-full border border-slate-200 rounded-lg p-2.5 text-slate-800" />
+                      </div>
+                      <label className="flex items-center gap-2 border border-slate-200 rounded-lg p-2.5 cursor-pointer">
+                        <input type="checkbox" className="h-4 w-4 accent-blue-700" checked={editForm.ie_aceita_parcial} onChange={e => setEditForm(prev => ({...prev, ie_aceita_parcial: e.target.checked}))} />
+                        <span className="text-sm font-semibold text-slate-700">Aceito compra parcial</span>
+                      </label>
                     </div>
 
                     <div>
@@ -530,6 +555,18 @@ export function MeusAnuncios({ materiais }: MeusAnunciosProps) {
                         </div>
                         <span className="text-sm font-bold text-slate-800">
                           {selectedAnuncio.dt_validade ? new Date(selectedAnuncio.dt_validade).toLocaleDateString("pt-BR") : "-"}
+                        </span>
+                      </div>
+                      <div className="bg-white p-3 rounded-lg border border-slate-200 flex flex-col gap-1">
+                        <span className="text-xs font-semibold text-slate-500">Valor mínimo aceito</span>
+                        <span className="text-sm font-bold text-slate-800">
+                          {selectedAnuncio.val_minimo ? Number(selectedAnuncio.val_minimo).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "Não definido"}
+                        </span>
+                      </div>
+                      <div className="bg-white p-3 rounded-lg border border-slate-200 flex flex-col gap-1">
+                        <span className="text-xs font-semibold text-slate-500">Compra parcial</span>
+                        <span className="text-sm font-bold text-slate-800">
+                          {selectedAnuncio.ie_aceita_parcial === false ? "Não aceita" : "Aceita"}
                         </span>
                       </div>
                     </div>

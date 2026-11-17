@@ -1,0 +1,19 @@
+"use client"
+
+import CadastroMassa from "@/components/anunciar/cadastro-massa"
+import SecaoTabs from "@/components/layout/SecaoTabs"
+
+export default function CadastroMassaPage() {
+  return (
+    <div className="w-full">
+      <SecaoTabs secao="anuncios" />
+      <header className="mb-6">
+        <h1 className="sr-only">Cadastro de anúncios em massa</h1>
+        <p className="text-sm text-slate-500 max-w-2xl">
+          Para publicar vários anúncios de uma vez: preencha a planilha com os lotes e envie. Os insumos que ainda não existirem são cadastrados automaticamente.
+        </p>
+      </header>
+      <CadastroMassa />
+    </div>
+  )
+}

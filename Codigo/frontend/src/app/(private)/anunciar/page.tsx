@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
+import { hojeISO } from "@/lib/format/hoje"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ModalPadrao, AvisoDialog, Resumo, BOTAO } from "@/components/ui/modal-padrao"
 import { Megaphone, Package, Hash, DollarSign, FileText, Sparkles, CheckCircle, Calendar, Layers, FileSpreadsheet, Coins, Loader2 } from "lucide-react"
@@ -54,9 +55,9 @@ export default function AnunciarPage() {
   const tabParam = searchParams.get("tab")
   const matParam = Number(searchParams.get("mat")) || 0
 
-  // Endereço antigo do cadastro em massa (agora em Ofertar insumos)
+  // Endereço antigo do cadastro em massa (agora em Anúncios → Cadastro em massa)
   useEffect(() => {
-    if (tabParam === "cadastro_massa") router.replace("/cadastrar/massa")
+    if (tabParam === "cadastro_massa") router.replace("/anunciar-em-massa")
   }, [tabParam, router])
 
   const [materiais, setMateriais] = useState<MatMed[]>([])
@@ -74,6 +75,8 @@ export default function AnunciarPage() {
     ds_obs: "",
     cd_pessoa_anunciante: 0,
     imagem_anuncio: "",
+    val_minimo: "",
+    ie_aceita_parcial: true,
   })
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -217,8 +220,17 @@ export default function AnunciarPage() {
     if (!anuncioForm.ds_lote) errors.ds_lote = "Lote é obrigatório."
     if (!anuncioForm.dt_fabricacao) errors.dt_fabricacao = "Data de fabricação é obrigatória."
     if (!anuncioForm.dt_validade) errors.dt_validade = "Data de validade é obrigatória."
+    else if (anuncioForm.dt_validade < hojeISO()) errors.dt_validade = "Produto vencido: a validade não pode ser anterior a hoje."
+    else if (anuncioForm.dt_fabricacao && anuncioForm.dt_validade < anuncioForm.dt_fabricacao)
+      errors.dt_validade = "A validade não pode ser anterior à data de fabricação."
     if (!anuncioForm.qtd_mat || anuncioForm.qtd_mat <= 0) errors.qtd_mat = "Quantidade inválida."
     if (!anuncioForm.val_base) errors.val_base = "Valor é obrigatório."
+    const valorBase = Number(anuncioForm.val_base.replace(",", "."))
+    const valorMinimo = Number((anuncioForm.val_minimo || "").replace(",", "."))
+    if (anuncioForm.val_minimo) {
+      if (!(valorMinimo > 0)) errors.val_minimo = "Informe um valor mínimo maior que zero."
+      else if (valorBase > 0 && valorMinimo > valorBase) errors.val_minimo = "O valor mínimo não pode ser maior que o valor base."
+    }
     if (!anuncioForm.ds_obs) errors.ds_obs = "Descrição é obrigatória."
 
     if (Object.keys(errors).length > 0) {
@@ -238,6 +250,8 @@ export default function AnunciarPage() {
       ds_obs: anuncioForm.ds_obs,
       imagem_anuncio: anuncioForm.imagem_anuncio || undefined,
       cd_pessoa_anunciante: anuncioForm.cd_pessoa_anunciante,
+      val_minimo: anuncioForm.val_minimo ? anuncioForm.val_minimo.replace(",", ".").trim() : null,
+      ie_aceita_parcial: anuncioForm.ie_aceita_parcial ?? true,
     }
 
     setLastSaved(dataToSend)
@@ -280,6 +294,8 @@ export default function AnunciarPage() {
       ds_obs: "",
       cd_pessoa_anunciante: AuthManager.getInstance().getUserId() || 0,
       imagem_anuncio: "",
+      val_minimo: "",
+      ie_aceita_parcial: true,
     })
     setLastSaved(null)
     setReaproveitado(null)
@@ -437,11 +453,16 @@ export default function AnunciarPage() {
                       icon={Calendar}
                       type="date"
                       required
+                      min={hojeISO()}
                       value={anuncioForm.dt_validade || ""}
                       error={fieldErrors.dt_validade}
                       onChange={(e) => {
-                        setFieldErrors((prev) => ({ ...prev, dt_validade: "" }))
-                        setAnuncioForm((prev) => ({ ...prev, dt_validade: e.target.value }))
+                        const valor = e.target.value
+                        setFieldErrors((prev) => ({
+                          ...prev,
+                          dt_validade: valor && valor < hojeISO() ? "Produto vencido: a validade não pode ser anterior a hoje." : "",
+                        }))
+                        setAnuncioForm((prev) => ({ ...prev, dt_validade: valor }))
                       }}
                     />
                   </div>
@@ -476,6 +497,42 @@ export default function AnunciarPage() {
                         setAnuncioForm((prev) => ({ ...prev, val_base: e.target.value }))
                       }}
                     />
+                  </div>
+
+                  {/* BLOCO 2.1: CONDIÇÕES DE VENDA */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                    <div>
+                      <InputField
+                        label="Valor mínimo aceito (R$)"
+                        icon={DollarSign}
+                        type="text"
+                        placeholder="Ex: 1200,00"
+                        value={anuncioForm.val_minimo || ""}
+                        error={fieldErrors.val_minimo}
+                        onChange={(e) => {
+                          setFieldErrors((prev) => ({ ...prev, val_minimo: "" }))
+                          setAnuncioForm((prev) => ({ ...prev, val_minimo: e.target.value }))
+                        }}
+                      />
+                      <p className="mt-1 text-xs text-slate-500">
+                        Opcional. Menor valor que você aceita pelo lote inteiro. Propostas abaixo dele são recusadas automaticamente, e só você vê esse valor.
+                      </p>
+                    </div>
+
+                    <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 cursor-pointer md:mt-6">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 h-4 w-4 accent-blue-700 cursor-pointer"
+                        checked={anuncioForm.ie_aceita_parcial ?? true}
+                        onChange={(e) => setAnuncioForm((prev) => ({ ...prev, ie_aceita_parcial: e.target.checked }))}
+                      />
+                      <span>
+                        <span className="block text-sm font-semibold text-slate-700">Aceito compra parcial</span>
+                        <span className="block text-xs text-slate-500">
+                          Se desmarcado, o comprador só pode propor ou comprar o lote inteiro.
+                        </span>
+                      </span>
+                    </label>
                   </div>
 
                   {/* BLOCO 3: OBSERVAÇÕES COM BOTÃO DE IA EMBUTIDO */}
@@ -566,6 +623,8 @@ export default function AnunciarPage() {
               ["Insumo", materiais.find(m => String(m.cd_mat) === String(lastSaved.cd_mat))?.ds_mat || "Insumo"],
               ["Quantidade", lastSaved.qtd_mat],
               ["Valor do lote", `R$ ${lastSaved.val_base}`],
+              ["Valor mínimo", lastSaved.val_minimo ? `R$ ${lastSaved.val_minimo}` : "Não definido"],
+              ["Compra parcial", lastSaved.ie_aceita_parcial === false ? "Não aceita" : "Aceita"],
               ...(lastSaved.ds_lote ? [["Lote", lastSaved.ds_lote] as [string, string]] : []),
             ]} />
           )}

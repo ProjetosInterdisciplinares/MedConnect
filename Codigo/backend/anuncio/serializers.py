@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.utils import timezone
 from rest_framework import serializers
+from anuncio.datas import hoje
 from anuncio.models import Anuncio, Negociacao
 
 class AnuncioSerializer(serializers.ModelSerializer):
@@ -84,7 +85,40 @@ class AnuncioSerializer(serializers.ModelSerializer):
             "negociações são gerenciadas em /negociacoes/."
         )
 
+    def to_representation(self, instance):
+        dados = super().to_representation(instance)
+        # O valor mínimo é estratégia do vendedor: só ele o vê
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if getattr(user, "pk", None) != instance.cd_pessoa_anunciante_id:
+            dados.pop("val_minimo", None)
+        return dados
+
+    def validate_val_minimo(self, value):
+        if value is not None and value <= 0:
+            raise serializers.ValidationError("O valor mínimo deve ser maior que zero.")
+        return value
+
+    def validate_dt_validade(self, value):
+        # Produto vencido não pode ser anunciado. Na edição, só checa se a data mudou.
+        mudou = self.instance is None or value != self.instance.dt_validade
+        if value and mudou and value < hoje():
+            raise serializers.ValidationError("Produto vencido: a validade não pode ser anterior a hoje.")
+        return value
+
     def validate(self, attrs):
+        fabricacao = attrs.get('dt_fabricacao', getattr(self.instance, 'dt_fabricacao', None))
+        validade = attrs.get('dt_validade', getattr(self.instance, 'dt_validade', None))
+        if fabricacao and validade and validade < fabricacao:
+            raise serializers.ValidationError(
+                {"dt_validade": "A validade não pode ser anterior à data de fabricação."}
+            )
+        minimo = attrs.get('val_minimo', getattr(self.instance, 'val_minimo', None))
+        base = attrs.get('val_base', getattr(self.instance, 'val_base', None))
+        if minimo is not None and base is not None and minimo > base:
+            raise serializers.ValidationError(
+                {"val_minimo": "O valor mínimo não pode ser maior que o valor base."}
+            )
         # Com proposta em andamento (N) ou negócio fechado (F), dados comerciais ficam congelados
         if self.instance is not None and self.instance.ie_status in ('N', 'F'):
             for campo in ('qtd_mat', 'val_base', 'cd_mat'):
@@ -246,4 +280,16 @@ class NegociacaoSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"qtd_proposta": f"A quantidade deve estar entre 1 e {anuncio.qtd_mat}."}
             )
-        return attrs
+        qtd_efetiva = qtd or anuncio.qtd_mat
+        if not anuncio.ie_aceita_parcial and qtd_efetiva != anuncio.qtd_mat:
+            raise serializers.ValidationError(
+                {"qtd_proposta": f"Este anúncio não aceita compra parcial: a proposta deve ser pelo lote inteiro ({anuncio.qtd_mat})."}
+            )
+        if anuncio.val_minimo:
+            # Mínimo vale pelo lote inteiro; em compra parcial, proporcional à quantidade
+            minimo = (anuncio.val_minimo * qtd_efetiva / anuncio.qtd_mat).quantize(Decimal("0.01"))
+            if attrs["val_proposta"] < minimo:
+                raise serializers.ValidationError(
+                    {"val_proposta": "O valor proposto está abaixo do mínimo aceito pelo vendedor."}
+                )
+        return attrs

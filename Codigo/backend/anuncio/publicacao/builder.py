@@ -10,13 +10,17 @@ chamadas e nenhuma regra foi violada.
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
+
+from anuncio.datas import hoje
 from anuncio.models import Anuncio
 from anuncio.publicacao.erros import AnuncioInvalidoError
-from mat_med.models import MatMed
+from mat_med.models import MatMed, UNIDADES_MEDIDA, unidade_padronizada
 
 FORMATOS_DATA = ('%d/%m/%Y', '%Y-%m-%d', '%d-%m-%Y', '%m/%d/%Y')
 CATEGORIAS = tuple(valor for valor, _ in MatMed.CATEGORIA_CHOICES)
-TABELAS_TISS = tuple(valor for valor, _ in MatMed.TISS_CHOICES)
+# Valores aceitos na coluna "Aceita Compra Parcial" da planilha
+SIM = ('sim', 's', 'yes', 'y', 'true', '1', 'x')
+NAO = ('não', 'nao', 'n', 'no', 'false', '0')
 LIMITE_OBSERVACOES = 2000
 
 
@@ -46,6 +50,7 @@ class AnuncioBuilder:
         self._campos = {
             'ds_lote': '', 'dt_fabricacao': None, 'dt_validade': None,
             'qtd_mat': None, 'val_base': None, 'ds_obs': '', 'imagem_anuncio': None,
+            'val_minimo': None, 'ie_aceita_parcial': True,
         }
         self._etapas: set[str] = set()
         self._erros: list[str] = []
@@ -63,10 +68,10 @@ class AnuncioBuilder:
         return self
 
     def com_novo_insumo(self, ds_mat='', ds_tipo='', ds_marca='', unidade_med='', cd_tuss='',
-                        cd_tiss='', cd_simpro='', cd_brasindice='') -> 'AnuncioBuilder':
+                        cd_simpro='', cd_brasindice='') -> 'AnuncioBuilder':
         """Prepara um insumo novo, que será gravado junto com o anúncio."""
         ds_mat, ds_tipo, ds_marca, unidade_med = map(_texto, (ds_mat, ds_tipo, ds_marca, unidade_med))
-        cd_tuss, cd_tiss, cd_simpro, cd_brasindice = map(_texto, (cd_tuss, cd_tiss, cd_simpro, cd_brasindice))
+        cd_tuss, cd_simpro, cd_brasindice = map(_texto, (cd_tuss, cd_simpro, cd_brasindice))
 
         self._exigir(ds_mat, 'Nome do Insumo é obrigatório')
         if not ds_tipo:
@@ -74,13 +79,19 @@ class AnuncioBuilder:
         elif ds_tipo not in CATEGORIAS:
             self._erros.append(f"Categoria '{ds_tipo}' inválida. Use 'Material Hospitalar' ou 'Medicamento'")
         self._exigir(ds_marca, 'Marca do Insumo é obrigatória')
-        self._exigir(unidade_med, 'Unidade de Medida é obrigatória')
+        if not unidade_med:
+            self._erros.append('Unidade de Medida é obrigatória')
+        elif unidade_padronizada(unidade_med) is None:
+            self._erros.append(
+                f"Unidade de Medida '{unidade_med}' inválida. Use só a unidade, sem quantidade "
+                f"(ex.: Caixa, Frasco, Ampola). Aceitas: {', '.join(UNIDADES_MEDIDA)}"
+            )
+        else:
+            unidade_med = unidade_padronizada(unidade_med)
         if not cd_tuss:
             self._erros.append('Código TUSS é obrigatório')
         elif len(cd_tuss) > 8:
             self._erros.append(f"Código TUSS '{cd_tuss}' excede 8 caracteres")
-        if cd_tiss and cd_tiss not in TABELAS_TISS:
-            self._erros.append(f"Tabela TISS '{cd_tiss}' inválida. Use '19' ou '20'")
         if len(cd_simpro) > 10:
             self._erros.append(f"Código SIMPRO '{cd_simpro}' excede 10 caracteres")
         if len(cd_brasindice) > 15:
@@ -88,7 +99,7 @@ class AnuncioBuilder:
 
         self._insumo = MatMed(
             ds_mat=ds_mat, ds_tipo=ds_tipo, ds_marca=ds_marca, unidade_med=unidade_med, cd_tuss=cd_tuss,
-            cd_tiss=cd_tiss or None, cd_simpro=cd_simpro or None, cd_brasindice=cd_brasindice or None,
+            cd_simpro=cd_simpro or None, cd_brasindice=cd_brasindice or None,
             ds_pessoaj=self._anunciante,
         )
         self._etapas.add('insumo')
@@ -100,12 +111,28 @@ class AnuncioBuilder:
             self._exigir(self._campos['ds_lote'], 'Lote é obrigatório')
         self._campos['dt_fabricacao'] = self._data_da_etapa(fabricacao, 'Data de Fabricação', obrigatorio)
         self._campos['dt_validade'] = self._data_da_etapa(validade, 'Data de Validade', obrigatorio)
+        fabricada, vence = self._campos['dt_fabricacao'], self._campos['dt_validade']
+        if vence and vence < hoje():
+            self._erros.append('Produto vencido: a Data de Validade não pode ser anterior a hoje')
+        elif vence and fabricada and vence < fabricada:
+            self._erros.append('A Data de Validade não pode ser anterior à Data de Fabricação')
         return self
 
     def com_valores(self, quantidade, valor_base) -> 'AnuncioBuilder':
         self._campos['qtd_mat'] = self._quantidade(quantidade)
         self._campos['val_base'] = self._valor(valor_base)
         self._etapas.add('valores')
+        return self
+
+    def com_condicoes(self, valor_minimo=None, aceita_parcial=True) -> 'AnuncioBuilder':
+        """Condições de venda: menor valor aceito pelo lote e se aceita compra parcial."""
+        if _texto(valor_minimo):
+            minimo = self._valor(valor_minimo, 'Valor Mínimo deve ser um número positivo')
+            base = self._campos['val_base']
+            if minimo is not None and base is not None and minimo > base:
+                self._erros.append('Valor Mínimo não pode ser maior que o Valor Base')
+            self._campos['val_minimo'] = minimo
+        self._campos['ie_aceita_parcial'] = self._sim_ou_nao(aceita_parcial)
         return self
 
     def com_descricao(self, texto, obrigatoria=False) -> 'AnuncioBuilder':
@@ -133,6 +160,8 @@ class AnuncioBuilder:
             'qtd_mat': c['qtd_mat'],
             'val_base': str(c['val_base']) if c['val_base'] is not None else None,
             'ds_obs': c['ds_obs'],
+            'val_minimo': str(c['val_minimo']) if c['val_minimo'] is not None else None,
+            'ie_aceita_parcial': c['ie_aceita_parcial'],
         }
 
     def construir(self) -> Anuncio:
@@ -180,12 +209,24 @@ class AnuncioBuilder:
             return None
         return quantidade
 
-    def _valor(self, valor) -> Decimal | None:
+    def _valor(self, valor, erro='Valor Base é obrigatório e deve ser um número positivo') -> Decimal | None:
         try:
             convertido = Decimal(_texto(valor).replace(',', '.'))
         except (InvalidOperation, ValueError):
             convertido = None
         if convertido is None or not convertido.is_finite() or convertido <= 0:
-            self._erros.append('Valor Base é obrigatório e deve ser um número positivo')
+            self._erros.append(erro)
             return None
         return convertido
+
+    def _sim_ou_nao(self, valor) -> bool:
+        """Vazio = Sim (padrão: aceita compra parcial)."""
+        if isinstance(valor, bool):
+            return valor
+        texto = _texto(valor).lower()
+        if texto == '' or texto in SIM:
+            return True
+        if texto in NAO:
+            return False
+        self._erros.append(f"Aceita Compra Parcial '{valor}' inválido. Use 'Sim' ou 'Não'")
+        return True

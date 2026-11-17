@@ -53,8 +53,8 @@ type NavLink = {
 
 const NAV_LINKS: NavLink[] = [
   { name: "Catálogo", href: "/catalogo", icon: Store, match: ["/catalogo"] },
-  { name: "Ofertar insumos", href: "/cadastrar", icon: PackagePlus, match: ["/cadastrar"] },
-  { name: "Anúncios", href: "/anunciar", icon: Megaphone, match: ["=/anunciar", "/meus-anuncios"] },
+  { name: "Cadastro de Insumo", href: "/cadastrar", icon: PackagePlus, match: ["/cadastrar"] },
+  { name: "Anúncios", href: "/anunciar", icon: Megaphone, match: ["=/anunciar", "/anunciar-em-massa", "/meus-anuncios"] },
   { name: "Negociações", href: "/caixa-de-propostas", icon: Handshake, match: ["/caixa-de-propostas", "/minhas-negociacoes"], notificacao: true },
   { name: "Solicitações", href: "/admin-painel/credenciamentos", icon: ClipboardCheck, match: ["/admin-painel/credenciamentos"], solicitacoes: true, adminOnly: true },
   { name: "Controle", href: "/admin-painel/dashboards", icon: BarChart, match: ["/admin-painel/dashboards"], adminOnly: true },
@@ -68,8 +68,9 @@ const AVISO_SOLICITACOES_KEY = "aviso_solicitacoes_exibido"
 const TITULOS: [string, string][] = [
   ["/catalogo", "Catálogo"],
   ["/anunciar/", "Catálogo"], // detalhe do anúncio (/anunciar/123)
-  ["/cadastrar", "Ofertar insumos"],
+  ["/cadastrar", "Cadastro de Insumo"],
   ["/meus-anuncios", "Anúncios"],
+  ["/anunciar-em-massa", "Anúncios"],
   ["/anunciar", "Anúncios"],
   ["/caixa-de-propostas", "Negociações"],
   ["/minhas-negociacoes", "Negociações"],

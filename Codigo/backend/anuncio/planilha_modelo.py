@@ -37,7 +37,6 @@ COLUNAS_PLANILHA = (
     ColunaPlanilha('ds_marca', 'Marca do Insumo (*)', 20),
     ColunaPlanilha('unidade_med', 'Unidade de Medida (*)', 20),
     ColunaPlanilha('cd_tuss', 'Código TUSS (*)', 18),
-    ColunaPlanilha('cd_tiss', 'Tabela TISS', 15),
     ColunaPlanilha('cd_simpro', 'Código SIMPRO', 18),
     ColunaPlanilha('cd_brasindice', 'Código Brasíndice', 18),
     ColunaPlanilha('ds_lote', 'Lote (*)', 15),
@@ -46,6 +45,8 @@ COLUNAS_PLANILHA = (
     ColunaPlanilha('qtd_mat', 'Quantidade (*)', 15),
     ColunaPlanilha('val_base', 'Valor Base R$ (*)', 18),
     ColunaPlanilha('ds_obs', 'Observações (*)', 50),
+    ColunaPlanilha('val_minimo', 'Valor Mínimo Aceito R$', 22),
+    ColunaPlanilha('ie_aceita_parcial', 'Aceita Compra Parcial', 22),
 )
 
 
@@ -181,17 +182,18 @@ class DiretorPlanilhaModelo:
             ('Nome do Insumo (*)', 'Nome do material/medicamento. Se já existir um insumo cadastrado com mesmo nome, ele será vinculado automaticamente.'),
             ('Categoria do Insumo (*)', "Tipo do insumo. Valores aceitos: 'Material Hospitalar' ou 'Medicamento'."),
             ('Marca do Insumo (*)', 'Marca/fabricante do insumo.'),
-            ('Unidade de Medida (*)', 'Ex: Caixa, Unidade, Frasco, Ampola, Comprimido.'),
-            ('Código TUSS (*)', 'Código TUSS do insumo (até 8 dígitos). Obrigatório para identificação.'),
-            ('Tabela TISS', "Opcional. Valores aceitos: '19' (Brasíndice) ou '20' (TUSS)."),
-            ('Código SIMPRO', 'Opcional. Código SIMPRO do insumo.'),
-            ('Código Brasíndice', 'Opcional. Código Brasíndice do insumo.'),
+            ('Unidade de Medida (*)', 'Só a unidade, sem quantidade. Ex: Caixa, Unidade, Frasco, Ampola, Comprimido.'),
+            ('Código TUSS (*)', 'Código TUSS do insumo (até 8 dígitos). Obrigatório para material e medicamento.'),
+            ('Código SIMPRO', 'Opcional. Código de precificação do material.'),
+            ('Código Brasíndice', 'Opcional. Código de precificação de medicamento.'),
             ('Lote (*)', 'Identificação do lote do produto. Ex: L123456.'),
             ('Data de Fabricação (*)', 'Formato: DD/MM/AAAA. Ex: 01/06/2025.'),
-            ('Data de Validade (*)', 'Formato: DD/MM/AAAA. Ex: 01/06/2026.'),
+            ('Data de Validade (*)', 'Formato: DD/MM/AAAA. Ex: 01/06/2026. Não pode ser anterior a hoje (produto vencido).'),
             ('Quantidade (*)', 'Quantidade disponível do insumo (número inteiro positivo).'),
-            ('Valor Base R$ (*)', 'Valor unitário de venda. Use vírgula para decimais. Ex: 15,90.'),
+            ('Valor Base R$ (*)', 'Valor total do lote. Use vírgula para decimais. Ex: 1590,00.'),
             ('Observações (*)', "Descrição ou observações sobre o anúncio. Ex: 'Produto lacrado, em perfeito estado'."),
+            ('Valor Mínimo Aceito R$', 'Opcional. Menor valor que você aceita pelo lote inteiro. Propostas abaixo dele são recusadas automaticamente.'),
+            ('Aceita Compra Parcial', "Opcional. 'Sim' (padrão) ou 'Não'. Com 'Não', só é possível comprar o lote inteiro."),
         ])
         b.adicionar_secao('REGRAS IMPORTANTES', [
             ('Insumos', 'Se o código TUSS do insumo já existir no seu cadastro, o sistema reutiliza. Caso contrário, cria automaticamente.'),

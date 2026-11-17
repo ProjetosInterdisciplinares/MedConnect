@@ -2,8 +2,8 @@
 
 import Link from "next/link"
 import { ModalPadrao, Resumo, BOTAO } from "@/components/ui/modal-padrao"
-import { useEffect, useMemo, useState } from "react"
-import { Tag, Hash, CheckCircle, Scale } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Tag, Hash, CheckCircle } from "lucide-react"
 
 import {
   Select,
@@ -25,15 +25,14 @@ import {
 
 import InputField from "./InputField"
 
-import { CreateMatMedForm, MatMed } from "@/types"
+import { CreateMatMedForm } from "@/types"
 
 import servicesCreateMatMed from "@/server/(POST)-mat-med"
-import servicesGetMaterials from "@/server/(GET)-materials-and-brands"
 import servicesGetCatmatSugestoes from "@/server/(GET)-catmat-sugestoes"
 import { AuthManager } from "@/lib/AuthManager"
 import CampoSugestoes, { Sugestao } from "@/components/ui/campo-sugestoes"
-import { UNIDADES_COMUNS } from "@/lib/format/unidade"
 import InfoCodigo from "@/components/ui/info-codigo"
+import { UNIDADES_MEDIDA } from "@/lib/format/unidade"
 
 export default function FormInsumo() {
   const [insumoForm, setInsumoForm] = useState<CreateMatMedForm>({
@@ -42,7 +41,6 @@ export default function FormInsumo() {
     ds_tipo: "",
     ds_pessoaj: 0,
     unidade_med: "",
-    cd_tiss: undefined,
     cd_tuss: "",
     cd_simpro: "",
     cd_brasindice: "",
@@ -55,8 +53,6 @@ export default function FormInsumo() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
-  const [catalogo, setCatalogo] = useState<MatMed[]>([])
-  const [preenchidoDoCatalogo, setPreenchidoDoCatalogo] = useState(false)
   const [sugestoesCatmat, setSugestoesCatmat] = useState<Sugestao[]>([])
 
   /* ─── CATMAT sugerido a partir do nome e da categoria digitados ─── */
@@ -83,57 +79,7 @@ export default function FormInsumo() {
       ...prev,
       ds_pessoaj: userId,
     }))
-
-    servicesGetMaterials().then((resposta) => {
-      if (Array.isArray(resposta)) setCatalogo(resposta)
-    })
   }, [])
-
-  /* ─── Sugestões a partir dos insumos já cadastrados na plataforma ─── */
-  const sugestoesNome = useMemo<Sugestao<MatMed>[]>(() => {
-    const vistos = new Set<string>()
-    return catalogo
-      .filter((m) => m.ds_mat)
-      .filter((m) => {
-        const chave = `${m.ds_mat}|${m.ds_marca}|${m.unidade_med}`.toLowerCase()
-        if (vistos.has(chave)) return false
-        vistos.add(chave)
-        return true
-      })
-      .map((m) => ({
-        valor: m.ds_mat as string,
-        detalhe: [m.ds_marca, m.unidade_med, m.cd_tuss && `TUSS ${m.cd_tuss}`].filter(Boolean).join(" · "),
-        dados: m,
-      }))
-  }, [catalogo])
-
-  const sugestoesMarca = useMemo<Sugestao[]>(() => {
-    const marcas = new Set(catalogo.map((m) => m.ds_marca?.trim()).filter(Boolean) as string[])
-    return Array.from(marcas).sort((a, b) => a.localeCompare(b, "pt-BR")).map((valor) => ({ valor }))
-  }, [catalogo])
-
-  const sugestoesUnidade = useMemo<Sugestao[]>(() => {
-    const unidades = new Set<string>(UNIDADES_COMUNS)
-    catalogo.forEach((m) => m.unidade_med?.trim() && unidades.add(m.unidade_med.trim()))
-    return Array.from(unidades).map((valor) => ({ valor }))
-  }, [catalogo])
-
-  function preencherComInsumoExistente(m: MatMed) {
-    setInsumoForm((prev) => ({
-      ...prev,
-      ds_mat: m.ds_mat || prev.ds_mat,
-      ds_tipo: m.ds_tipo || prev.ds_tipo,
-      ds_marca: m.ds_marca || prev.ds_marca,
-      unidade_med: m.unidade_med || prev.unidade_med,
-      cd_tuss: m.cd_tuss || prev.cd_tuss,
-      cd_tiss: m.cd_tiss || prev.cd_tiss,
-      cd_simpro: m.cd_simpro || prev.cd_simpro,
-      cd_brasindice: m.cd_brasindice || prev.cd_brasindice,
-      cd_catmat: m.cd_catmat || prev.cd_catmat,
-    }))
-    setFieldErrors({})
-    setPreenchidoDoCatalogo(true)
-  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -171,7 +117,6 @@ export default function FormInsumo() {
       ds_marca: "",
       ds_tipo: "",
       unidade_med: "",
-      cd_tiss: undefined,
       cd_tuss: "",
       cd_simpro: "",
       cd_brasindice: "",
@@ -193,24 +138,19 @@ export default function FormInsumo() {
         <p className="mt-0.5 text-xs text-slate-500">Como o insumo aparece nos anúncios e no catálogo.</p>
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-x-6 gap-y-5">
         <div className="md:col-span-2">
-          <CampoSugestoes
+          <InputField
             label="Nome do Insumo"
             icon={Tag}
             placeholder="Ex: Seringa 5ml"
+            autoComplete="off"
             value={insumoForm.ds_mat || ""}
             required
             error={fieldErrors.ds_mat}
-            sugestoes={sugestoesNome}
-            onSelecionar={(s) => s.dados && preencherComInsumoExistente(s.dados)}
-            onChange={(texto) => {
+            onChange={(event) => {
               setFieldErrors((prev) => ({ ...prev, ds_mat: "" }))
-              setPreenchidoDoCatalogo(false)
-              setInsumoForm((prev) => ({ ...prev, ds_mat: texto }))
+              setInsumoForm((prev) => ({ ...prev, ds_mat: event.target.value }))
             }}
           />
-          {preenchidoDoCatalogo && (
-            <p className="mt-1 text-xs text-blue-700">Campos preenchidos a partir de um insumo já cadastrado. Confira antes de salvar.</p>
-          )}
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -242,68 +182,56 @@ export default function FormInsumo() {
           )}
         </div>
 
-        <CampoSugestoes
+        <InputField
           label="Marca"
           icon={Tag}
           placeholder="Ex: Descarpack"
+          autoComplete="off"
           value={insumoForm.ds_marca || ""}
           required
           error={fieldErrors.ds_marca}
-          sugestoes={sugestoesMarca}
-          onChange={(texto) => {
+          onChange={(event) => {
             setFieldErrors((prev) => ({ ...prev, ds_marca: "" }))
-            setInsumoForm((prev) => ({ ...prev, ds_marca: texto }))
+            setInsumoForm((prev) => ({ ...prev, ds_marca: event.target.value }))
           }}
         />
 
-        <CampoSugestoes
-          label="Unidade de Medida"
-          icon={Scale}
-          placeholder="Ex: Caixa c/ 100"
-          value={insumoForm.unidade_med || ""}
-          required
-          error={fieldErrors.unidade_med}
-          sugestoes={sugestoesUnidade}
-          mostrarComCampoVazio
-          onChange={(texto) => {
-            setFieldErrors((prev) => ({ ...prev, unidade_med: "" }))
-            setInsumoForm((prev) => ({ ...prev, unidade_med: texto }))
-          }}
-        />
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-semibold flex items-center gap-1">
+            Unidade de Medida <span className="text-red-500 text-xs mt-0.5">*</span>
+          </label>
+          <Select
+            value={insumoForm.unidade_med || ""}
+            onValueChange={(value) => {
+              setFieldErrors((prev) => ({ ...prev, unidade_med: "" }))
+              setInsumoForm((prev) => ({ ...prev, unidade_med: value || "" }))
+            }}
+          >
+            <SelectTrigger className={`w-full bg-surface border rounded-lg text-sm h-11 ${
+              fieldErrors.unidade_med ? "border-danger focus:ring-danger/20" : "border-border"
+            }`}>
+              <SelectValue placeholder="Selecione" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {UNIDADES_MEDIDA.map((u) => (
+                  <SelectItem key={u} value={u}>{u}</SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          {fieldErrors.unidade_med && (
+            <p className="text-xs text-red-500 mt-0.5">{fieldErrors.unidade_med}</p>
+          )}
+        </div>
       </div>
       </fieldset>
 
       <fieldset className="mt-8 pt-6 border-t border-slate-100">
         <legend className="sr-only">Códigos de faturamento</legend>
         <p className="text-base font-semibold text-slate-900" aria-hidden="true">Códigos de faturamento</p>
-        <p className="mt-0.5 text-xs text-slate-500">Identificação nas tabelas usadas pelos hospitais. Só o TUSS é obrigatório.</p>
-      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-x-6 gap-y-5">
-        <div className="flex flex-col gap-1.5">
-          <span className="flex items-center gap-1.5">
-            <label className="text-sm font-semibold">Tabela TISS</label>
-            <InfoCodigo codigo="TISS" />
-          </span>
-          <Select
-            value={insumoForm.cd_tiss || ""}
-            onValueChange={(value) =>
-              setInsumoForm((prev) => ({
-                ...prev,
-                cd_tiss: value || undefined,
-              }))
-            }
-          >
-            <SelectTrigger className="w-full bg-surface border border-border rounded-lg text-sm h-11">
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="19">19 - Brasíndice</SelectItem>
-                <SelectItem value="20">20 - TUSS</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </div>
-
+        <p className="mt-0.5 text-xs text-slate-500">TUSS é obrigatório para material e medicamento. SIMPRO e Brasíndice são opcionais.</p>
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5">
         <InputField
           label="Código TUSS"
           icon={Hash}
@@ -319,7 +247,7 @@ export default function FormInsumo() {
         />
 
         <InputField
-          label="Código SIMPRO"
+          label="Código SIMPRO (precificação do material)"
           icon={Hash}
           ajuda={<InfoCodigo codigo="SIMPRO" />}
           placeholder="Ex: 1197898"
@@ -333,7 +261,7 @@ export default function FormInsumo() {
         />
 
         <InputField
-          label="Código Brasíndice"
+          label="Código Brasíndice (precificação de medicamento)"
           icon={Hash}
           ajuda={<InfoCodigo codigo="BRASINDICE" />}
           placeholder="Ex: 41723412ERRU"
@@ -346,7 +274,7 @@ export default function FormInsumo() {
           }
         />
 
-        <div className="md:col-span-2 xl:col-span-4">
+        <div className="md:col-span-3">
           <CampoSugestoes
             label="Código CATMAT"
             icon={Hash}

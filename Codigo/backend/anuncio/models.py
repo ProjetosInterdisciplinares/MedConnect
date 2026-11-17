@@ -48,6 +48,13 @@ class Anuncio(models.Model):
     ie_status            = models.CharField(max_length=1, choices=STATUS_CHOICES, default='A')
     imagem_anuncio       = models.TextField(blank=True, null=True, verbose_name="Imagem do Anúncio (Base64)")
 
+    # Condições de venda definidas pelo anunciante
+    val_minimo           = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        verbose_name="Valor mínimo aceito pelo lote",
+    )  # visível só para o anunciante; propostas abaixo dele são recusadas
+    ie_aceita_parcial    = models.BooleanField(default=True, verbose_name="Aceita compra parcial")
+
     # Campos de negociação
     val_proposta         = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     val_aceito           = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)

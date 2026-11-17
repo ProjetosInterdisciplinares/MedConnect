@@ -12,14 +12,10 @@ export const NotificacoesContext = createContext<Notificacoes>({ recebidas: 0, e
 type Aba = { label: string; href: string; tab?: string; contador?: keyof Notificacoes }
 
 export const SECOES = {
-  // Ofertar insumos: cadastrar o que a instituição tem para oferecer
-  ofertar: [
-    { label: "Cadastrar insumo", href: "/cadastrar" },
-    { label: "Cadastro em massa", href: "/cadastrar/massa" },
-  ],
-  // Anúncios: publicar um insumo cadastrado e acompanhar as publicações
+  // Anúncios: publicar um insumo cadastrado (um a um ou em massa) e acompanhar as publicações
   anuncios: [
     { label: "Publicar novo", href: "/anunciar" },
+    { label: "Cadastro em massa", href: "/anunciar-em-massa" },
     { label: "Meus anúncios", href: "/meus-anuncios" },
   ],
   negociacoes: [
@@ -95,7 +91,7 @@ function SecaoTabsSemBusca({ secao }: { secao: keyof typeof SECOES }) {
 
 /**
  * Abas de uma seção do menu (cada aba é uma rota ou uma rota + ?tab=).
- * Ex.: Ofertar insumos → Cadastrar insumo | Cadastro em massa; Anúncios → Publicar novo | Meus anúncios.
+ * Ex.: Anúncios → Publicar novo | Cadastro em massa | Meus anúncios.
  */
 export default function SecaoTabs({ secao }: { secao: keyof typeof SECOES }) {
   return (

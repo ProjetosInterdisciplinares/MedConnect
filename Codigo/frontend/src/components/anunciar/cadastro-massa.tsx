@@ -45,7 +45,6 @@ interface BulkInsumo {
   ds_marca: string
   unidade_med: string
   cd_tuss: string
-  cd_tiss?: string | null
   cd_simpro?: string | null
   cd_brasindice?: string | null
 }
@@ -58,6 +57,8 @@ interface BulkAnuncio {
   val_base: string | null
   ds_obs: string
   imagem_anuncio?: string | null
+  val_minimo?: string | null
+  ie_aceita_parcial?: boolean
 }
 
 interface BulkAdRow {
@@ -551,12 +552,6 @@ export default function CadastroMassa() {
                               <span className="text-slate-500">TUSS</span>
                               <span className="font-semibold text-slate-800">{row.insumo.cd_tuss || "—"}</span>
                             </div>
-                            {row.insumo.cd_tiss && (
-                              <div className="flex justify-between">
-                                <span className="text-slate-500">TISS</span>
-                                <span className="font-semibold text-slate-800">{row.insumo.cd_tiss}</span>
-                              </div>
-                            )}
                           </div>
                         </div>
 
@@ -585,6 +580,14 @@ export default function CadastroMassa() {
                             <div className="flex justify-between">
                               <span className="text-slate-500">Valor Base</span>
                               <span className="font-bold text-blue-900">R$ {row.anuncio.val_base || "—"}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">Valor mínimo</span>
+                              <span className="font-semibold text-slate-800">{row.anuncio.val_minimo ? `R$ ${row.anuncio.val_minimo}` : "—"}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">Compra parcial</span>
+                              <span className="font-semibold text-slate-800">{row.anuncio.ie_aceita_parcial === false ? "Não aceita" : "Aceita"}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-slate-500">Observações</span>
@@ -867,13 +870,13 @@ export default function CadastroMassa() {
                   { field: "Nome do Insumo", desc: "Nome do material ou medicamento" },
                   { field: "Categoria", desc: "'Material Hospitalar' ou 'Medicamento'" },
                   { field: "Marca", desc: "Fabricante do insumo" },
-                  { field: "Unidade de Medida", desc: "Ex: Caixa, Unidade, Frasco" },
-                  { field: "Código TUSS", desc: "Código TUSS de até 8 dígitos" },
+                  { field: "Unidade de Medida", desc: "Só a unidade, sem quantidade. Ex: Caixa, Unidade, Frasco" },
+                  { field: "Código TUSS", desc: "Código TUSS de até 8 dígitos (material e medicamento)" },
                   { field: "Lote", desc: "Identificação do lote. Ex: L123456" },
                   { field: "Data de Fabricação", desc: "Formato DD/MM/AAAA" },
                   { field: "Data de Validade", desc: "Formato DD/MM/AAAA" },
                   { field: "Quantidade", desc: "Número inteiro positivo" },
-                  { field: "Valor Base R$", desc: "Use vírgula para decimais. Ex: 15,90" },
+                  { field: "Valor Base R$", desc: "Valor total do lote. Use vírgula para decimais. Ex: 1590,00" },
                   { field: "Observações", desc: "Descrição do anúncio" },
                 ].map((item) => (
                   <div key={item.field} className="flex items-start gap-3 px-3 py-2.5 rounded-lg border border-slate-200">
@@ -892,9 +895,10 @@ export default function CadastroMassa() {
               <h3 className="text-sm font-semibold text-slate-900 mb-3">Campos opcionais</h3>
               <div className="space-y-2">
                 {[
-                  { field: "Tabela TISS", desc: "'19' (Brasíndice) ou '20' (TUSS)" },
-                  { field: "Código SIMPRO", desc: "Código SIMPRO do insumo" },
-                  { field: "Código Brasíndice", desc: "Código Brasíndice do insumo" },
+                  { field: "Código SIMPRO", desc: "Código de precificação do material" },
+                  { field: "Código Brasíndice", desc: "Código de precificação de medicamento" },
+                  { field: "Valor Mínimo Aceito R$", desc: "Menor valor aceito pelo lote; propostas abaixo são recusadas" },
+                  { field: "Aceita Compra Parcial", desc: "'Sim' (padrão) ou 'Não'" },
                 ].map((item) => (
                   <div key={item.field} className="flex items-start gap-3 px-3 py-2.5 rounded-lg border border-slate-200">
                     <span className="text-slate-400 font-bold text-sm mt-0.5">○</span>

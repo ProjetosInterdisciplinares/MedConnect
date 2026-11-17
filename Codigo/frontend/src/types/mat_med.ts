@@ -7,7 +7,6 @@ export interface MatMed {
   ds_pessoaj: number
 
   unidade_med?: string
-  cd_tiss?: string | null
   cd_tuss: string
   cd_simpro?: string | null
   cd_brasindice?: string | null
@@ -22,7 +21,6 @@ export interface CreateMatMedForm {
   ds_pessoaj: number
 
   unidade_med?: string
-  cd_tiss?: string
   cd_tuss: string
   cd_simpro?: string
   cd_brasindice?: string

@@ -1,12 +1,10 @@
 "use client"
 
 import FormInsumo from "@/components/cadastro/FormInsumo"
-import SecaoTabs from "@/components/layout/SecaoTabs"
 
 export default function CadastroPage() {
   return (
     <div className="w-full">
-      <SecaoTabs secao="ofertar" />
       <header className="mb-6">
         <h1 className="sr-only">Cadastrar insumo</h1>
         <p className="text-sm text-slate-500 max-w-2xl">

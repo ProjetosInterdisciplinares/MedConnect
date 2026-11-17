@@ -15,7 +15,7 @@ from anuncio.publicacao.erros import EntradaVaziaError, PlanilhaInvalidaError
 from anuncio.serializers import AnuncioSerializer
 from mat_med.models import MatMed
 
-CAMPOS_CODIGO = ('cd_tuss', 'cd_tiss', 'cd_simpro', 'cd_brasindice')
+CAMPOS_CODIGO = ('cd_tuss', 'cd_simpro', 'cd_brasindice')
 
 
 @dataclass
@@ -25,7 +25,6 @@ class DadosInsumo:
     ds_marca: str = ''
     unidade_med: str = ''
     cd_tuss: str = ''
-    cd_tiss: str = ''
     cd_simpro: str = ''
     cd_brasindice: str = ''
 
@@ -41,7 +40,7 @@ class DadosInsumo:
 
     def como_dict(self) -> dict:
         dados = asdict(self)
-        for nome in ('cd_tiss', 'cd_simpro', 'cd_brasindice'):
+        for nome in ('cd_simpro', 'cd_brasindice'):
             dados[nome] = dados[nome] or None
         return dados
 
@@ -57,6 +56,8 @@ class DadosAnuncio:
     val_base: object = None
     ds_obs: object = ''
     imagem_anuncio: str | None = None
+    val_minimo: object = None                 # menor valor aceito pelo lote (opcional)
+    ie_aceita_parcial: object = True          # aceita compra de parte do lote
     linha: int | None = None                  # linha da planilha, quando houver
 
 
@@ -87,6 +88,8 @@ class LeitorFormulario(LeitorAnuncio):
             val_base=dados.get('val_base'),
             ds_obs=dados.get('ds_obs', ''),
             imagem_anuncio=dados.get('imagem_anuncio'),
+            val_minimo=dados.get('val_minimo'),
+            ie_aceita_parcial=dados.get('ie_aceita_parcial', True),
         )]
 
 
@@ -100,12 +103,15 @@ class LeitorPlanilhaXlsx(LeitorAnuncio):
             raise PlanilhaInvalidaError('Arquivo inválido. Envie um arquivo .xlsx válido.') from erro
 
         aba = self._aba_de_dados(workbook)
+        posicoes = self._posicoes_das_colunas(aba)
         lidos = []
         for numero, linha in enumerate(aba.iter_rows(min_row=2, values_only=True), start=2):
             if all(_texto(celula) == '' for celula in linha):
                 continue
-            linha = list(linha) + [None] * max(0, len(COLUNAS_PLANILHA) - len(linha))
-            valores = {coluna.chave: linha[i] for i, coluna in enumerate(COLUNAS_PLANILHA)}
+            valores = {
+                chave: (linha[i] if i is not None and i < len(linha) else None)
+                for chave, i in posicoes.items()
+            }
             lidos.append(DadosAnuncio(
                 insumo=DadosInsumo.de_dict(valores),
                 ds_lote=valores['ds_lote'],
@@ -114,6 +120,8 @@ class LeitorPlanilhaXlsx(LeitorAnuncio):
                 qtd_mat=valores['qtd_mat'],
                 val_base=valores['val_base'],
                 ds_obs=valores['ds_obs'],
+                val_minimo=valores['val_minimo'],
+                ie_aceita_parcial=valores['ie_aceita_parcial'],
                 linha=numero,
             ))
 
@@ -122,6 +130,19 @@ class LeitorPlanilhaXlsx(LeitorAnuncio):
                 "Nenhuma linha de dados encontrada na planilha. Preencha os dados na aba 'Anúncios'."
             )
         return lidos
+
+    @staticmethod
+    def _posicoes_das_colunas(aba) -> dict:
+        """Coluna de cada campo pelo título no cabeçalho; sem cabeçalho reconhecível, usa a ordem do modelo."""
+        cabecalho = next(aba.iter_rows(min_row=1, max_row=1, values_only=True), ())
+        titulos = [_texto(celula).lower() for celula in cabecalho]
+        posicoes = {
+            coluna.chave: titulos.index(coluna.titulo.lower()) if coluna.titulo.lower() in titulos else None
+            for coluna in COLUNAS_PLANILHA
+        }
+        if all(i is None for i in posicoes.values()):
+            posicoes = {coluna.chave: i for i, coluna in enumerate(COLUNAS_PLANILHA)}
+        return posicoes
 
     @staticmethod
     def _aba_de_dados(workbook):
@@ -153,5 +174,7 @@ class LeitorLoteJson(LeitorAnuncio):
                 val_base=anuncio.get('val_base'),
                 ds_obs=anuncio.get('ds_obs', ''),
                 imagem_anuncio=anuncio.get('imagem_anuncio'),
+                val_minimo=anuncio.get('val_minimo'),
+                ie_aceita_parcial=anuncio.get('ie_aceita_parcial', True),
             ))
         return lidos

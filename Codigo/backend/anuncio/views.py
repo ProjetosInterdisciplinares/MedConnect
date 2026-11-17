@@ -28,7 +28,7 @@ def meus_anuncios(request):
         cd_pessoa_anunciante=request.user
     )
 
-    serializer = AnuncioSerializer(anuncios, many=True)
+    serializer = AnuncioSerializer(anuncios, many=True, context={"request": request})
     return Response(serializer.data)
 
 # View que retorna somente os anúncios onde o usuário é o comprador e o status é 'F' (finalizado)
@@ -237,8 +237,12 @@ class NegociacaoViewSet(viewsets.ModelViewSet):
                     # RF15: venda parcial. O saldo fica com o valor proporcional (ou o
                     # informado pelo vendedor) e volta ao catálogo se ele escolher.
                     proporcional = (anuncio.val_base * restante / anuncio.qtd_mat).quantize(Decimal('0.01'))
+                    if anuncio.val_minimo:
+                        anuncio.val_minimo = (anuncio.val_minimo * restante / anuncio.qtd_mat).quantize(Decimal('0.01'))
                     anuncio.qtd_mat = restante
                     anuncio.val_base = saldo.get('novo_val_base') or max(proporcional, Decimal('0.01'))
+                    if anuncio.val_minimo:
+                        anuncio.val_minimo = min(anuncio.val_minimo, anuncio.val_base)
                     if saldo.get('nova_descricao'):
                         anuncio.ds_obs = saldo['nova_descricao']
                     anuncio.ie_status = Anuncio.STATUS_ATIVO if saldo.get('reativar_saldo') else Anuncio.STATUS_SALDO

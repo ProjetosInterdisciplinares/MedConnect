@@ -12,6 +12,9 @@ export interface Anuncio {
   data_anuncio: string
   ie_status: 'A' | 'N' | 'F' | 'I' | 'S'
   imagem_anuncio?: string
+  /** Menor valor aceito pelo lote; a API só envia para o próprio anunciante. */
+  val_minimo?: string | null
+  ie_aceita_parcial?: boolean
   anunciante_razao?: string
   anunciante_lat?: number
   anunciante_lon?: number
@@ -41,6 +44,8 @@ export interface CreateAnuncioForm {
   cd_pessoa_anunciante: number
   ds_obs?: string
   imagem_anuncio?: string
+  val_minimo?: string | null
+  ie_aceita_parcial?: boolean
 }
 
 export interface UpdateAnuncioForm {
@@ -52,6 +57,8 @@ export interface UpdateAnuncioForm {
   val_base?: string
   ds_obs?: string
   ie_status?: 'A' | 'N' | 'F' | 'I' | 'S'
+  val_minimo?: string | null
+  ie_aceita_parcial?: boolean
   val_proposta?: string | null
   val_aceito?: string | null
   cd_pessoa_compradora?: number | null

@@ -24,7 +24,7 @@ def criar_empresa(n, saldo=0, **extra):
     return empresa
 
 
-LINHA_VALIDA = ['Luva nitrílica', 'Material Hospitalar', 'Marca X', 'Caixa', '1234', '', '', '',
+LINHA_VALIDA = ['Luva nitrílica', 'Material Hospitalar', 'Marca X', 'Caixa', '1234', '', '',
                 'L1', '01/06/2025', '01/06/2027', 10, '15,90', 'Lacrado']
 
 
@@ -32,7 +32,7 @@ def planilha(*linhas, aba='Anúncios'):
     wb = Workbook()
     wb.active.title = 'Tutorial'
     ws = wb.create_sheet(aba)
-    ws.append(['cabeçalho'] * 14)
+    ws.append(['cabeçalho'] * 15)
     for linha in linhas:
         ws.append(linha)
     buffer = io.BytesIO()
@@ -48,7 +48,7 @@ def item_lote(tuss='1234', qtd=10, **anuncio):
     dados.update(anuncio)
     return {
         'insumo': {'ds_mat': 'Luva nitrílica', 'ds_tipo': 'Material Hospitalar', 'ds_marca': 'Marca X',
-                   'unidade_med': 'Caixa', 'cd_tuss': tuss, 'cd_tiss': None, 'cd_simpro': None,
+                   'unidade_med': 'Caixa', 'cd_tuss': tuss, 'cd_simpro': None,
                    'cd_brasindice': None},
         'anuncio': dados,
     }
@@ -115,9 +115,11 @@ class PlanilhaModeloTests(Base):
         wb = load_workbook(io.BytesIO(resp.content))
         self.assertEqual(wb.sheetnames, ['Tutorial', 'Anúncios'])
         cabecalhos = [c.value for c in wb['Anúncios'][1]]
-        self.assertEqual(len(cabecalhos), 14)
+        self.assertEqual(len(cabecalhos), 15)
         self.assertEqual(cabecalhos[0], 'Nome do Insumo (*)')
-        self.assertEqual(cabecalhos[13], 'Observações (*)')
+        self.assertNotIn('Tabela TISS', cabecalhos)
+        self.assertEqual(cabecalhos[12], 'Observações (*)')
+        self.assertEqual(cabecalhos[13:], ['Valor Mínimo Aceito R$', 'Aceita Compra Parcial'])
         self.assertEqual(wb['Anúncios'].freeze_panes, 'A2')
 
 
@@ -128,11 +130,11 @@ class PreviaPlanilhaTests(Base):
         return self.api.post(self.URL, {'file': arquivo}, format='multipart')
 
     def test_previa_com_linha_valida_e_invalida(self):
-        invalida = ['', 'Brinquedo', '', '', '123456789', '', '', '', '', '', '', -1, 'abc', '']
+        invalida = ['', 'Brinquedo', '', '', '123456789', '', '', '', '', '', -1, 'abc', '']
         existente = list(LINHA_VALIDA)
         existente[4] = '999'  # TUSS do insumo já cadastrado
 
-        resp = self.enviar(planilha(LINHA_VALIDA, invalida, [None] * 14, existente))
+        resp = self.enviar(planilha(LINHA_VALIDA, invalida, [None] * 13, existente))
 
         self.assertEqual(resp.status_code, 200, resp.content)
         corpo = resp.json()

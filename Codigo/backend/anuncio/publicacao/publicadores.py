@@ -103,6 +103,7 @@ class PublicadorAnuncio(ABC):
         builder.com_lote(dados.ds_lote, dados.dt_fabricacao, dados.dt_validade,
                          obrigatorio=self.exigir_dados_completos)
         builder.com_valores(dados.qtd_mat, dados.val_base)
+        builder.com_condicoes(dados.val_minimo, dados.ie_aceita_parcial)
         builder.com_descricao(dados.ds_obs, obrigatoria=self.exigir_dados_completos)
         builder.com_imagem(dados.imagem_anuncio)
 

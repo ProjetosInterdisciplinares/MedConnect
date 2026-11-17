@@ -47,9 +47,6 @@ function diasAte(iso: string | null | undefined) {
   return Math.round((alvo.getTime() - hoje.getTime()) / 86_400_000)
 }
 
-/** Tabela TISS de origem do código (19 = materiais, 20 = medicamentos). */
-const TABELA_TISS: Record<string, string> = { "19": "19 · Materiais", "20": "20 · Medicamentos" }
-
 /* Classes compartilhadas */
 const CARTAO = "bg-white rounded-xl border border-slate-200"
 const BTN_PRIMARIO = "h-10 px-4 rounded-lg bg-blue-700 hover:bg-blue-800 text-sm font-semibold text-white transition-colors cursor-pointer"
@@ -165,7 +162,7 @@ export default function AnuncioDetalhePage() {
       showError("Informe o valor total que você propõe pagar.")
       return
     }
-    const qtd = qtdProposta === "" ? anuncio.qtd_mat : Number(qtdProposta)
+    const qtd = qtdProposta === "" || anuncio.ie_aceita_parcial === false ? anuncio.qtd_mat : Number(qtdProposta)
     if (!Number.isInteger(qtd) || qtd < 1 || qtd > anuncio.qtd_mat) {
       showError(`Informe uma quantidade entre 1 e ${anuncio.qtd_mat}.`)
       return
@@ -237,6 +234,7 @@ export default function AnuncioDetalhePage() {
   const unidadeTexto = material?.unidade_med?.trim() || ""
   const { singular: unidadeBase, plural } = unidadeDeVenda(unidadeTexto)
   const qtdTexto = quantidadeComUnidade(qtd, unidadeTexto)
+  const aceitaParcial = anuncio.ie_aceita_parcial !== false
 
   const nomeProduto = material?.ds_mat || anuncio.material_nome || "Insumo sem nome"
   const validade = formatarData(anuncio.dt_validade)
@@ -264,7 +262,6 @@ export default function AnuncioDetalhePage() {
 
   const codigos = [
     { rotulo: "TUSS", codigo: "TUSS" as const, valor: material?.cd_tuss },
-    { rotulo: "Tabela TISS", codigo: "TISS" as const, valor: material?.cd_tiss ? TABELA_TISS[material.cd_tiss] ?? material.cd_tiss : null },
     { rotulo: "SIMPRO", codigo: "SIMPRO" as const, valor: material?.cd_simpro },
     { rotulo: "Brasíndice", codigo: "BRASINDICE" as const, valor: material?.cd_brasindice },
     { rotulo: "CATMAT", codigo: "CATMAT" as const, valor: material?.cd_catmat },
@@ -325,6 +322,7 @@ export default function AnuncioDetalhePage() {
               <Campo rotulo="Quantidade disponível">{qtdTexto}</Campo>
               <Campo rotulo="Unidade de venda">{unidadeTexto || "Não informada"}</Campo>
               <Campo rotulo="Categoria">{material?.ds_tipo || "Não informada"}</Campo>
+              <Campo rotulo="Compra parcial">{aceitaParcial ? "Aceita" : "Somente o lote inteiro"}</Campo>
             </dl>
 
             <div className="mt-6 pt-5 border-t border-slate-100">
@@ -531,9 +529,12 @@ export default function AnuncioDetalhePage() {
         <DialogContent showCloseButton={false} className="sm:max-w-md p-6 gap-0 bg-white">
           <DialogTitle className="text-lg font-semibold text-slate-900">Fazer proposta</DialogTitle>
           <DialogDescription className="mt-2 text-sm text-slate-600">
-            Informe a quantidade e o valor total que você propõe pagar.
+            {aceitaParcial
+              ? "Informe a quantidade e o valor total que você propõe pagar."
+              : `Este anúncio não aceita compra parcial: a proposta vale pelo lote inteiro (${qtdTexto}).`}
           </DialogDescription>
           <div className="mt-5 space-y-4">
+            {aceitaParcial && (
             <div>
               <label htmlFor="qtd-proposta" className="block text-sm font-medium text-slate-700 mb-1.5">
                 Quantidade ({plural})
@@ -550,6 +551,7 @@ export default function AnuncioDetalhePage() {
               />
               <p className="mt-1 text-xs text-slate-500">Se deixar a quantidade em branco, a proposta vale pelo lote inteiro ({qtdTexto}).</p>
             </div>
+            )}
             <div>
               <label htmlFor="valor-proposta" className="block text-sm font-medium text-slate-700 mb-1.5">
                 Valor total proposto

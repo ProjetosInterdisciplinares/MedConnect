@@ -5,7 +5,7 @@ import { Info } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { CODIGOS_REFERENCIA, CodigoReferencia } from "@/lib/codigos-referencia"
 
-/** Ícone "i" ao lado de um código (TUSS, TISS, SIMPRO, Brasíndice) que explica o que é e onde encontrar. */
+/** Ícone "i" ao lado de um código (TUSS, SIMPRO, Brasíndice, CATMAT) que explica o que é e onde encontrar. */
 export default function InfoCodigo({ codigo }: { codigo: CodigoReferencia }) {
   const info = CODIGOS_REFERENCIA[codigo]
   return (

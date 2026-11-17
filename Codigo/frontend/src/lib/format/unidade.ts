@@ -1,26 +1,12 @@
-/** Unidades de medida mais usadas, sugeridas no cadastro de insumo. */
-export const UNIDADES_COMUNS = [
-  "Unidade",
-  "Caixa c/ 10",
-  "Caixa c/ 20",
-  "Caixa c/ 50",
-  "Caixa c/ 100",
-  "Pacote c/ 10",
-  "Pacote c/ 100",
-  "Frasco",
-  "Frasco-ampola",
-  "Ampola",
-  "Bolsa",
-  "Comprimido",
-  "Cápsula",
-  "Blister",
-  "Tubo",
-  "Rolo",
-  "Par",
-  "Kit",
-  "Seringa",
-  "Litro",
-]
+/**
+ * Unidades de medida aceitas no cadastro de insumo: só a unidade, sem quantidade
+ * (ex.: "Caixa", e não "Caixa c/ 100"). Manter igual a UNIDADES_MEDIDA em backend/mat_med/models.py.
+ */
+export const UNIDADES_MEDIDA = [
+  "Unidade", "Caixa", "Pacote", "Frasco", "Frasco-ampola", "Ampola", "Bolsa",
+  "Comprimido", "Cápsula", "Blister", "Envelope", "Bisnaga", "Tubo", "Rolo",
+  "Par", "Kit", "Seringa", "Galão", "Litro", "Mililitro", "Grama", "Quilograma",
+] as const
 
 const PLURAIS: Record<string, string> = {
   caixa: "caixas",
@@ -30,6 +16,8 @@ const PLURAIS: Record<string, string> = {
   ampola: "ampolas",
   rolo: "rolos",
   "frasco-ampola": "frascos-ampola",
+  par: "pares",
+  "galão": "galões",
 }
 
 /**
