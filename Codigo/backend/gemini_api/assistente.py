@@ -34,7 +34,7 @@ class AssistenteIAFacade:
 
         carteira.garantir_saldo(acao)
         texto = self._provedor.gerar_texto(self._prompt_descricao(material)).strip()
-        carteira.debitar(acao, referencia=f'MAT-{material.cd_mat}')
+        carteira.debitar(acao, referencia=f'MAT-{material.cd_mat}' if material.cd_mat else 'MAT-NOVO')
         return texto
 
     def buscar_semanticamente(self, termo: str, empresa) -> list[Anuncio]:

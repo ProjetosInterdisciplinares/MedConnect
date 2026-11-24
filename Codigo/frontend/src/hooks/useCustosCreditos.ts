@@ -12,9 +12,10 @@ export type CustosCreditos = {
   publicacao: number | null
   ia: number | null
   precoReferencia: number | null
+  analiseEstoque: number | null
 }
 
-const VAZIO: CustosCreditos = { publicacao: null, ia: null, precoReferencia: null }
+const VAZIO: CustosCreditos = { publicacao: null, ia: null, precoReferencia: null, analiseEstoque: null }
 
 let cache: CustosCreditos | null = null
 let pendente: Promise<CustosCreditos> | null = null
@@ -26,7 +27,12 @@ function carregarCustos(): Promise<CustosCreditos> {
       pendente = null
       if ("isError" in resposta) return VAZIO
       const custo = (codigo: string) => resposta.find((c) => c.codigo === codigo)?.custo ?? null
-      cache = { publicacao: custo("PUBLICAR_ANUNCIO"), ia: custo("IA_DESCRICAO"), precoReferencia: custo("PRECO_REFERENCIA") }
+      cache = {
+        publicacao: custo("PUBLICAR_ANUNCIO"),
+        ia: custo("IA_DESCRICAO"),
+        precoReferencia: custo("PRECO_REFERENCIA"),
+        analiseEstoque: custo("IA_ANALISE_ESTOQUE"),
+      }
       return cache
     })
   }

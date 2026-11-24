@@ -154,7 +154,22 @@ class LeitorPlanilhaXlsx(LeitorAnuncio):
 
 
 class LeitorLoteJson(LeitorAnuncio):
-    """Confirmação da importação: lista [{insumo: {...}, anuncio: {...}}] enviada pela prévia."""
+    """
+    Confirmação da importação: lista [{insumo: {...}, anuncio: {...}}] enviada pela prévia.
+    Com a empresa, insumo.cd_mat aponta um insumo já cadastrado por ela (usado pela análise de estoque).
+    """
+
+    def __init__(self, empresa=None):
+        self._empresa = empresa
+
+    def _insumo_cadastrado(self, insumo: dict) -> MatMed | None:
+        cd_mat = insumo.get('cd_mat')
+        if self._empresa is None or not cd_mat:
+            return None
+        try:
+            return MatMed.objects.filter(pk=int(cd_mat), ds_pessoaj=self._empresa).first()
+        except (TypeError, ValueError):
+            return None
 
     def ler(self, itens) -> list[DadosAnuncio]:
         if not isinstance(itens, list) or not itens:
@@ -166,6 +181,7 @@ class LeitorLoteJson(LeitorAnuncio):
             insumo = item.get('insumo') if isinstance(item.get('insumo'), dict) else {}
             anuncio = item.get('anuncio') if isinstance(item.get('anuncio'), dict) else {}
             lidos.append(DadosAnuncio(
+                insumo_cadastrado=self._insumo_cadastrado(insumo),
                 insumo=DadosInsumo.de_dict(insumo),
                 ds_lote=anuncio.get('ds_lote'),
                 dt_fabricacao=anuncio.get('dt_fabricacao'),

@@ -55,6 +55,12 @@ export default function FormInsumo() {
 
   const [sugestoesCatmat, setSugestoesCatmat] = useState<Sugestao[]>([])
 
+  /* ─── Nome vindo da análise de estoque com IA (?nome=) ─── */
+  useEffect(() => {
+    const nome = new URLSearchParams(window.location.search).get("nome")?.trim()
+    if (nome) setInsumoForm((prev) => (prev.ds_mat ? prev : { ...prev, ds_mat: nome.slice(0, 255) }))
+  }, [])
+
   /* ─── CATMAT sugerido a partir do nome e da categoria digitados ─── */
   useEffect(() => {
     const nome = insumoForm.ds_mat?.trim() || ""

@@ -12,10 +12,11 @@ export const NotificacoesContext = createContext<Notificacoes>({ recebidas: 0, e
 type Aba = { label: string; href: string; tab?: string; contador?: keyof Notificacoes }
 
 export const SECOES = {
-  // Anúncios: publicar um insumo cadastrado (um a um ou em massa) e acompanhar as publicações
+  // Anúncios: publicar um insumo cadastrado (um a um ou em massa), descobrir o que anunciar e acompanhar as publicações
   anuncios: [
     { label: "Publicar novo", href: "/anunciar" },
     { label: "Cadastro em massa", href: "/anunciar-em-massa" },
+    { label: "Analisar estoque com IA", href: "/analisar-estoque" },
     { label: "Meus anúncios", href: "/meus-anuncios" },
   ],
   negociacoes: [

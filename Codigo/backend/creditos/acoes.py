@@ -83,6 +83,27 @@ class ConsultarPrecoReferencia(AcaoPaga):
         return 'Consulta de preço de referência (Compras.gov.br)'
 
 
+class AnalisarEstoqueIA(AcaoPaga):
+    """Análise da planilha de movimentação de estoque com IA (sugestão do que anunciar)."""
+    CODIGO = 'IA_ANALISE_ESTOQUE'
+    CUSTO = 3
+
+    def __init__(self, nome_arquivo: str | None = None):
+        self._nome_arquivo = nome_arquivo
+
+    @property
+    def codigo(self) -> str:
+        return self.CODIGO
+
+    def custo(self) -> int:
+        return self.CUSTO
+
+    def descricao(self) -> str:
+        if self._nome_arquivo:
+            return f'Análise de estoque com IA ({self._nome_arquivo})'
+        return 'Análise de estoque com IA'
+
+
 class DecoradorAcao(AcaoPaga):
     """Decorador base: guarda a ação envolvida e delega tudo a ela."""
 
@@ -117,7 +138,7 @@ class PublicacaoEmLote(DecoradorAcao):
 
 
 # Ações exibidas na tabela de custos (GET /creditos/custos/)
-ACOES_COM_CUSTO = (PublicarAnuncio, GerarDescricaoIA, ConsultarPrecoReferencia)
+ACOES_COM_CUSTO = (PublicarAnuncio, GerarDescricaoIA, ConsultarPrecoReferencia, AnalisarEstoqueIA)
 
 
 def tabela_de_custos() -> list[dict]:

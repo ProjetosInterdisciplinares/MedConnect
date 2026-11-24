@@ -28,6 +28,10 @@ class RespostaInvalidaIAError(ErroProvedorIA):
     """O provedor respondeu, mas não no formato esperado."""
 
 
+class IANaoConfiguradaError(ErroProvedorIA):
+    """O servidor não tem a chave da API (GEMINI_API_KEY ou GOOGLE_API_KEY)."""
+
+
 class ProvedorIA(ABC):
     """Interface do cliente: o que o MedConnect espera de qualquer IA."""
 
@@ -66,20 +70,33 @@ class GeminiAdapter(ProvedorIA):
     _pausados_ate: dict[str, float] = {}  # compartilhado entre requisições
     _trava = threading.Lock()
 
-    def __init__(self, api_key: str | None = None, modelos: tuple[str, ...] | None = None):
+    def __init__(self, api_key: str | None = None, modelos: tuple[str, ...] | None = None,
+                 tempo_por_tentativa_s: float | None = None, tempo_total_s: float | None = None):
         self._api_key = api_key or os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY')
         configurados = tuple(m.strip() for m in os.environ.get('GEMINI_MODELOS', '').split(',') if m.strip())
         self._modelos = modelos or configurados or self.MODELOS_PADRAO
         self._cliente = None
+        # Respostas longas (ex.: análise de estoque) precisam de mais tempo que o padrão
+        if tempo_por_tentativa_s:
+            self.TEMPO_POR_TENTATIVA_S = tempo_por_tentativa_s
+        if tempo_total_s:
+            self.TEMPO_TOTAL_S = tempo_total_s
 
     @property
     def cliente(self) -> genai.Client:
         # Criado sob demanda: instanciar o adaptador não exige rede nem chave.
         if self._cliente is None:
-            self._cliente = genai.Client(
-                api_key=self._api_key,
-                http_options={'timeout': self.TEMPO_POR_TENTATIVA_S * 1000},
-            )
+            try:
+                self._cliente = genai.Client(
+                    api_key=self._api_key,
+                    http_options={'timeout': self.TEMPO_POR_TENTATIVA_S * 1000},
+                )
+            except Exception as erro:
+                if not self._api_key:
+                    raise IANaoConfiguradaError(
+                        'Chave da API de IA ausente: defina GEMINI_API_KEY ou GOOGLE_API_KEY no .env do backend.'
+                    ) from erro
+                raise ErroProvedorIA(f'Não foi possível iniciar o cliente de IA: {erro}') from erro
         return self._cliente
 
     def gerar_texto(self, prompt: str) -> str:

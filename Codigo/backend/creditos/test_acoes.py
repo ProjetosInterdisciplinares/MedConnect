@@ -39,7 +39,7 @@ class CarteiraTests(TestCase):
 
         custos = {c['codigo']: c['custo'] for c in api.get('/api/medconnect/creditos/custos/').json()}
 
-        self.assertEqual(custos, {'PUBLICAR_ANUNCIO': 5, 'IA_DESCRICAO': 1, 'PRECO_REFERENCIA': 15})
+        self.assertEqual(custos, {'PUBLICAR_ANUNCIO': 5, 'IA_DESCRICAO': 1, 'PRECO_REFERENCIA': 15, 'IA_ANALISE_ESTOQUE': 3})
 
     def test_debito_registra_a_funcionalidade(self):
         carteira = CarteiraCreditos(self.empresa)

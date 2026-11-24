@@ -308,3 +308,36 @@ class GeminiAdapterTests(TestCase):
         with self.assertRaises(IAIndisponivelError):
             adaptador.gerar_texto('oi')
         liberar.set()
+
+
+class GeminiAdapterSemChaveTests(TestCase):
+    """Sem GEMINI_API_KEY, o adaptador lança o erro do MedConnect (e não um ValueError solto)."""
+
+    @patch(CLIENTE_GENAI, side_effect=ValueError('No API key was provided.'))
+    def test_cliente_sem_chave_vira_erro_do_provedor(self, _):
+        from gemini_api.provedores import IANaoConfiguradaError
+        with patch.dict('os.environ', {'GEMINI_API_KEY': '', 'GOOGLE_API_KEY': ''}):
+            with self.assertRaises(IANaoConfiguradaError):
+                GeminiAdapter().gerar_texto('oi')
+
+
+class GerarDescricaoSemInsumoCadastradoTests(BaseIATests):
+    """Cadastro em massa e análise de estoque: o insumo ainda não existe no banco."""
+
+    @patch(CLIENTE_GENAI)
+    def test_gera_com_os_dados_digitados(self, cliente):
+        simular_resposta(cliente, 'Texto gerado.')
+        resp = self.api.post('/api/medconnect/gerar-anuncio/', {
+            'insumo': {'ds_mat': 'Torneirinha 3 vias', 'ds_tipo': 'Material Hospitalar', 'unidade_med': 'Unidade'},
+        }, format='json')
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('Torneirinha 3 vias', cliente.return_value.models.generate_content.call_args.kwargs['contents'])
+        self.assertEqual(TransacaoCredito.objects.get(pessoa_juridica=self.empresa, tipo='D').referencia, 'MAT-NOVO')
+
+    @patch(CLIENTE_GENAI, side_effect=ValueError('No API key was provided.'))
+    def test_sem_chave_responde_503_e_nao_cobra(self, _):
+        with patch.dict('os.environ', {'GEMINI_API_KEY': '', 'GOOGLE_API_KEY': ''}),                 self.assertLogs('gemini_api.views', level='ERROR'):
+            resp = self.api.post('/api/medconnect/gerar-anuncio/', {'cd_mat': self.material.cd_mat}, format='json')
+        self.assertEqual(resp.status_code, 503)
+        self.assertIn('não está configurada', resp.json()['erro'])
+        self.assertEqual(self.saldo(), 10)

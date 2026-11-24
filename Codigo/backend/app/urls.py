@@ -13,6 +13,7 @@ urlpatterns = [
     path('api/medconnect/', include('creditos.urls')),
     path('api/medconnect/', include('notificacoes.urls')),
     path('api/medconnect/', include('preco_referencia.urls')),
+    path('api/medconnect/', include('estoque_ia.urls')),
     path('authentication/', include('authentication.urls')),
 
     path('authentication/token/', TokenObtainPairView.as_view(), name='token-obtain-pair'),

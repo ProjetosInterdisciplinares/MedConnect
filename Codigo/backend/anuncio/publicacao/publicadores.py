@@ -153,7 +153,7 @@ class PublicadorLote(PublicadorAnuncio):
     exigir_dados_completos = True
 
     def criar_leitor(self) -> LeitorAnuncio:
-        return LeitorLoteJson()
+        return LeitorLoteJson(self._empresa)
 
     def criar_acao_paga(self, quantidade: int) -> AcaoPaga:
         return PublicacaoEmLote(PublicarAnuncio(), quantidade)

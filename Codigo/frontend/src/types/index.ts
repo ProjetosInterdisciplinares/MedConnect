@@ -46,3 +46,17 @@ export type {
 	NotificacoesResponse,
 	AlertaInteresse,
 } from './notificacoes'
+export type {
+	AnaliseEstoque,
+	ResumoAnaliseEstoque,
+	ItemAnaliseEstoque,
+	AlertaEstoque,
+	NivelAlertaEstoque,
+	PerfilEstoque,
+	PrioridadeEstoque,
+	SinalEstoque,
+	IndicadoresEstoque,
+	InsumoVinculado,
+	PublicacaoSugestao,
+	PublicarSugestoesResposta,
+} from './estoque'

@@ -1,6 +1,8 @@
 "use client"
 
-import { ModalPadrao, BOTAO } from "@/components/ui/modal-padrao"
+import { ModalPadrao, BOTAO, AvisoDialog, ConfirmarDialog, Resumo } from "@/components/ui/modal-padrao"
+import { otimizarImagem } from "@/lib/imagem"
+import servicesGerarAnuncio from "@/server/(POST)-gerar-anuncio"
 import { useRouter } from "next/navigation"
 
 import React, { useState, useCallback } from "react"
@@ -93,9 +95,20 @@ interface PublishResponse {
   }>
 }
 
+// A descrição pode ser escrita (ou gerada com IA) na prévia: o erro de descrição
+// vindo da validação da planilha passa a depender do que está digitado agora.
+const ERRO_DESCRICAO = "Observações são obrigatórias"
+
+function comDescricaoAtual(row: BulkAdRow): BulkAdRow {
+  const preenchida = !!(row.anuncio.ds_obs || "").trim()
+  const erros = row.erros.filter((e) => e !== ERRO_DESCRICAO)
+  if (!preenchida) erros.push(ERRO_DESCRICAO)
+  return { ...row, erros, valido: erros.length === 0 }
+}
+
 // ── Component ────────────────────────────────────────────────────────
 export default function CadastroMassa() {
-  const { publicacao: custoPorAnuncio } = useCustosCreditos()
+  const { publicacao: custoPorAnuncio, ia: custoIA } = useCustosCreditos()
   const custoDoLote = (quantidade: number) =>
     rotuloCreditos(custoPorAnuncio === null ? null : quantidade * custoPorAnuncio)
   const [dragActive, setDragActive] = useState(false)
@@ -113,6 +126,10 @@ export default function CadastroMassa() {
   const [isConfirmPublishOpen, setIsConfirmPublishOpen] = useState(false)
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false)
   const [isInsufficientCreditsOpen, setIsInsufficientCreditsOpen] = useState(false)
+  const [aviso, setAviso] = useState<{ titulo: string; mensagem: string } | null>(null)
+  const [gerarPara, setGerarPara] = useState<number | null>(null)
+  const [gerandoDescricao, setGerandoDescricao] = useState<number | null>(null)
+  const linhasPrevia = adRows.map(comDescricaoAtual)
 
   // ── Download template ──────────────────────────────────────────────
   async function handleDownloadTemplate() {
@@ -227,40 +244,78 @@ export default function CadastroMassa() {
   }
 
   // ── Row image upload ────────────────────────────────────────────────
+  // Mesmas regras do anúncio único: PNG/JPG/WEBP até 20 MB, reduzida sem cortar
   async function handleRowImageUpload(index: number, e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
+    e.target.value = ""
     if (!file) return
 
-    if (!file.type.startsWith("image/")) {
-      alert("Por favor, selecione uma imagem válida.")
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      setAviso({ titulo: "Formato não aceito", mensagem: "Envie uma imagem PNG, JPG ou WEBP." })
       return
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert("A imagem deve ter no máximo 5MB.")
+    if (file.size > 20 * 1024 * 1024) {
+      setAviso({ titulo: "Imagem muito grande", mensagem: "Envie uma imagem de até 20 MB." })
       return
     }
 
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string
+    try {
+      const imagem = await otimizarImagem(file)
       setAdRows((prev) =>
-        prev.map((row) =>
-          row.index === index
-            ? { ...row, anuncio: { ...row.anuncio, imagem_anuncio: base64 } }
-            : row
-        )
+        prev.map((row) => (row.index === index ? { ...row, anuncio: { ...row.anuncio, imagem_anuncio: imagem } } : row))
       )
+    } catch {
+      setAviso({ titulo: "Erro de leitura", mensagem: "Não foi possível ler o arquivo de imagem." })
     }
-    reader.readAsDataURL(file)
+  }
+
+  // ── Descrição: editável na prévia, com geração por IA (como no anúncio único) ──
+  function alterarDescricao(index: number, texto: string) {
+    setAdRows((prev) => prev.map((row) => {
+      if (row.index !== index) return row
+      const atualizada = { ...row, anuncio: { ...row.anuncio, ds_obs: texto } }
+      const antes = comDescricaoAtual(row).valido
+      // Linha que só faltava a descrição: passa a ser publicada assim que fica válida
+      return comDescricaoAtual(atualizada).valido && !antes ? { ...atualizada, publicar: true } : atualizada
+    }))
+  }
+
+  async function gerarDescricao(index: number) {
+    setGerarPara(null)
+    const row = adRows.find((r) => r.index === index)
+    if (!row) return
+    setGerandoDescricao(index)
+    const pedido = row.insumo_existente && row.insumo_cd_mat
+      ? { cd_mat: row.insumo_cd_mat }
+      : { insumo: { ds_mat: row.insumo.ds_mat, ds_tipo: row.insumo.ds_tipo, unidade_med: row.insumo.unidade_med } }
+    const resposta = await (servicesGerarAnuncio as unknown as (p: object) => ReturnType<typeof servicesGerarAnuncio>)(pedido)
+    setGerandoDescricao(null)
+    if ("isError" in resposta) {
+      if (resposta.status === 402) setIsInsufficientCreditsOpen(true)
+      else setAviso({ titulo: "Não foi possível gerar a descrição", mensagem: resposta.message })
+      return
+    }
+    alterarDescricao(index, resposta.texto_sugerido)
+    servicesGetCreditosSaldo().then((res) => {
+      if (!("isError" in res)) notificarCreditosAtualizados(res.saldo)
+    })
   }
 
   // ── Publish all ─────────────────────────────────────────────────────
   async function handlePublishAll() {
-    const toPublish = adRows.filter((r) => r.publicar && r.valido)
+    const toPublish = linhasPrevia.filter((r) => r.publicar && r.valido)
 
     if (toPublish.length === 0) {
       setPublishError("Nenhum anúncio válido selecionado para publicar.")
+      return
+    }
+
+    const semDescricao = toPublish.filter((r) => !(r.anuncio.ds_obs || "").trim())
+    if (semDescricao.length > 0) {
+      setIsConfirmPublishOpen(false)
+      setPublishError(`Preencha a descrição dos anúncios das linhas ${semDescricao.map((r) => r.linha).join(", ")}.`)
+      setExpandedRow(semDescricao[0].index)
       return
     }
 
@@ -325,10 +380,10 @@ export default function CadastroMassa() {
   }
 
   // ── Computed values ─────────────────────────────────────────────────
-  const totalToPublish = adRows.filter((r) => r.publicar && r.valido).length
-  const totalValid = adRows.filter((r) => r.valido).length
-  const totalInvalid = adRows.filter((r) => !r.valido).length
-  const totalNewInsumos = adRows.filter((r) => !r.insumo_existente && r.valido && r.publicar).length
+  const totalToPublish = linhasPrevia.filter((r) => r.publicar && r.valido).length
+  const totalValid = linhasPrevia.filter((r) => r.valido).length
+  const totalInvalid = linhasPrevia.filter((r) => !r.valido).length
+  const totalNewInsumos = linhasPrevia.filter((r) => !r.insumo_existente && r.valido && r.publicar).length
 
   return (
     <div className="space-y-6">
@@ -391,7 +446,7 @@ export default function CadastroMassa() {
             </div>
 
             <div className="divide-y divide-slate-100">
-              {adRows.map((row) => (
+              {linhasPrevia.map((row) => (
                 <div
                   key={row.index}
                   className={`transition-all duration-300 ${
@@ -598,6 +653,36 @@ export default function CadastroMassa() {
                           </div>
                         </div>
                         
+                        {/* Descrição editável */}
+                        <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 col-span-1 md:col-span-2">
+                          <div className="flex items-center justify-between gap-3 mb-2">
+                            <label htmlFor={`obs-${row.index}`} className="text-xs font-bold text-slate-600 flex items-center gap-1">
+                              <FileSpreadsheet size={12} aria-hidden="true" /> Descrição do anúncio <span className="text-red-500">*</span>
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => setGerarPara(row.index)}
+                              disabled={gerandoDescricao === row.index || !row.insumo.ds_mat}
+                              className="shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-60 cursor-pointer"
+                            >
+                              {gerandoDescricao === row.index ? (
+                                <><Loader2 size={14} className="animate-spin text-slate-500" aria-hidden="true" /> Gerando…</>
+                              ) : (
+                                <><Sparkles size={14} className="text-blue-700" aria-hidden="true" /> Gerar descrição com IA
+                                  <span className="ml-1 pl-2 border-l border-slate-200 font-normal text-slate-500">{rotuloCreditos(custoIA)}</span></>
+                              )}
+                            </button>
+                          </div>
+                          <textarea
+                            id={`obs-${row.index}`}
+                            rows={3}
+                            maxLength={2000}
+                            value={row.anuncio.ds_obs || ""}
+                            onChange={(e) => alterarDescricao(row.index, e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 resize-y"
+                          />
+                        </div>
+
                         {/* Photo details */}
                         <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 col-span-1 md:col-span-2">
                           <h4 className="text-xs font-bold text-slate-600 mb-3 flex items-center gap-1">
@@ -624,7 +709,7 @@ export default function CadastroMassa() {
                                 <input
                                   type="file"
                                   className="hidden"
-                                  accept="image/*"
+                                  accept="image/png,image/jpeg,image/webp"
                                   onChange={(e) => handleRowImageUpload(row.index, e)}
                                 />
                               </label>
@@ -984,7 +1069,7 @@ export default function CadastroMassa() {
         <DialogContent showCloseButton={false} className="sm:max-w-md p-6 gap-0 bg-white">
           <DialogTitle className="text-lg font-semibold text-slate-900">Saldo insuficiente</DialogTitle>
           <DialogDescription className="mt-2 text-sm text-slate-600 leading-relaxed">
-            Você não tem créditos suficientes para publicar esses anúncios. Compre um pacote na Central de Créditos para continuar.
+            Você não tem créditos suficientes para concluir esta ação. Compre um pacote na Central de Créditos para continuar.
           </DialogDescription>
           <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
             <button
@@ -1006,6 +1091,19 @@ export default function CadastroMassa() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmarDialog
+        open={gerarPara !== null}
+        onOpenChange={(open) => { if (!open) setGerarPara(null) }}
+        titulo="Gerar descrição com IA?"
+        mensagem="A IA sugere um texto a partir do insumo da linha. Revise antes de publicar."
+        confirmar="Gerar descrição"
+        onConfirmar={() => gerarPara !== null && gerarDescricao(gerarPara)}
+      >
+        <Resumo itens={[["Custo", rotuloCreditos(custoIA)]]} />
+      </ConfirmarDialog>
+
+      <AvisoDialog open={aviso !== null} onClose={() => setAviso(null)} titulo={aviso?.titulo ?? ""} mensagem={aviso?.mensagem ?? ""} />
 
       {/* MODAL SUCESSO PUBLICAÇÃO */}
       <ModalPadrao

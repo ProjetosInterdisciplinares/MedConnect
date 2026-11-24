@@ -54,6 +54,10 @@ export default function AnunciarPage() {
   const searchParams = useSearchParams()
   const tabParam = searchParams.get("tab")
   const matParam = Number(searchParams.get("mat")) || 0
+  // Vindos da análise de estoque com IA: quantidade, lote e validade sugeridos
+  const qtdParam = Math.max(0, Math.floor(Number(searchParams.get("qtd")) || 0))
+  const loteParam = searchParams.get("lote") || ""
+  const validadeParam = /^\d{4}-\d{2}-\d{2}$/.test(searchParams.get("validade") || "") ? searchParams.get("validade")! : ""
 
   // Endereço antigo do cadastro em massa (agora em Anúncios → Cadastro em massa)
   useEffect(() => {
@@ -152,7 +156,17 @@ export default function AnunciarPage() {
   // Insumo recém-cadastrado chega selecionado (?mat=ID)
   useEffect(() => {
     if (!matParam || anuncioForm.cd_mat || materiais.length === 0) return
-    if (materiais.some((m) => Number(m.cd_mat) === matParam)) handleMatChange(String(matParam))
+    if (materiais.some((m) => Number(m.cd_mat) === matParam)) {
+      handleMatChange(String(matParam))
+      if (qtdParam || loteParam || validadeParam) {
+        setAnuncioForm((prev) => ({
+          ...prev,
+          qtd_mat: qtdParam || prev.qtd_mat,
+          ds_lote: loteParam || prev.ds_lote,
+          dt_validade: validadeParam && validadeParam >= hojeISO() ? validadeParam : prev.dt_validade,
+        }))
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matParam, materiais, meusAnuncios])
 
