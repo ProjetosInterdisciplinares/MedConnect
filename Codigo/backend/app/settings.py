@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     'creditos',
     'notificacoes',
     'preco_referencia',
+    'estoque_ia',
 
 ]
 

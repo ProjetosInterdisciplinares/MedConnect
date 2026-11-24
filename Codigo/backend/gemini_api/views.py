@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from anuncio.serializers import AnuncioSerializer
 from creditos.carteira import SaldoInsuficienteError
 from gemini_api.assistente import AssistenteIAFacade
-from gemini_api.provedores import ErroProvedorIA, IAIndisponivelError, RespostaInvalidaIAError
+from gemini_api.provedores import ErroProvedorIA, IAIndisponivelError, IANaoConfiguradaError, RespostaInvalidaIAError
 from mat_med.models import MatMed
 
 logger = logging.getLogger(__name__)
@@ -18,23 +18,43 @@ def erro(mensagem, codigo=status.HTTP_500_INTERNAL_SERVER_ERROR, **extra):
     return Response({'erro': mensagem, **extra}, status=codigo)
 
 
+IA_NAO_CONFIGURADA = 'A inteligência artificial não está configurada neste servidor (chave da API ausente).'
+
+
+def material_da_requisicao(dados, empresa):
+    """
+    Insumo já cadastrado (cd_mat) ou, para quem ainda vai cadastrar o insumo junto com o
+    anúncio (cadastro em massa e análise de estoque), os dados digitados ({'insumo': {...}}).
+    """
+    cd_mat = dados.get('cd_mat')
+    if cd_mat:
+        return MatMed.objects.get(cd_mat=cd_mat)
+    insumo = dados.get('insumo') if isinstance(dados.get('insumo'), dict) else {}
+    nome = str(insumo.get('ds_mat') or '').strip()
+    if not nome:
+        return None
+    return MatMed(ds_mat=nome[:255], ds_tipo=str(insumo.get('ds_tipo') or '')[:50] or None,
+                  unidade_med=str(insumo.get('unidade_med') or '')[:50] or None, ds_pessoaj=empresa)
+
+
 class GerarDescricaoAnuncioView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request):
-        cd_mat = request.data.get('cd_mat')
-        if not cd_mat:
-            return erro('Escolha o insumo antes de gerar a descrição.', status.HTTP_400_BAD_REQUEST)
-
         try:
-            material = MatMed.objects.get(cd_mat=cd_mat)
-        except MatMed.DoesNotExist:
+            material = material_da_requisicao(request.data, request.user)
+        except (MatMed.DoesNotExist, ValueError, TypeError):
             return erro('Insumo não encontrado.', status.HTTP_404_NOT_FOUND)
+        if material is None:
+            return erro('Escolha o insumo antes de gerar a descrição.', status.HTTP_400_BAD_REQUEST)
 
         try:
             texto = AssistenteIAFacade().gerar_descricao(empresa=request.user, material=material)
         except SaldoInsuficienteError as e:
             return erro(str(e), status.HTTP_402_PAYMENT_REQUIRED, saldo_insuficiente=True)
+        except IANaoConfiguradaError:
+            logger.error('IA sem chave configurada (GEMINI_API_KEY/GOOGLE_API_KEY)')
+            return erro(IA_NAO_CONFIGURADA, status.HTTP_503_SERVICE_UNAVAILABLE)
         except IAIndisponivelError:
             logger.warning('IA indisponível ao gerar descrição', exc_info=True)
             return erro('O serviço de inteligência artificial está com alta demanda no momento. '
